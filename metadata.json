@@ -1,0 +1,6 @@
+{
+  "name": "Photo Tourism & Landmark AR Explorer",
+  "description": "AI-powered city tourism app supporting every language in the world that recognizes landmarks from photos, fetches historical context with Google Search grounding, presents interactive AR narrated tours with Gemini voice synthesis, and securely persists tour journals using Google Sign-In and Cloud Firestore.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

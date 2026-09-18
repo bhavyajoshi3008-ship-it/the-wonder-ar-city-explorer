@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CityLens AR Tourism Database Blueprint",
+  "description": "Firestore database blueprint for CityLens AR landmark recognition, user tour journals, and saved travel heritage bookmarks",
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile data stored under users/{userId}",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique Firebase Authentication UID" },
+        "displayName": { "type": "string", "description": "User display name from Google Auth" },
+        "email": { "type": "string", "description": "User email from Google Auth" },
+        "photoURL": { "type": "string", "description": "Avatar image URL from Google Auth" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "ScannedLandmark": {
+      "title": "Scanned Landmark Entry",
+      "description": "Scanned landmark history and AR tour record stored under users/{userId}/scans/{scanId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "landmarkName": { "type": "string" },
+        "city": { "type": "string" },
+        "country": { "type": "string" },
+        "architecturalStyle": { "type": "string" },
+        "periodEra": { "type": "string" },
+        "confidence": { "type": "number" },
+        "summary": { "type": "string" },
+        "coordinates": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "arKeypointsCount": { "type": "number" },
+        "thumbnailUrl": { "type": "string", "description": "Optimized image thumbnail" },
+        "isFavorite": { "type": "boolean" },
+        "userNotes": { "type": "string" },
+        "scannedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "landmarkName", "scannedAt"]
+    },
+    "FavoriteLandmark": {
+      "title": "Favorite Landmark Bookmark",
+      "description": "Saved favorite landmark bookmarked by user under users/{userId}/favorites/{favoriteId}",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "landmarkName": { "type": "string" },
+        "city": { "type": "string" },
+        "country": { "type": "string" },
+        "savedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "landmarkName", "savedAt"]
+    }
+  },
+  "firestore": {
+    "paths": {
+      "users/{userId}": {
+        "entity": "User",
+        "access": {
+          "read": "request.auth != null && request.auth.uid == userId",
+          "write": "request.auth != null && request.auth.uid == userId"
+        }
+      },
+      "users/{userId}/scans/{scanId}": {
+        "entity": "ScannedLandmark",
+        "access": {
+          "read": "request.auth != null && request.auth.uid == userId",
+          "write": "request.auth != null && request.auth.uid == userId"
+        }
+      },
+      "users/{userId}/favorites/{favoriteId}": {
+        "entity": "FavoriteLandmark",
+        "access": {
+          "read": "request.auth != null && request.auth.uid == userId",
+          "write": "request.auth != null && request.auth.uid == userId"
+        }
+      }
+    }
+  }
+}

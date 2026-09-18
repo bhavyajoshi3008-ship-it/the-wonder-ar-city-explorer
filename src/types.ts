@@ -1,0 +1,79 @@
+export interface ARKeypoint {
+  id: string;
+  label: string;
+  featureType: string; // e.g., 'spire', 'dome', 'arch', 'facade', 'statue', 'clock', 'relief'
+  description: string;
+  x: number; // percentage 0 - 100
+  y: number; // percentage 0 - 100
+}
+
+export interface LandmarkRecognition {
+  name: string;
+  localName?: string;
+  city: string;
+  country: string;
+  architecturalStyle: string;
+  periodEra: string;
+  confidence: number;
+  summary: string;
+  coordinatesEstimate?: {
+    lat: number;
+    lng: number;
+  };
+  arKeypoints: ARKeypoint[];
+  modelUsed?: string;
+  isLandmark?: boolean;
+  detectedCategory?: 'landmark' | 'person' | 'animal' | 'nature' | 'food' | 'object' | 'indoor' | 'other';
+  notLandmarkReason?: string;
+}
+
+export interface GroundingSource {
+  title: string;
+  url: string;
+}
+
+export interface TourChapter {
+  id: string;
+  title: string;
+  timestampHint: string;
+  script: string;
+  focusPointId?: string;
+}
+
+export interface LandmarkHistory {
+  historicalTimeline: Array<{
+    yearOrEra: string;
+    event: string;
+    description: string;
+  }>;
+  architecturalSecrets: string[];
+  culturalSignificance: string;
+  visitorTips: string[];
+  narrationScript: string;
+  chapters: TourChapter[];
+  groundingQueries: string[];
+  groundingSources: GroundingSource[];
+  modelUsed?: string;
+}
+
+export interface NarrationAudio {
+  audioBase64: string; // data:audio/wav;base64,...
+  voiceName: string;
+  sampleRate: number;
+  durationEstimateSec: number;
+  modelUsed?: string;
+  useClientFallback?: boolean;
+  warning?: string;
+}
+
+export interface ScannedLandmarkEntry {
+  id: string;
+  scannedAt: string;
+  imageDataUrl: string;
+  recognition: LandmarkRecognition;
+  history: LandmarkHistory;
+  narration?: NarrationAudio;
+  syncStatus?: 'syncing' | 'synced' | 'local';
+}
+
+export type AppViewMode = 'capture' | 'ar_tour' | 'history_log';
