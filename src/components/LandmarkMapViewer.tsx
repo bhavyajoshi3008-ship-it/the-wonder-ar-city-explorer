@@ -268,6 +268,21 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
       });
 
       leafletMapRef.current = map;
+
+      // Invalidate size after layout settles to prevent gray tiles or clipped viewport
+      const resizeTimer = setTimeout(() => {
+        if (map) {
+          map.invalidateSize();
+        }
+      }, 250);
+
+      return () => {
+        clearTimeout(resizeTimer);
+        if (leafletMapRef.current) {
+          leafletMapRef.current.remove();
+          leafletMapRef.current = null;
+        }
+      };
     } catch (err) {
       console.warn("Leaflet map initialization warning:", err);
     }

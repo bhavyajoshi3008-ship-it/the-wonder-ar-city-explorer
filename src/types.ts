@@ -7,6 +7,15 @@ export interface ARKeypoint {
   y: number; // percentage 0 - 100
 }
 
+export interface PhotoAnalysis {
+  perspectiveAndAngle: string;
+  lightingAndAtmosphere: string;
+  visibleMaterialsAndTextures: string;
+  structuralCondition: string;
+  prominentVisualFeatures: string[];
+  compositionNotes?: string;
+}
+
 export interface LandmarkRecognition {
   name: string;
   localName?: string;
@@ -16,6 +25,7 @@ export interface LandmarkRecognition {
   periodEra: string;
   confidence: number;
   summary: string;
+  photoAnalysis?: PhotoAnalysis;
   coordinatesEstimate?: {
     lat: number;
     lng: number;
@@ -53,6 +63,7 @@ export interface LandmarkHistory {
   chapters: TourChapter[];
   groundingQueries: string[];
   groundingSources: GroundingSource[];
+  photoGroundedNotes?: string;
   modelUsed?: string;
 }
 
@@ -64,6 +75,8 @@ export interface NarrationAudio {
   modelUsed?: string;
   useClientFallback?: boolean;
   warning?: string;
+  infoMessage?: string;
+  status?: "ready" | "client_fallback" | "synthesizing" | "error";
 }
 
 export interface ScannedLandmarkEntry {

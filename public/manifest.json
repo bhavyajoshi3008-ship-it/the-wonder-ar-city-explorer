@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "Photo Tourism & Landmark AR Explorer",
+  "short_name": "CityLens AR",
+  "description": "AI-powered city tourism app that recognizes landmarks, provides interactive AR tours, and persists historical journals and narrated guides for offline access.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#06b6d4",
+  "categories": ["travel", "education", "navigation"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

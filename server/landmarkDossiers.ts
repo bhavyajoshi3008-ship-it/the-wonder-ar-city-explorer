@@ -1,3 +1,5 @@
+import { RELIGIOUS_STRUCTURE_DOSSIERS, RELIGIOUS_ALIASES } from "./religiousStructuresKnowledge";
+
 export interface FallbackLandmarkData {
   name: string;
   localName: string;
@@ -388,39 +390,60 @@ export const KNOWN_LANDMARK_DOSSIERS: Record<string, FallbackLandmarkData> = {
  * Finds the most relevant dossier based on any landmark name, city, or query.
  * Returns null if no match is found (unless fallbackToDefault is true).
  */
+/**
+ * Normalized lookup that finds a dossier ONLY if the landmark name genuinely matches.
+ * Strictly prevents false matches on generic words (like "tower", "temple", "bridge")
+ * or broad city/country names, ensuring user pictures are never replaced with wrong landmarks.
+ */
 export function findLandmarkDossier(query?: string): FallbackLandmarkData | null {
   if (!query) return null;
   const norm = query.toLowerCase().replace(/[^a-z0-9 ]/g, " ").trim();
   if (!norm) return null;
 
-  const keys = Object.keys(KNOWN_LANDMARK_DOSSIERS);
+  // Normalized key aliases
+  const canonicalAliases: Record<string, string> = {
+    "eiffel tower": "eiffel tower",
+    "tour eiffel": "eiffel tower",
+    "colosseum": "colosseum",
+    "colosseo": "colosseum",
+    "flavian amphitheatre": "colosseum",
+    "taj mahal": "taj mahal",
+    "statue of liberty": "statue of liberty",
+    "liberty enlightening the world": "statue of liberty",
+    "great pyramid of giza": "great pyramid of giza",
+    "pyramid of khufu": "great pyramid of giza",
+    "senso ji": "senso-ji temple",
+    "sensoji": "senso-ji temple",
+    "senso-ji temple": "senso-ji temple",
+    "sensoji temple": "senso-ji temple",
+    "sydney opera house": "sydney opera house",
+    "sydney opera": "sydney opera house",
+    "sagrada familia": "sagrada familia",
+    "basilica de la sagrada familia": "sagrada familia",
+    ...RELIGIOUS_ALIASES,
+  };
 
-  // 1. Exact or partial key match
-  for (const k of keys) {
-    if (norm === k || norm.includes(k) || (norm.length >= 4 && k.includes(norm))) {
-      return KNOWN_LANDMARK_DOSSIERS[k];
-    }
-  }
+  // Combined dossiers map
+  const allDossiers: Record<string, FallbackLandmarkData> = {
+    ...KNOWN_LANDMARK_DOSSIERS,
+    ...RELIGIOUS_STRUCTURE_DOSSIERS,
+  };
 
-  // 2. Word-level match
-  for (const k of keys) {
-    const words = k.split(" ").filter((w) => w.length > 3);
-    for (const w of words) {
-      if (norm.includes(w)) {
-        return KNOWN_LANDMARK_DOSSIERS[k];
+  // Direct alias check
+  for (const [alias, dossierKey] of Object.entries(canonicalAliases)) {
+    if (norm === alias || norm.startsWith(alias) || norm.includes(alias)) {
+      if (allDossiers[dossierKey]) {
+        return allDossiers[dossierKey];
       }
     }
   }
 
-  // 3. City/Country match
-  for (const k of keys) {
-    const d = KNOWN_LANDMARK_DOSSIERS[k];
-    if (
-      norm.includes(d.city.toLowerCase()) ||
-      norm.includes(d.country.toLowerCase()) ||
-      norm.includes(d.name.toLowerCase())
-    ) {
-      return d;
+  // Exact match against primary name or localName in all dossiers
+  for (const [key, dossier] of Object.entries(allDossiers)) {
+    const dName = dossier.name.toLowerCase();
+    const dLocal = (dossier.localName || "").toLowerCase();
+    if (norm === key || norm === dName || (dLocal && norm === dLocal)) {
+      return dossier;
     }
   }
 
@@ -428,14 +451,10 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
 }
 
 /**
- * Legacy wrapper: gets landmark dossier, defaulting to Eiffel Tower only when explicitly queried or when fallback is desired.
+ * Gets landmark dossier only if an authentic match exists; otherwise returns null
+ * so callers can dynamically generate landmark-specific context without forcing wrong monuments.
  */
-export function getLandmarkDossier(query?: string, fallbackToDefault = true): FallbackLandmarkData {
-  const match = findLandmarkDossier(query);
-  if (match) return match;
-  if (!fallbackToDefault) {
-    throw new Error(`No architectural dossier available for "${query}"`);
-  }
-  return KNOWN_LANDMARK_DOSSIERS["eiffel tower"];
+export function getLandmarkDossier(query?: string): FallbackLandmarkData | null {
+  return findLandmarkDossier(query);
 }
 

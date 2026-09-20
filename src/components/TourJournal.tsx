@@ -13,6 +13,8 @@ import {
   HardDrive,
   RefreshCw,
   Tag,
+  Volume2,
+  WifiOff,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { ScannedLandmarkEntry } from "../types";
@@ -29,6 +31,7 @@ interface TourJournalProps {
   user?: FirebaseUser | null;
   syncingEntryIds?: string[];
   isGlobalSyncing?: boolean;
+  isOnline?: boolean;
 }
 
 export const TourJournal: React.FC<TourJournalProps> = ({
@@ -41,6 +44,7 @@ export const TourJournal: React.FC<TourJournalProps> = ({
   user,
   syncingEntryIds = [],
   isGlobalSyncing = false,
+  isOnline = true,
 }) => {
   if (!isOpen) return null;
 
@@ -121,8 +125,21 @@ export const TourJournal: React.FC<TourJournalProps> = ({
           </div>
         </div>
 
-        {/* Sync Status Banner if user is not signed in */}
-        {!user && (
+        {/* Offline Mode Active Banner */}
+        {!isOnline && (
+          <div className="bg-gradient-to-r from-amber-950/60 via-orange-950/40 to-slate-950 px-4 py-2 border-b border-amber-500/30 flex items-center justify-between text-xs text-amber-200">
+            <div className="flex items-center space-x-2">
+              <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Offline Mode Active • Saved landmark journals & narration audio are stored locally for immediate access.</span>
+            </div>
+            <span className="hidden sm:inline-flex text-[10px] font-mono px-2 py-0.5 rounded bg-amber-900/60 border border-amber-500/40 text-amber-300 shrink-0">
+              Offline Storage
+            </span>
+          </div>
+        )}
+
+        {/* Sync Status Banner if user is not signed in and is online */}
+        {!user && isOnline && (
           <div className="bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-slate-950 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2 text-slate-300">
               <Cloud className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -253,8 +270,8 @@ export const TourJournal: React.FC<TourJournalProps> = ({
                       {entry.recognition.summary}
                     </p>
 
-                    {/* Stamped Travel Sticker Badge */}
-                    <div className="mt-2 flex items-center gap-1.5">
+                    {/* Stamped Travel Sticker & Offline Audio Badges */}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {(() => {
                         // Deterministically assign a stylish travel sticker based on entry id
                         const hash = entry.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -269,6 +286,25 @@ export const TourJournal: React.FC<TourJournalProps> = ({
                           </span>
                         );
                       })()}
+
+                      {/* Offline Audio Available Badge */}
+                      {entry.narration?.audioBase64 ? (
+                        <span
+                          className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-[9px] font-mono"
+                          title="Audio narration asset persisted locally in IndexedDB"
+                        >
+                          <Volume2 className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                          <span>Audio Cached</span>
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-full bg-slate-800/60 border border-slate-700/30 text-slate-400 text-[9px] font-mono"
+                          title="History & AR markers available offline"
+                        >
+                          <HardDrive className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                          <span>Offline Ready</span>
+                        </span>
+                      )}
                     </div>
                   </div>
 

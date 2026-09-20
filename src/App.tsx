@@ -20,6 +20,7 @@ import {
   Loader2,
   Flame,
   Globe,
+  WifiOff,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "motion/react";
@@ -30,7 +31,7 @@ import {
   ScannedLandmarkEntry,
   AppViewMode,
 } from "./types";
-import { recognizeLandmark, fetchLandmarkHistory, generateNarration } from "./services/api";
+import { recognizeLandmark, fetchLandmarkHistory, generateNarration, translateText } from "./services/api";
 import { CameraCapture } from "./components/CameraCapture";
 import { ARNarratedClip } from "./components/ARNarratedClip";
 import { HistoryGroundingPanel } from "./components/HistoryGroundingPanel";
@@ -41,6 +42,15 @@ import { AuthBar } from "./components/AuthBar";
 import { TravelStampsBackground } from "./components/TravelStampsBackground";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { useLanguage } from "./context/LanguageContext";
+import { useOnlineStatus } from "./hooks/useOnlineStatus";
+import {
+  saveOfflineJournalEntry,
+  getAllOfflineJournalEntries,
+  deleteOfflineJournalEntry,
+  clearAllOfflineJournalEntries,
+  getOfflineNarrationAsset,
+} from "./services/offlineStorage";
+import { cacheNarrationInServiceWorker } from "./services/serviceWorkerRegistration";
 import { SampleLandmark } from "./data/sampleLandmarks";
 import {
   auth,
@@ -56,9 +66,11 @@ const LOCAL_STORAGE_KEY = "citylens_ar_journal_v1";
 
 export default function App() {
   const { currentLanguage, t } = useLanguage();
+  const { isOnline } = useOnlineStatus();
   const [viewMode, setViewMode] = useState<AppViewMode>("capture");
   const [activeTab, setActiveTab] = useState<"ar_tour" | "map" | "history">("ar_tour");
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
+  const [activePreset, setActivePreset] = useState<SampleLandmark | undefined>(undefined);
   const [recognition, setRecognition] = useState<LandmarkRecognition | null>(null);
   const [history, setHistory] = useState<LandmarkHistory | null>(null);
   const [narration, setNarration] = useState<NarrationAudio | null>(null);
@@ -76,16 +88,40 @@ export default function App() {
   const [showJournal, setShowJournal] = useState<boolean>(false);
   const [syncingIds, setSyncingIds] = useState<string[]>([]);
 
-  // Load journal from localStorage on mount
+  // Load journal from IndexedDB on mount with localStorage fallback
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        setJournalEntries(JSON.parse(saved));
+    let isMounted = true;
+    async function loadOfflineJournal() {
+      try {
+        const offlineEntries = await getAllOfflineJournalEntries();
+        if (isMounted && offlineEntries && offlineEntries.length > 0) {
+          setJournalEntries(offlineEntries);
+          return;
+        }
+      } catch (err) {
+        console.warn("IndexedDB initial load notice:", err);
       }
-    } catch (e) {
-      console.warn("Failed to load journal from localStorage:", e);
+
+      // Fallback to localStorage if IndexedDB is empty
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved && isMounted) {
+          const parsed: ScannedLandmarkEntry[] = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setJournalEntries(parsed);
+            // Migrate to IndexedDB for offline durability
+            parsed.forEach((item) => saveOfflineJournalEntry(item));
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to load journal from localStorage:", e);
+      }
     }
+
+    loadOfflineJournal();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Firebase Auth State Listener & Local-to-Cloud Sync
@@ -130,6 +166,10 @@ export default function App() {
       (firestoreScans) => {
         if (firestoreScans) {
           setJournalEntries(firestoreScans);
+          // Also persist new Firestore scans into local IndexedDB for offline availability
+          firestoreScans.forEach((scan) => {
+            saveOfflineJournalEntry(scan);
+          });
           try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(firestoreScans.slice(0, 25)));
           } catch {}
@@ -145,13 +185,35 @@ export default function App() {
 
   const saveJournal = async (entries: ScannedLandmarkEntry[], latestEntry?: ScannedLandmarkEntry) => {
     setJournalEntries(entries);
+
+    // 1. High-capacity IndexedDB local persistence (stores full photos + audio narration assets)
+    if (latestEntry) {
+      await saveOfflineJournalEntry(latestEntry);
+      if (latestEntry.narration?.audioBase64) {
+        cacheNarrationInServiceWorker(latestEntry.id, latestEntry.narration.audioBase64);
+      }
+    }
+
+    // 2. Keep localStorage updated with lightweight metadata (stripped of heavy base64 audio to avoid quota limits)
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries.slice(0, 25)));
+      const lightweightEntries = entries.slice(0, 25).map((e) => ({
+        ...e,
+        narration: e.narration
+          ? {
+              voiceName: e.narration.voiceName,
+              durationEstimateSec: e.narration.durationEstimateSec,
+              sampleRate: e.narration.sampleRate,
+              modelUsed: e.narration.modelUsed,
+              audioBase64: "", // safely persisted in IndexedDB
+            }
+          : undefined,
+      }));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(lightweightEntries));
     } catch (e) {
       console.warn("Failed to persist journal locally:", e);
     }
 
-    // Persist to Cloud Firestore if signed in
+    // 3. Persist to Cloud Firestore if signed in
     if (user && latestEntry) {
       setSyncingIds((prev) => (prev.includes(latestEntry.id) ? prev : [...prev, latestEntry.id]));
       try {
@@ -159,7 +221,6 @@ export default function App() {
       } catch (err) {
         console.warn("Failed to persist scan to Firestore:", err);
       } finally {
-        // Keep syncing state visible for a gentle period (600ms) to provide clear feedback
         setTimeout(() => {
           setSyncingIds((prev) => prev.filter((id) => id !== latestEntry.id));
         }, 600);
@@ -167,34 +228,33 @@ export default function App() {
     }
   };
 
-  const handlePhotoSelected = async (imageDataUrl: string, samplePreset?: SampleLandmark) => {
+  const handlePhotoSelected = async (imageDataUrl: string, samplePreset?: SampleLandmark, fileNameHint?: string) => {
     setActivePhoto(imageDataUrl);
+    if (samplePreset !== undefined) {
+      setActivePreset(samplePreset);
+    }
+    const currentPreset = samplePreset !== undefined ? samplePreset : activePreset;
+    const effectiveHint = currentPreset?.name || fileNameHint;
     setAnalysisError(null);
+
+    // Check if device is offline before initiating Gemini API call
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setAnalysisError(
+        "You are currently offline. Connect to the internet to scan new landmarks with AI, or browse your saved landmark journals and audio guides offline."
+      );
+      setAnalysisStage("error");
+      return;
+    }
+
     setAnalysisStage("recognizing");
 
     try {
       // Step 1: AI Recognizes the landmark using Gemini Vision
-      const recResult = await recognizeLandmark(imageDataUrl, samplePreset?.name);
-
-      // Check if image is an actual landmark vs human / animal / other subject
-      if (recResult.isLandmark === false) {
-        const categoryLabels: Record<string, string> = {
-          person: "a person or portrait",
-          animal: "an animal or pet",
-          nature: "a natural landscape without a landmark",
-          food: "food or beverage",
-          object: "an everyday object",
-          indoor: "an indoor interior",
-          other: "a non-landmark subject",
-        };
-        const categoryDesc = categoryLabels[recResult.detectedCategory || "other"] || "a non-landmark subject";
-        const reason = recResult.notLandmarkReason || `This photo looks like ${categoryDesc} rather than a recognized city landmark.`;
-        throw new Error(`${reason} Please point your camera at a historic monument, civic building, cathedral, bridge, or famous landmark.`);
-      }
+      const recResult = await recognizeLandmark(imageDataUrl, effectiveHint);
 
       setRecognition(recResult);
 
-      // Step 2: Fetches history via Google Search Grounding with Gemini 3.8 Flash
+      // Step 2: Fetches history via Google Search Grounding with Gemini 3.8 Flash & Photo Grounding
       setAnalysisStage("grounding");
       let histResult: LandmarkHistory;
       try {
@@ -203,49 +263,110 @@ export default function App() {
           city: recResult.city,
           country: recResult.country,
           architecturalStyle: recResult.architecturalStyle,
+          periodEra: recResult.periodEra,
+          summary: recResult.summary,
+          photoAnalysis: recResult.photoAnalysis,
+          arKeypoints: recResult.arKeypoints,
+          isLandmark: recResult.isLandmark,
+          detectedCategory: recResult.detectedCategory,
+          notLandmarkReason: recResult.notLandmarkReason,
         });
       } catch (histErr) {
-        console.warn("History fetch issue, generating fallback history for landmark:", histErr);
-        histResult = {
-          historicalTimeline: [
-            {
-              yearOrEra: recResult.periodEra || "Historic Era",
-              event: "Monument Construction",
-              description: `Conceived and built in the ${recResult.architecturalStyle} architectural style.`
-            },
-            {
-              yearOrEra: "Modern Era",
-              event: "World Heritage & Cultural Icon",
-              description: `Recognized as a premier cultural wonder of ${recResult.city}, attracting visitors worldwide.`
+        console.warn("History fetch notice, generating bespoke photo-grounded history:", histErr);
+        const photoFeatures = recResult.photoAnalysis?.prominentVisualFeatures || [];
+        const featureHighlight = photoFeatures.length > 0 ? photoFeatures.join(", ") : recResult.arKeypoints.map((k) => k.label).join(", ");
+        const vantage = recResult.photoAnalysis?.perspectiveAndAngle || "framing view";
+        const materials = recResult.photoAnalysis?.visibleMaterialsAndTextures || "authentic textures";
+        const isPerson = recResult.detectedCategory === "person" || recResult.isLandmark === false;
+
+        histResult = isPerson
+          ? {
+              historicalTimeline: [
+                {
+                  yearOrEra: recResult.periodEra && recResult.periodEra !== "N/A" ? recResult.periodEra : "Career Milestone",
+                  event: "Emergence & Public Distinction",
+                  description: `${recResult.name} rose to prominence through signature achievements, dedication, and iconic public presence.`
+                },
+                {
+                  yearOrEra: "Career Highlights",
+                  event: "Signature Accolades & Leadership",
+                  description: `Recognized for high-impact performances, clutch leadership, and unforgettable career moments celebrated worldwide.`
+                },
+                {
+                  yearOrEra: "Modern Legacy",
+                  event: "Enduring Cultural Impact",
+                  description: `A celebrated figure inspiring fans and peers across global sports and contemporary culture.`
+                }
+              ],
+              architecturalSecrets: [
+                `Observable features highlighted in this capture: ${featureHighlight}.`,
+                `Framed from a ${vantage}, accentuating authentic character and presence.`,
+                `Renowned for high-stakes resilience and charisma.`
+              ],
+              culturalSignificance: recResult.summary || `${recResult.name} holds a celebrated place in modern culture and athletics.`,
+              visitorTips: [
+                "Tap on the AR keypoint pins on your photo to inspect specific visual details.",
+                "Listen to the synchronized narration audio highlighting career and visual elements.",
+                "Tap the World Monuments buttons if you wish to tour famous architectural wonders."
+              ],
+              photoGroundedNotes: `Captured from a ${vantage}, highlighting ${featureHighlight}.`,
+              narrationScript: `Welcome to this special visual feature on ${recResult.name}. Looking closely at this photograph captured from a ${vantage}, we can see ${featureHighlight}. Celebrated as one of the most compelling figures in modern culture, their career is defined by determination, clutch moments, and leadership. Let's explore the visual details and story behind this capture.`,
+              chapters: recResult.arKeypoints.slice(0, 4).map((kp, idx) => ({
+                id: `chap-${idx + 1}`,
+                title: kp.label,
+                timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
+                script: kp.description,
+                focusPointId: kp.id
+              })),
+              groundingQueries: [`${recResult.name} biography`, `${recResult.name} career milestones`],
+              groundingSources: [
+                {
+                  title: `${recResult.name} — Profile & Milestones`,
+                  url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name)}`
+                }
+              ]
             }
-          ],
-          architecturalSecrets: [
-            `Distinguished by classic ${recResult.architecturalStyle} geometry and structural proportions.`,
-            `Key highlighted features include: ${recResult.arKeypoints.map((k) => k.label).join(", ")}.`,
-            `Architecturally engineered to dominate the urban skyline of ${recResult.city}.`
-          ],
-          culturalSignificance: recResult.summary || "A monumental landmark steeped in cultural and architectural identity.",
-          visitorTips: [
-            "Best visited early morning or at golden hour for striking architectural illumination.",
-            "Tap on AR keypoint pins on the photo to examine intricate architectural facets.",
-            "Use the Google Maps tab below for real-time walking directions and 360° Street View."
-          ],
-          narrationScript: `Welcome to ${recResult.name} in ${recResult.city}, ${recResult.country}. Standing before this iconic ${recResult.architecturalStyle} masterpiece, you can explore each distinctive architectural detail, from its signature facade to its soaring height. Let's delve into its history and spatial design!`,
-          chapters: recResult.arKeypoints.slice(0, 4).map((kp, idx) => ({
-            id: `chap-${idx + 1}`,
-            title: kp.label,
-            timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
-            script: kp.description,
-            focusPointId: kp.id
-          })),
-          groundingQueries: [`${recResult.name} ${recResult.city} architecture history`, `${recResult.name} visitor guide`],
-          groundingSources: [
-            {
-              title: `${recResult.name} - Official Architectural Dossier`,
-              url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name + " " + recResult.city)}`
-            }
-          ]
-        };
+          : {
+              historicalTimeline: [
+                {
+                  yearOrEra: recResult.periodEra || "Historic Era",
+                  event: "Monument Construction",
+                  description: `Conceived and built in the ${recResult.architecturalStyle} architectural style, featuring ${materials}.`
+                },
+                {
+                  yearOrEra: "Modern Era",
+                  event: "World Heritage & Cultural Icon",
+                  description: `Recognized as a premier cultural wonder of ${recResult.city}, attracting visitors and architectural historians worldwide.`
+                }
+              ],
+              architecturalSecrets: [
+                `Distinguished by classic ${recResult.architecturalStyle} geometry and structural proportions.`,
+                `Key visual features spotted in your photograph: ${featureHighlight}.`,
+                `Architecturally engineered to harmonize with the urban landscape of ${recResult.city}.`
+              ],
+              culturalSignificance: recResult.summary || "A monumental landmark steeped in cultural and architectural identity.",
+              visitorTips: [
+                "Best visited early morning or at golden hour for striking architectural illumination.",
+                "Tap on AR keypoint pins directly on your photo to examine intricate architectural facets.",
+                "Use the Google Maps tab below for real-time walking directions and 360° Street View."
+              ],
+              photoGroundedNotes: `Captured from a ${vantage}, highlighting ${featureHighlight}.`,
+              narrationScript: `Welcome to ${recResult.name} in ${recResult.city}, ${recResult.country}. Standing before this remarkable ${recResult.architecturalStyle} monument, captured here from a ${vantage}, let's examine its handcrafted masonry and structural details. Notice ${featureHighlight}, showcasing centuries of human ingenuity and cultural pride.`,
+              chapters: recResult.arKeypoints.slice(0, 4).map((kp, idx) => ({
+                id: `chap-${idx + 1}`,
+                title: kp.label,
+                timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
+                script: kp.description,
+                focusPointId: kp.id
+              })),
+              groundingQueries: [`${recResult.name} ${recResult.city} architecture history`, `${recResult.name} visitor guide`],
+              groundingSources: [
+                {
+                  title: `${recResult.name} - Architectural Heritage Dossier`,
+                  url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name + " " + recResult.city)}`
+                }
+              ]
+            };
       }
       setHistory(histResult);
 
@@ -253,7 +374,14 @@ export default function App() {
       setAnalysisStage("synthesizing");
       let audioResult: NarrationAudio | null = null;
       try {
-        audioResult = await generateNarration(histResult.narrationScript, "Kore");
+        let scriptForAudio = histResult.narrationScript;
+        if (currentLanguage.code !== "en") {
+          const trans = await translateText(histResult.narrationScript, currentLanguage.code, currentLanguage.name);
+          if (trans?.translatedText) {
+            scriptForAudio = trans.translatedText;
+          }
+        }
+        audioResult = await generateNarration(scriptForAudio, "Kore", currentLanguage.name);
         setNarration(audioResult);
       } catch (ttsErr: any) {
         console.warn("TTS synthesis notice (browser speech synthesis will be used):", ttsErr);
@@ -285,17 +413,18 @@ export default function App() {
       setViewMode("ar_tour");
       setActiveTab("ar_tour");
     } catch (err: any) {
-      console.error("Landmark analysis workflow failed:", err);
-      setAnalysisError(err?.message || "Failed to analyze landmark");
+      console.warn("Landmark analysis notice:", err?.message || err);
+      setAnalysisError(err?.message || "Failed to complete visual analysis. Please try again.");
       setAnalysisStage("error");
     }
   };
 
-  const handleRegenerateVoice = async (voiceName: string) => {
+  const handleRegenerateVoice = async (voiceName: string, customScript?: string) => {
     if (!history?.narrationScript) return;
     setIsRegeneratingVoice(true);
     try {
-      const result = await generateNarration(history.narrationScript, voiceName);
+      const scriptToNarrate = customScript || history.narrationScript;
+      const result = await generateNarration(scriptToNarrate, voiceName, currentLanguage.name);
       setNarration(result);
     } catch (err) {
       console.error("Failed to switch tour guide voice:", err);
@@ -304,11 +433,27 @@ export default function App() {
     }
   };
 
-  const handleSelectJournalEntry = (entry: ScannedLandmarkEntry) => {
+  const handleSelectJournalEntry = async (entry: ScannedLandmarkEntry) => {
     setActivePhoto(entry.imageDataUrl);
     setRecognition(entry.recognition);
     setHistory(entry.history);
-    setNarration(entry.narration || null);
+
+    // Rehydrate narration audio from offline storage if audioBase64 was stripped from memory
+    if (!entry.narration?.audioBase64) {
+      try {
+        const cachedNarration = await getOfflineNarrationAsset(entry.id);
+        if (cachedNarration?.audioBase64) {
+          setNarration(cachedNarration);
+        } else {
+          setNarration(entry.narration || null);
+        }
+      } catch {
+        setNarration(entry.narration || null);
+      }
+    } else {
+      setNarration(entry.narration || null);
+    }
+
     setViewMode("ar_tour");
   };
 
@@ -318,6 +463,7 @@ export default function App() {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated.slice(0, 25)));
     } catch {}
+    await deleteOfflineJournalEntry(scanId);
 
     if (user) {
       try {
@@ -330,7 +476,12 @@ export default function App() {
 
   const handleClearJournal = async () => {
     const entriesToDelete = [...journalEntries];
-    saveJournal([]);
+    setJournalEntries([]);
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+    } catch {}
+    await clearAllOfflineJournalEntries();
+
     if (user) {
       for (const entry of entriesToDelete) {
         try {
@@ -341,6 +492,9 @@ export default function App() {
   };
 
   const resetToCapture = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
     setViewMode("capture");
     setAnalysisStage("idle");
     setAnalysisError(null);
@@ -445,6 +599,31 @@ export default function App() {
         </div>
       </header>
 
+      {/* Offline Status Notification Banner */}
+      {!isOnline && (
+        <div
+          id="offline-banner"
+          className="w-full bg-gradient-to-r from-amber-950/80 via-orange-950/60 to-slate-950 border-b border-amber-500/40 px-4 py-2 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-2 shadow-inner z-30"
+        >
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+            <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="font-medium">
+              Offline Mode Active — You can revisit all saved landmark tours, historical context, and narrated audio guides.
+            </span>
+          </div>
+          <button
+            type="button"
+            id="offline-open-journal-btn"
+            onClick={() => setShowJournal(true)}
+            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-medium transition cursor-pointer"
+          >
+            <HistoryIcon className="w-3 h-3" />
+            <span>Browse Saved Journals ({journalEntries.length})</span>
+          </button>
+        </div>
+      )}
+
       {/* Main App Content Viewport */}
       <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col items-center">
         {viewMode === "capture" && (
@@ -454,7 +633,7 @@ export default function App() {
                 {t("hero_title", "Explore Any City Landmark in Augmented Reality")}
               </h2>
               <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-                {t("hero_subtitle", "Take a photo or upload an image of any monument or building. Our multi-model AI recognizes the architecture, grounds its history via live Google Search, and renders an interactive AR-narrated clip with integrated Google Maps.")}
+                {t("hero_subtitle", "Take a photo or upload an image of any monument, building, temple, mosque, or religious structure of every religion in the world. Our multi-model AI recognizes the architecture, grounds its history via live Google Search, and renders an interactive AR-narrated clip with integrated Google Maps.")}
               </p>
             </div>
 
@@ -546,6 +725,7 @@ export default function App() {
                   narration={narration || undefined}
                   onRegenerateVoice={handleRegenerateVoice}
                   isRegeneratingVoice={isRegeneratingVoice}
+                  onSelectPreset={(preset) => handlePhotoSelected(preset.imageUrl, preset)}
                 />
               </section>
             )}
@@ -608,10 +788,10 @@ export default function App() {
       {/* Progress & Error Modal */}
       <AnalysisProgressModal
         currentStage={analysisStage}
-        landmarkName={recognition?.name}
+        landmarkName={recognition?.name || activePreset?.name}
         error={analysisError}
         onRetry={() => {
-          if (activePhoto) handlePhotoSelected(activePhoto);
+          if (activePhoto) handlePhotoSelected(activePhoto, activePreset);
         }}
         onCancel={() => {
           setAnalysisStage("idle");
@@ -630,6 +810,7 @@ export default function App() {
         user={user}
         syncingEntryIds={syncingIds}
         isGlobalSyncing={syncingIds.length > 0}
+        isOnline={isOnline}
       />
     </div>
   );

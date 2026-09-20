@@ -18,13 +18,21 @@ import {
   Check,
   ChevronRight,
   Info,
-  Tag
+  Tag,
+  Loader2,
+  Landmark,
+  Camera,
+  AlertCircle,
+  RefreshCw,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { LandmarkRecognition, LandmarkHistory, NarrationAudio, ARKeypoint, TourChapter } from "../types";
 import { TRAVEL_STICKERS, TravelSticker } from "../data/travelStickers";
+import { SAMPLE_LANDMARKS } from "../data/sampleLandmarks";
 import { useLanguage } from "../context/LanguageContext";
-import { translateText } from "../services/api";
+import { translateText, generateNarration, translateUIBatch } from "../services/api";
 import { Globe } from "lucide-react";
 
 interface ARNarratedClipProps {
@@ -32,8 +40,9 @@ interface ARNarratedClipProps {
   recognition: LandmarkRecognition;
   history: LandmarkHistory;
   narration?: NarrationAudio;
-  onRegenerateVoice?: (voiceName: string) => Promise<void>;
+  onRegenerateVoice?: (voiceName: string, customScript?: string) => Promise<void>;
   isRegeneratingVoice?: boolean;
+  onSelectPreset?: (preset: any) => void;
 }
 
 export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
@@ -43,6 +52,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   narration,
   onRegenerateVoice,
   isRegeneratingVoice = false,
+  onSelectPreset,
 }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const viewportContainerRef = useRef<HTMLDivElement | null>(null);
@@ -54,6 +64,55 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   const [playbackRate, setPlaybackRate] = useState<number>(1);
   const [selectedVoice, setSelectedVoice] = useState<string>(narration?.voiceName || "Kore");
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
+  const [audioPlaybackError, setAudioPlaybackError] = useState<boolean>(false);
+  const [completedChapters, setCompletedChapters] = useState<Set<number>>(new Set());
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
+
+  // Synchronized playback refs to prevent stale closures and concurrency races
+  const isPlayingRef = useRef<boolean>(false);
+  const activeChapterIndexRef = useRef<number>(0);
+  const currentTimeRef = useRef<number>(0);
+  const durationRef = useRef<number>(narration?.durationEstimateSec || 30);
+  const playbackRateRef = useRef<number>(1);
+  const isMutedRef = useRef<boolean>(false);
+  const autoAdvanceRef = useRef<boolean>(true);
+
+  // Speech synthesis queue and heartbeat refs
+  const sentencesQueueRef = useRef<string[]>([]);
+  const sentenceIndexRef = useRef<number>(0);
+  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const speechTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const keepAliveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const activePlaybackModeRef = useRef<"html5" | "speech" | "none">("none");
+
+  // Synchronize state values into refs
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  useEffect(() => {
+    activeChapterIndexRef.current = activeChapterIndex;
+  }, [activeChapterIndex]);
+
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
+  useEffect(() => {
+    playbackRateRef.current = playbackRate;
+  }, [playbackRate]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
+
+  useEffect(() => {
+    autoAdvanceRef.current = autoAdvance;
+  }, [autoAdvance]);
 
   // AR visual HUD toggles
   const [showPins, setShowPins] = useState<boolean>(true);
@@ -63,20 +122,146 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [activeSticker, setActiveSticker] = useState<TravelSticker | null>(() => TRAVEL_STICKERS[0]);
   const [showStickerPicker, setShowStickerPicker] = useState<boolean>(false);
-  const speechIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const translationCacheRef = useRef<Record<string, string>>({});
 
   // Multi-Language Tour Guide Support
   const { currentLanguage, t } = useLanguage();
   const [translatedScript, setTranslatedScript] = useState<string>("");
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
 
-  // Translate narration subtitles and speech whenever the selected language or chapter changes
+  // Dynamic Photo Architecture & Chapters Translation
+  const [translatedDynamic, setTranslatedDynamic] = useState<Record<string, string>>({});
+  const dynamicCacheRef = useRef<Record<string, Record<string, string>>>({});
+
+  // Active studio audio state for the current language & voice
+  const [activeNarration, setActiveNarration] = useState<NarrationAudio | null>(narration || null);
+  const [isGeneratingLanguageAudio, setIsGeneratingLanguageAudio] = useState<boolean>(false);
+  const languageAudioMapRef = useRef<Record<string, NarrationAudio>>({});
+
+  // Effect to translate dynamic photo intelligence, chapters, and landmark metadata into chosen language
+  useEffect(() => {
+    if (currentLanguage.code === "en") {
+      setTranslatedDynamic({});
+      return;
+    }
+
+    const cacheKey = `${currentLanguage.code}:${recognition.landmarkName || "landmark"}`;
+    if (dynamicCacheRef.current[cacheKey]) {
+      setTranslatedDynamic(dynamicCacheRef.current[cacheKey]);
+      return;
+    }
+
+    const batchKeys: Record<string, string> = {};
+    if (history.photoGroundedNotes) {
+      batchKeys["photoGroundedNotes"] = history.photoGroundedNotes;
+    }
+    if (recognition.photoAnalysis?.perspectiveAndAngle) {
+      batchKeys["perspectiveAndAngle"] = recognition.photoAnalysis.perspectiveAndAngle;
+    }
+    if (recognition.photoAnalysis?.lightingAndAtmosphere) {
+      batchKeys["lightingAndAtmosphere"] = recognition.photoAnalysis.lightingAndAtmosphere;
+    }
+    if (recognition.photoAnalysis?.visibleMaterialsAndTextures) {
+      batchKeys["visibleMaterialsAndTextures"] = recognition.photoAnalysis.visibleMaterialsAndTextures;
+    }
+    if (recognition.photoAnalysis?.structuralCondition) {
+      batchKeys["structuralCondition"] = recognition.photoAnalysis.structuralCondition;
+    }
+    if (recognition.architecturalStyle) {
+      batchKeys["architecturalStyle"] = recognition.architecturalStyle;
+    }
+    if (recognition.periodEra) {
+      batchKeys["periodEra"] = recognition.periodEra;
+    }
+    history.chapters?.forEach((chap, idx) => {
+      if (chap.title) {
+        batchKeys[`chapter_${idx}_title`] = chap.title;
+      }
+      if (chap.script) {
+        batchKeys[`chapter_${idx}_script`] = chap.script;
+      }
+    });
+    if (history.narrationScript) {
+      batchKeys["narrationScript"] = history.narrationScript;
+    }
+    recognition.photoAnalysis?.prominentVisualFeatures?.forEach((feat, idx) => {
+      batchKeys[`feat_${idx}`] = feat;
+    });
+    recognition.arKeypoints?.forEach((kp) => {
+      if (kp.label) {
+        batchKeys[`kp_${kp.id}`] = kp.label;
+      }
+    });
+
+    if (Object.keys(batchKeys).length === 0) return;
+
+    let isMounted = true;
+    translateUIBatch(batchKeys, currentLanguage.code, currentLanguage.name)
+      .then((res) => {
+        if (isMounted && res && Object.keys(res).length > 0) {
+          dynamicCacheRef.current[cacheKey] = res;
+          setTranslatedDynamic(res);
+        }
+      })
+      .catch((err) => {
+        console.warn("Dynamic data translation notice:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    currentLanguage.code,
+    currentLanguage.name,
+    recognition.landmarkName,
+    recognition.architecturalStyle,
+    recognition.periodEra,
+    recognition.photoAnalysis,
+    recognition.arKeypoints,
+    history.photoGroundedNotes,
+    history.chapters,
+  ]);
+
+  // Synchronize incoming narration prop
+  useEffect(() => {
+    if (narration) {
+      const voiceKey = narration.voiceName || selectedVoice;
+      if (narration.audioBase64) {
+        languageAudioMapRef.current[`${currentLanguage.code}_${voiceKey}`] = narration;
+        if (currentLanguage.code === "en") {
+          languageAudioMapRef.current[`en_${voiceKey}`] = narration;
+        }
+      }
+      setActiveNarration(narration);
+      if (narration.voiceName) {
+        setSelectedVoice(narration.voiceName);
+      }
+    }
+    setAudioPlaybackError(false);
+  }, [narration]);
+
+  // Translate narration subtitles and speech whenever the selected language or chapter changes (with caching)
   useEffect(() => {
     const rawText = history.chapters?.[activeChapterIndex]?.script || history.narrationScript;
     if (!rawText) return;
 
     if (currentLanguage.code === "en") {
       setTranslatedScript(rawText);
+      setIsTranslating(false);
+      return;
+    }
+
+    const dynScript = translatedDynamic[`chapter_${activeChapterIndex}_script`];
+    if (dynScript) {
+      setTranslatedScript(dynScript);
+      setIsTranslating(false);
+      return;
+    }
+
+    const cacheKey = `${currentLanguage.code}:chap_${activeChapterIndex}:${rawText.slice(0, 50)}`;
+    if (translationCacheRef.current[cacheKey]) {
+      setTranslatedScript(translationCacheRef.current[cacheKey]);
+      setIsTranslating(false);
       return;
     }
 
@@ -85,6 +270,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     translateText(rawText, currentLanguage.code, currentLanguage.name)
       .then((res) => {
         if (isMounted && res?.translatedText) {
+          translationCacheRef.current[cacheKey] = res.translatedText;
           setTranslatedScript(res.translatedText);
         }
       })
@@ -98,174 +284,446 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [currentLanguage.code, currentLanguage.name, activeChapterIndex, history]);
+  }, [currentLanguage.code, currentLanguage.name, activeChapterIndex, history.chapters, history.narrationScript, translatedDynamic]);
 
-  // Stop any active speech on unmount
+  // Helper to reliably get the script of any chapter in current language
+  const getActiveChapterScript = (index: number): string => {
+    const raw = history.chapters?.[index]?.script || history.narrationScript || "";
+    if (currentLanguage.code === "en") return raw;
+    return (
+      translatedDynamic[`chapter_${index}_script`] ||
+      translationCacheRef.current[`${currentLanguage.code}:chap_${index}:${raw.slice(0, 50)}`] ||
+      (index === activeChapterIndex && translatedScript ? translatedScript : raw)
+    );
+  };
+
+  // Generate or retrieve Studio Audio for English chapter 0
   useEffect(() => {
-    return () => {
-      if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
+    const rawChapterText = history.chapters?.[activeChapterIndex]?.script || history.narrationScript;
+    if (!rawChapterText) return;
 
-  // Audio setup and sync
-  useEffect(() => {
-    if (audioRef.current && narration?.audioBase64) {
-      audioRef.current.src = narration.audioBase64;
-      audioRef.current.playbackRate = playbackRate;
-      // Auto-play when ready
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => setIsPlaying(true))
-          .catch((e) => {
-            console.log("Audio autoplay prevented by browser:", e);
-            setIsPlaying(false);
-          });
-      }
-    } else if (narration?.useClientFallback || !narration?.audioBase64) {
-      // Set duration estimate for speech synthesis
-      setDuration(narration?.durationEstimateSec || 30);
-    }
-  }, [narration?.audioBase64, narration?.useClientFallback]);
-
-  const togglePlay = () => {
-    // If a non-English language is active, use client SpeechSynthesis to speak in that language
-    const isNonEnglish = currentLanguage.code !== "en";
-
-    // If standard English audio is available and user is viewing English
-    if (!isNonEnglish && narration?.audioBase64 && audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
+    const cacheKey = `${currentLanguage.code}_chap_${activeChapterIndex}_${selectedVoice}`;
+    if (languageAudioMapRef.current[cacheKey]) {
+      setActiveNarration(languageAudioMapRef.current[cacheKey]);
       return;
     }
 
-    // SpeechSynthesis playback in user's selected language
+    if (currentLanguage.code === "en" && activeChapterIndex === 0 && narration?.audioBase64) {
+      setActiveNarration(narration);
+      return;
+    }
+
+    // For non-English, wait until translatedScript is ready
+    if (currentLanguage.code !== "en" && (!translatedScript || isTranslating)) {
+      return;
+    }
+
+    let isMounted = true;
+    setIsGeneratingLanguageAudio(true);
+
+    const scriptToNarrate = currentLanguage.code === "en" ? rawChapterText : (translatedScript || rawChapterText);
+
+    generateNarration(scriptToNarrate, selectedVoice, currentLanguage.name)
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.audioBase64) {
+          languageAudioMapRef.current[cacheKey] = res;
+          setActiveNarration(res);
+          setAudioPlaybackError(false);
+        } else {
+          setActiveNarration(res);
+        }
+      })
+      .catch((err) => {
+        console.warn(`Audio generation notice for ${currentLanguage.name} ch ${activeChapterIndex}:`, err);
+      })
+      .finally(() => {
+        if (isMounted) setIsGeneratingLanguageAudio(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    currentLanguage.code,
+    currentLanguage.name,
+    activeChapterIndex,
+    translatedScript,
+    isTranslating,
+    selectedVoice,
+    history.chapters,
+    history.narrationScript,
+    narration,
+  ]);
+
+  // Clean stop for all playback engines (HTML5 audio & Web Speech API)
+  const stopAllPlayback = () => {
+    activePlaybackModeRef.current = "none";
+    if (speechTimerRef.current) {
+      clearInterval(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
+    if (keepAliveTimerRef.current) {
+      clearInterval(keepAliveTimerRef.current);
+      keepAliveTimerRef.current = null;
+    }
+    sentencesQueueRef.current = [];
+    sentenceIndexRef.current = 0;
+    activeUtteranceRef.current = null;
+    (window as any).__activeTourUtterance = null;
+
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      if (isPlaying) {
-        window.speechSynthesis.cancel();
-        if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
-        setIsPlaying(false);
-      } else {
-        window.speechSynthesis.cancel();
-        // Pause any HTML5 English audio if playing
-        if (audioRef.current) audioRef.current.pause();
-
-        const textToSpeak = translatedScript || history.chapters?.[activeChapterIndex]?.script || history.narrationScript;
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.rate = playbackRate;
-        utterance.lang = currentLanguage.code;
-
-        utterance.onend = () => {
-          setIsPlaying(false);
-          if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
-        };
-
-        window.speechSynthesis.speak(utterance);
-        setIsPlaying(true);
-
-        const estDur = duration || 30;
-        const startTime = Date.now() - (currentTime * 1000);
-        if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
-        speechIntervalRef.current = setInterval(() => {
-          const elapsed = (Date.now() - startTime) / 1000;
-          if (elapsed >= estDur) {
-            setCurrentTime(estDur);
-            setIsPlaying(false);
-            if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
-          } else {
-            setCurrentTime(elapsed);
-          }
-        }, 200);
-      }
+      window.speechSynthesis.cancel();
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
   };
 
-  const handleTimeUpdate = () => {
-    if (!audioRef.current) return;
+  // Stop playback when language changes to prevent narration collision
+  useEffect(() => {
+    stopAllPlayback();
+    setIsPlaying(false);
+    isPlayingRef.current = false;
+    setCurrentTime(0);
+    currentTimeRef.current = 0;
+  }, [currentLanguage.code]);
+
+  // Stop any active speech and audio on unmount
+  useEffect(() => {
+    return () => {
+      stopAllPlayback();
+    };
+  }, []);
+
+  // Naturally called when a chapter is 100% finished
+  const onChapterNaturallyFinished = () => {
+    if (!isPlayingRef.current) return;
+    if (currentTimeRef.current < 4) return; // Guard against instantaneous false triggers
+
+    if (speechTimerRef.current) {
+      clearInterval(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
+    if (keepAliveTimerRef.current) {
+      clearInterval(keepAliveTimerRef.current);
+      keepAliveTimerRef.current = null;
+    }
+
+    const currentIdx = activeChapterIndexRef.current;
+    const totalChapters = history.chapters?.length || 1;
+
+    // Mark current chapter complete
+    setCompletedChapters((prev) => {
+      const updated = new Set(prev);
+      updated.add(currentIdx);
+      return updated;
+    });
+
+    if (autoAdvanceRef.current && currentIdx < totalChapters - 1) {
+      const nextIdx = currentIdx + 1;
+      // 500ms audio transition pause between chapters
+      setTimeout(() => {
+        if (isPlayingRef.current) {
+          playChapter(nextIdx);
+        }
+      }, 500);
+    } else {
+      // Completed entire tour or auto-advance off
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+      setCurrentTime(durationRef.current);
+      activePlaybackModeRef.current = "none";
+    }
+  };
+
+  // Sequential sentence-by-sentence speaker for uninterrupted narration
+  const speakNextSentence = () => {
+    if (!isPlayingRef.current || activePlaybackModeRef.current !== "speech") return;
+    const sentences = sentencesQueueRef.current;
+    const idx = sentenceIndexRef.current;
+
+    if (idx >= sentences.length) {
+      onChapterNaturallyFinished();
+      return;
+    }
+
+    const sentenceText = sentences[idx];
+    if (!sentenceText.trim()) {
+      sentenceIndexRef.current = idx + 1;
+      speakNextSentence();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(sentenceText);
+    utterance.rate = playbackRateRef.current;
+    if (isMutedRef.current) {
+      utterance.volume = 0;
+    }
+
+    // BCP-47 regional pronunciation mapping
+    const langMap: Record<string, string> = {
+      gu: "gu-IN", hi: "hi-IN", bn: "bn-IN", mr: "mr-IN", ta: "ta-IN", te: "te-IN",
+      ur: "ur-PK", pa: "pa-IN", ar: "ar-SA", ja: "ja-JP", zh: "zh-CN", ko: "ko-KR",
+      ru: "ru-RU", es: "es-ES", fr: "fr-FR", de: "de-DE", it: "it-IT", pt: "pt-PT", en: "en-US",
+    };
+    const bcp47 = langMap[currentLanguage.code] || currentLanguage.code;
+    utterance.lang = bcp47;
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      const voices = window.speechSynthesis.getVoices();
+      const match = voices.find((v) => v.lang === bcp47 || v.lang.startsWith(currentLanguage.code));
+      if (match) utterance.voice = match;
+    }
+
+    utterance.onend = () => {
+      activeUtteranceRef.current = null;
+      (window as any).__activeTourUtterance = null;
+      sentenceIndexRef.current = idx + 1;
+      setTimeout(() => {
+        if (isPlayingRef.current && activePlaybackModeRef.current === "speech") {
+          speakNextSentence();
+        }
+      }, 150);
+    };
+
+    utterance.onerror = (e) => {
+      console.warn("Speech synthesis notice:", e);
+      activeUtteranceRef.current = null;
+      (window as any).__activeTourUtterance = null;
+      if (e.error !== "canceled" && e.error !== "interrupted") {
+        sentenceIndexRef.current = idx + 1;
+        speakNextSentence();
+      }
+    };
+
+    activeUtteranceRef.current = utterance;
+    (window as any).__activeTourUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startSentenceSpeech = (fullText: string, totalEstimatedSec: number) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+      return;
+    }
+
+    activePlaybackModeRef.current = "speech";
+    window.speechSynthesis.cancel();
+
+    // Natural sentence splitting preserving punctuation boundaries
+    const rawSentences = fullText
+      .replace(/([.?!;:\n])\s+/g, "$1|")
+      .split("|")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    const sentences = rawSentences.length > 0 ? rawSentences : [fullText];
+    sentencesQueueRef.current = sentences;
+    sentenceIndexRef.current = 0;
+
+    setIsPlaying(true);
+    isPlayingRef.current = true;
+
+    const startTime = Date.now();
+    if (speechTimerRef.current) clearInterval(speechTimerRef.current);
+    speechTimerRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      if (elapsed >= totalEstimatedSec) {
+        setCurrentTime(totalEstimatedSec);
+        currentTimeRef.current = totalEstimatedSec;
+      } else {
+        setCurrentTime(elapsed);
+        currentTimeRef.current = elapsed;
+      }
+    }, 250);
+
+    // Keep-alive heartbeat ensures Chromium doesn't pause speech
+    if (keepAliveTimerRef.current) clearInterval(keepAliveTimerRef.current);
+    keepAliveTimerRef.current = setInterval(() => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 8000);
+
+    speakNextSentence();
+  };
+
+  // Play designated chapter reliably
+  const playChapter = (chapIdx: number) => {
+    stopAllPlayback();
+    setActiveChapterIndex(chapIdx);
+    activeChapterIndexRef.current = chapIdx;
+    setCurrentTime(0);
+    currentTimeRef.current = 0;
+
+    // Focus AR reticle on matching keypoint
+    const focusId = history.chapters?.[chapIdx]?.focusPointId;
+    if (focusId) {
+      const matchPin = recognition.arKeypoints?.find((p) => p.id === focusId);
+      if (matchPin) setActivePin(matchPin);
+    }
+
+    const scriptText = getActiveChapterScript(chapIdx);
+    if (!scriptText) {
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+      return;
+    }
+
+    const words = scriptText.split(/\s+/).filter(Boolean).length;
+    const estSec = Math.max(12, Math.round(words / (2.4 * playbackRateRef.current)));
+    setDuration(estSec);
+    durationRef.current = estSec;
+
+    // HTML5 studio audio is only used for English Chapter 0 if base64 exists
+    const canUseStudioAudio =
+      currentLanguage.code === "en" &&
+      chapIdx === 0 &&
+      Boolean(narration?.audioBase64) &&
+      !narration?.useClientFallback &&
+      !audioPlaybackError;
+
+    if (canUseStudioAudio && audioRef.current) {
+      activePlaybackModeRef.current = "html5";
+      audioRef.current.src = narration!.audioBase64;
+      audioRef.current.playbackRate = playbackRateRef.current;
+      audioRef.current.muted = isMutedRef.current;
+      audioRef.current.currentTime = 0;
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          isPlayingRef.current = true;
+          setAudioPlaybackError(false);
+        })
+        .catch((err) => {
+          console.warn("Studio audio play failed, falling back to speech synthesis:", err);
+          setAudioPlaybackError(true);
+          startSentenceSpeech(scriptText, estSec);
+        });
+    } else {
+      startSentenceSpeech(scriptText, estSec);
+    }
+  };
+
+  // HTML5 audio event handlers
+  const handleAudioTimeUpdate = () => {
+    if (activePlaybackModeRef.current !== "html5" || !audioRef.current) return;
     const curr = audioRef.current.currentTime;
     setCurrentTime(curr);
-    const dur = audioRef.current.duration || narration?.durationEstimateSec || 30;
-    setDuration(dur);
+    currentTimeRef.current = curr;
+    const dur = audioRef.current.duration;
+    if (dur && !isNaN(dur) && isFinite(dur) && dur > 0) {
+      setDuration(dur);
+      durationRef.current = dur;
+    }
+  };
 
-    // Auto-advance chapters based on progress ratio
-    if (history.chapters && history.chapters.length > 0 && dur > 0) {
-      const progressRatio = curr / dur;
-      const chapterIdx = Math.min(
-        history.chapters.length - 1,
-        Math.floor(progressRatio * history.chapters.length)
-      );
-      if (chapterIdx !== activeChapterIndex) {
-        setActiveChapterIndex(chapterIdx);
-        // Highlight matching pin if focusPointId exists
-        const focusId = history.chapters[chapterIdx]?.focusPointId;
-        if (focusId) {
-          const matchPin = recognition.arKeypoints.find((p) => p.id === focusId);
-          if (matchPin) setActivePin(matchPin);
-        }
-      }
+  const handleAudioEnded = () => {
+    if (activePlaybackModeRef.current === "html5" && currentTimeRef.current >= 4) {
+      onChapterNaturallyFinished();
+    }
+  };
+
+  // User playback controls
+  const togglePlay = () => {
+    if (isPlaying) {
+      stopAllPlayback();
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+    } else {
+      playChapter(activeChapterIndex);
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const target = parseFloat(e.target.value);
     setCurrentTime(target);
-    if (audioRef.current) {
+    currentTimeRef.current = target;
+    if (activePlaybackModeRef.current === "html5" && audioRef.current) {
       audioRef.current.currentTime = target;
     }
   };
 
   const restartAudio = () => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = 0;
-    audioRef.current.play();
-    setIsPlaying(true);
+    playChapter(activeChapterIndex);
   };
 
   const toggleMute = () => {
-    if (!audioRef.current) return;
     const nextMuted = !isMuted;
-    audioRef.current.muted = nextMuted;
     setIsMuted(nextMuted);
+    isMutedRef.current = nextMuted;
+    if (audioRef.current) {
+      audioRef.current.muted = nextMuted;
+    }
+    if (activeUtteranceRef.current) {
+      activeUtteranceRef.current.volume = nextMuted ? 0 : 1;
+    }
   };
 
   const changePlaybackRate = (rate: number) => {
     setPlaybackRate(rate);
+    playbackRateRef.current = rate;
     if (audioRef.current) {
       audioRef.current.playbackRate = rate;
     }
   };
 
   const selectChapter = (index: number) => {
+    const wasPlaying = isPlayingRef.current;
+    stopAllPlayback();
     setActiveChapterIndex(index);
-    if (!audioRef.current || duration <= 0) return;
-    const targetTime = (index / (history.chapters?.length || 4)) * duration;
-    audioRef.current.currentTime = targetTime;
-    setCurrentTime(targetTime);
-    if (!isPlaying) {
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
+    activeChapterIndexRef.current = index;
+    setCurrentTime(0);
+    currentTimeRef.current = 0;
 
     const focusId = history.chapters?.[index]?.focusPointId;
     if (focusId) {
-      const matchPin = recognition.arKeypoints.find((p) => p.id === focusId);
+      const matchPin = recognition.arKeypoints?.find((p) => p.id === focusId);
       if (matchPin) setActivePin(matchPin);
+    }
+
+    const scriptText = getActiveChapterScript(index);
+    const words = scriptText.split(/\s+/).filter(Boolean).length;
+    const estSec = Math.max(12, Math.round(words / (2.4 * playbackRateRef.current)));
+    setDuration(estSec);
+    durationRef.current = estSec;
+
+    if (wasPlaying) {
+      playChapter(index);
+    } else {
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+    }
+  };
+
+  const goToPreviousChapter = () => {
+    if (activeChapterIndex > 0) {
+      selectChapter(activeChapterIndex - 1);
+    }
+  };
+
+  const goToNextChapter = () => {
+    const totalChapters = history.chapters?.length || 1;
+    if (activeChapterIndex < totalChapters - 1) {
+      selectChapter(activeChapterIndex + 1);
     }
   };
 
   const handleVoiceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVoice = e.target.value;
     setSelectedVoice(newVoice);
+    setAudioPlaybackError(false);
+    stopAllPlayback();
+    setIsPlaying(false);
+    isPlayingRef.current = false;
+    const scriptToNarrate = getActiveChapterScript(activeChapterIndex);
     if (onRegenerateVoice) {
-      await onRegenerateVoice(newVoice);
+      await onRegenerateVoice(newVoice, scriptToNarrate);
     }
   };
 
@@ -301,10 +759,60 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       {/* Hidden native audio element */}
       <audio
         ref={audioRef}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={() => setIsPlaying(false)}
+        onTimeUpdate={handleAudioTimeUpdate}
+        onEnded={handleAudioEnded}
+        onError={(e) => {
+          console.warn("HTML5 audio playback error event:", e);
+          setAudioPlaybackError(true);
+        }}
         className="hidden"
       />
+
+      {/* Special Subject Tour Notice for Portraits & Non-Landmarks */}
+      {recognition.isLandmark === false && (
+        <div
+          id="subject-analysis-notice"
+          className="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-950/70 via-slate-900/90 to-cyan-950/70 border border-amber-500/40 text-left shadow-lg backdrop-blur-md"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start space-x-2.5">
+              <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider font-mono">
+                    {recognition.detectedCategory === "person" ? "Special Figure & Portrait Tour" : "Special Visual Subject Tour"}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 text-[10px] font-mono">
+                    {recognition.name}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                  {recognition.notLandmarkReason || `Custom AR visual keypoints and biographical narration synthesized for ${recognition.name}.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Landmark Switcher */}
+            {onSelectPreset && (
+              <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto overflow-x-auto pt-1 sm:pt-0">
+                <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">Tour Monuments:</span>
+                {SAMPLE_LANDMARKS.slice(0, 3).map((landmark) => (
+                  <button
+                    key={landmark.id}
+                    type="button"
+                    onClick={() => onSelectPreset(landmark)}
+                    className="px-2.5 py-1 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/30 text-[11px] font-medium transition flex items-center space-x-1 whitespace-nowrap"
+                  >
+                    <span>{landmark.name.split(" ")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main AR Stage Viewport */}
       <div
@@ -328,12 +836,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         {/* Animated AR Laser Scanline */}
         {showScanline && (
           <div
-            className={`absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] pointer-events-none opacity-80 ${
-              isPlaying ? "animate-pulse" : ""
-            }`}
-            style={{
-              animation: "ar-scan 6s linear infinite alternate",
-            }}
+            className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] pointer-events-none opacity-80 animate-ar-scan"
           />
         )}
 
@@ -345,7 +848,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
                 <span className="text-[10px] font-mono tracking-wider text-cyan-300 uppercase font-semibold">
-                  AR OPTIC TRACKING • LOCKED
+                  {recognition.isLandmark === false ? "VISUAL SUBJECT TRACKING • LOCKED" : "AR OPTIC TRACKING • LOCKED"}
                 </span>
               </div>
               <h2 className="text-base sm:text-xl font-bold text-white tracking-tight mt-0.5">
@@ -354,10 +857,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               <div className="flex items-center space-x-2 text-xs text-slate-300 font-mono mt-0.5">
                 <MapPin className="w-3 h-3 text-cyan-400" />
                 <span>
-                  {recognition.city}, {recognition.country}
+                  {recognition.city ? `${recognition.city}, ${recognition.country}` : (recognition.country || recognition.detectedCategory?.toUpperCase() || "VISUAL ANALYSIS")}
                 </span>
                 <span className="text-slate-600">•</span>
-                <span className="text-cyan-400/90">{recognition.periodEra}</span>
+                <span className="text-cyan-400/90">{recognition.periodEra && recognition.periodEra !== "N/A" ? recognition.periodEra : "FEATURED"}</span>
               </div>
             </div>
 
@@ -372,7 +875,11 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 </div>
                 <div className="text-[10px] text-slate-400">
                   CONFIDENCE: <span className="text-emerald-400 font-semibold">{recognition.confidence}%</span> |{" "}
-                  <span className="text-cyan-300">{recognition.architecturalStyle}</span>
+                  <span className="text-cyan-300">
+                    {recognition.isLandmark === false
+                      ? (recognition.detectedCategory?.toUpperCase() || "SUBJECT")
+                      : recognition.architecturalStyle}
+                  </span>
                 </div>
               </div>
 
@@ -406,6 +913,18 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         {showPins &&
           recognition.arKeypoints.map((pin) => {
             const isSelected = activePin?.id === pin.id;
+            const isNearLeft = pin.x < 30;
+            const isNearRight = pin.x > 70;
+            const isNearBottom = pin.y > 65;
+
+            const popupAlignClass = isNearLeft
+              ? "left-0 translate-x-0"
+              : isNearRight
+              ? "right-0 translate-x-0"
+              : "left-1/2 -translate-x-1/2";
+
+            const popupVerticalClass = isNearBottom ? "bottom-8" : "top-8";
+
             return (
               <div
                 key={pin.id}
@@ -422,12 +941,12 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 >
                   {/* Outer Pulsing Rings */}
                   <span
-                    className={`absolute w-8 h-8 rounded-full border transition-all duration-300 ${
+                    className={`absolute w-7 h-7 rounded-full border transition-all duration-300 ${
                       isSelected
-                        ? "border-cyan-400 bg-cyan-400/20 scale-125"
-                        : "border-cyan-400/60 group-hover:border-cyan-300 group-hover:scale-110"
-                    } animate-ping`}
-                    style={{ animationDuration: "3s" }}
+                        ? "border-cyan-400 bg-cyan-400/20 scale-125 animate-ping"
+                        : "border-cyan-400/50 group-hover:border-cyan-300 group-hover:scale-110"
+                    }`}
+                    style={{ animationDuration: "2.5s" }}
                   />
 
                   {/* Pin Dot Center */}
@@ -453,11 +972,11 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   </div>
                 </button>
 
-                {/* Floating AR Inspection Card when pin is clicked */}
+                {/* Floating AR Inspection Card when pin is clicked with smart edge clamping */}
                 {isSelected && (
                   <div
                     id={`ar-popup-${pin.id}`}
-                    className="absolute top-8 left-1/2 -translate-x-1/2 w-60 sm:w-72 bg-slate-950/95 backdrop-blur-xl border border-cyan-400/80 rounded-xl p-3.5 shadow-2xl text-left z-30 animate-in fade-in zoom-in-95 duration-150"
+                    className={`absolute ${popupVerticalClass} ${popupAlignClass} w-60 sm:w-72 bg-slate-950/95 backdrop-blur-xl border border-cyan-400/80 rounded-xl p-3.5 shadow-2xl text-left z-30 animate-in fade-in zoom-in-95 duration-150`}
                   >
                     <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1.5 mb-2">
                       <div className="flex items-center space-x-1.5">
@@ -482,7 +1001,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                           e.stopPropagation();
                           setActivePin(null);
                         }}
-                        className="text-cyan-400 hover:text-cyan-300 font-semibold"
+                        className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer"
                       >
                         [Dismiss]
                       </button>
@@ -645,29 +1164,60 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-xs font-semibold text-slate-200">
-                  AR Narrated Audio Guide
+                  {t("voice_narration", "AR Narrated Audio Guide")}
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30">
-                  Gemini 3.1 Flash TTS
-                </span>
+                {isRegeneratingVoice || isGeneratingLanguageAudio ? (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                    <span>Synthesizing Studio Audio ({currentLanguage.name})...</span>
+                  </span>
+                ) : (!audioPlaybackError && activeNarration?.audioBase64 && !activeNarration?.useClientFallback) ? (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Gemini 3.1 Flash TTS ({currentLanguage.name})</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/30 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span>Browser Speech Engine ({currentLanguage.name})</span>
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-400">
-                AI Tour Guide Voice: <span className="text-cyan-300 font-medium">{selectedVoice}</span> (24kHz Studio Audio)
-              </p>
+              <div className="text-xs text-slate-400 flex items-center space-x-2 mt-0.5">
+                {isRegeneratingVoice || isGeneratingLanguageAudio ? (
+                  <span>Generating {currentLanguage.name} narration with Gemini Flash TTS...</span>
+                ) : (!audioPlaybackError && activeNarration?.audioBase64 && !activeNarration?.useClientFallback) ? (
+                  <span>AI Tour Guide Voice: <strong className="text-cyan-300 font-medium">{selectedVoice}</strong> (24kHz Studio Audio • {currentLanguage.name})</span>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span>Voice Guide: Natural Spoken Narration ({currentLanguage.name})</span>
+                    {onRegenerateVoice && (
+                      <button
+                        type="button"
+                        id="retry-studio-audio-btn"
+                        onClick={() => handleVoiceChange({ target: { value: selectedVoice } } as any)}
+                        className="text-[11px] text-cyan-400 hover:text-cyan-300 underline font-mono flex items-center space-x-1 cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Retry Studio Audio</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Animated Audio Equalizer Wave */}
           <div className="flex items-center space-x-1 h-6 px-3 py-1 rounded-lg bg-slate-950/80 border border-slate-800">
-            {[40, 70, 30, 90, 50, 80, 45, 95, 60, 35].map((height, idx) => (
+            {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.45, 0.95, 0.6, 0.35].map((_, idx) => (
               <div
                 key={idx}
-                className={`w-1 rounded-full bg-cyan-400 transition-all duration-150 ${
-                  isPlaying ? "animate-pulse opacity-100" : "opacity-30 h-1"
+                className={`w-1 rounded-full bg-cyan-400 ${
+                  isPlaying ? "animate-soundwave" : "opacity-30 h-1"
                 }`}
                 style={{
-                  height: isPlaying ? `${Math.max(4, Math.round(height * Math.random()))}px` : "4px",
-                  animationDelay: `${idx * 0.1}s`,
+                  animationDelay: `${idx * 0.12}s`,
                 }}
               />
             ))}
@@ -715,8 +1265,26 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
           />
 
           {/* Playback Button Bar */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center space-x-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex items-center space-x-2">
+              {/* Previous Chapter */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                type="button"
+                id="narration-prev-chapter-btn"
+                onClick={goToPreviousChapter}
+                disabled={activeChapterIndex === 0}
+                className={`p-2 rounded-full transition cursor-pointer ${
+                  activeChapterIndex === 0
+                    ? "text-slate-600 cursor-not-allowed opacity-40"
+                    : "text-slate-400 hover:text-cyan-300 hover:bg-slate-800"
+                }`}
+                title="Previous Chapter"
+              >
+                <SkipBack className="w-4 h-4" />
+              </motion.button>
+
               {/* Play / Pause with Motion Spring */}
               <motion.button
                 whileHover={{ scale: 1.08 }}
@@ -730,6 +1298,30 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
               </motion.button>
 
+              {/* Next Chapter */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                type="button"
+                id="narration-next-chapter-btn"
+                onClick={goToNextChapter}
+                disabled={activeChapterIndex >= (history.chapters?.length || 1) - 1}
+                className={`p-2 rounded-full transition cursor-pointer ${
+                  activeChapterIndex >= (history.chapters?.length || 1) - 1
+                    ? "text-slate-600 cursor-not-allowed opacity-40"
+                    : "text-slate-400 hover:text-cyan-300 hover:bg-slate-800"
+                }`}
+                title="Next Chapter"
+              >
+                <SkipForward className="w-4 h-4" />
+              </motion.button>
+
+              {!isPlaying && (
+                <span className="text-xs font-semibold text-cyan-300 tracking-wide select-none hidden sm:inline">
+                  {t("play_audio_tour", "Play Audio Tour")}
+                </span>
+              )}
+
               {/* Restart */}
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -737,7 +1329,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 type="button"
                 id="narration-restart-btn"
                 onClick={restartAudio}
-                className="p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
                 title="Restart Audio"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -750,10 +1342,27 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 type="button"
                 id="narration-mute-btn"
                 onClick={toggleMute}
-                className="p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
                 title={isMuted ? "Unmute" : "Mute"}
               >
                 {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
+              </motion.button>
+
+              {/* Auto-Advance Toggle */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                type="button"
+                id="narration-auto-advance-toggle"
+                onClick={() => setAutoAdvance(!autoAdvance)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition flex items-center space-x-1.5 cursor-pointer ${
+                  autoAdvance
+                    ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-300"
+                    : "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300"
+                }`}
+                title="Auto-advance to next chapter upon completion"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${autoAdvance ? "bg-cyan-400 animate-pulse" : "bg-slate-600"}`} />
+                <span>Auto-Advance: {autoAdvance ? "ON" : "OFF"}</span>
               </motion.button>
             </div>
 
@@ -788,7 +1397,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 border-b border-slate-800/80 pb-1.5 mb-2">
             <span className="text-cyan-400 uppercase tracking-wider font-semibold flex items-center space-x-1.5">
               <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-              <span>LIVE TOUR SUBTITLES</span>
+              <span>{t("live_tour_subtitles", "LIVE TOUR SUBTITLES")}</span>
               {currentLanguage.code !== "en" && (
                 <span className="flex items-center gap-1 text-[10px] text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded-full border border-cyan-500/30">
                   <Globe className="w-2.5 h-2.5" />
@@ -799,15 +1408,15 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
             <div className="flex items-center space-x-2">
               {isTranslating && (
                 <span className="text-cyan-400 animate-pulse text-[10px] font-mono">
-                  Translating...
+                  {t("translating", "Translating...")}
                 </span>
               )}
-              <span>Chapter {activeChapterIndex + 1} of {history.chapters?.length || 4}</span>
+              <span>{t("chapter_prefix", "Chapter")} {activeChapterIndex + 1} {t("of_chapters", "of")} {history.chapters?.length || 4}</span>
             </div>
           </div>
 
           <p className="text-sm text-slate-200 leading-relaxed font-sans" dir={currentLanguage.dir || "ltr"}>
-            {translatedScript || (activeChapter ? activeChapter.script : history.narrationScript)}
+            {getActiveChapterScript(activeChapterIndex)}
           </p>
         </div>
 
@@ -815,11 +1424,13 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         {history.chapters && history.chapters.length > 0 && (
           <div className="space-y-2 pt-1">
             <div className="text-xs font-mono text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-              <span>Tour Chapters (Click to Jump)</span>
+              <span>{t("tour_chapters", "Tour Chapters (Click to Jump)")}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {history.chapters.map((chap, idx) => {
                 const isChapActive = activeChapterIndex === idx;
+                const isChapCompleted = completedChapters.has(idx);
+                const translatedTitle = translatedDynamic[`chapter_${idx}_title`] || chap.title;
                 return (
                   <motion.button
                     whileHover={{ y: -2, scale: 1.01 }}
@@ -835,14 +1446,33 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     }`}
                   >
                     <div className="flex items-center justify-between text-[10px] font-mono mb-1">
-                      <span className={isChapActive ? "text-cyan-400 font-semibold flex items-center gap-1" : "text-slate-500"}>
+                      <span
+                        className={
+                          isChapActive
+                            ? "text-cyan-400 font-semibold flex items-center gap-1"
+                            : isChapCompleted
+                            ? "text-emerald-400 font-medium flex items-center gap-1"
+                            : "text-slate-500 flex items-center gap-1"
+                        }
+                      >
                         {isChapActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />}
-                        CH 0{idx + 1}
+                        {isChapCompleted && !isChapActive && <Check className="w-3 h-3 text-emerald-400" />}
+                        {t("ch_label", "CH")} 0{idx + 1}
                       </span>
-                      <span className="text-slate-500">{chap.timestampHint || `0:${idx * 20}`}</span>
+                      <span className="text-slate-500">
+                        {(() => {
+                          const chapScript = getActiveChapterScript(idx);
+                          const words = chapScript.split(/\s+/).filter(Boolean).length;
+                          const estSec = Math.max(12, Math.round(words / 2.4));
+                          if (isChapActive && isPlaying) {
+                            return `${formatTime(currentTime)} / ${formatTime(duration || estSec)}`;
+                          }
+                          return isChapCompleted ? "Done" : `~${formatTime(estSec)}`;
+                        })()}
+                      </span>
                     </div>
-                    <div className="text-xs font-semibold text-slate-100 line-clamp-1">
-                      {chap.title}
+                    <div className="text-xs font-semibold text-slate-100 line-clamp-1" dir={currentLanguage.dir || "ltr"}>
+                      {translatedTitle}
                     </div>
                   </motion.button>
                 );
@@ -851,6 +1481,160 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
           </div>
         )}
       </div>
+
+      {/* PHOTO ARCHITECTURAL INTELLIGENCE & VISUAL DETAILS DECK */}
+      {(recognition.photoAnalysis || history.photoGroundedNotes || recognition.arKeypoints?.length > 0) && (
+        <div
+          id="ar-photo-analysis-deck"
+          className="bg-slate-900/90 rounded-2xl border border-cyan-500/30 p-4 sm:p-5 shadow-xl space-y-3.5 relative overflow-hidden"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-sm">
+                <Camera className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                  <span>{t("photo_arch_intel", "Photo Architectural Intelligence")}</span>
+                  <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+                    {t("spotted_in_picture", "Spotted In Your Picture")}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {t("visual_features_extracted", "Visual features, materials, and camera perspective extracted from your photo")}
+                </p>
+              </div>
+            </div>
+
+            <div className="text-xs font-mono text-cyan-400 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800" dir={currentLanguage.dir || "ltr"}>
+              {translatedDynamic.architecturalStyle || recognition.architecturalStyle} • {translatedDynamic.periodEra || recognition.periodEra || "Historic Period"}
+            </div>
+          </div>
+
+          {/* Photo-Grounded Context Quote if available */}
+          {history.photoGroundedNotes && (
+            <div className="p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/20 text-xs text-cyan-200 leading-relaxed flex items-start space-x-2.5">
+              <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-cyan-300">{t("photo_grounded_context", "Photo-Grounded Narration Context:")} </span>
+                <span dir={currentLanguage.dir || "ltr"}>{translatedDynamic.photoGroundedNotes || history.photoGroundedNotes}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Key Extracted Photographic Attributes Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{t("camera_vantage", "Camera Vantage")}</span>
+              </div>
+              <p className="text-xs text-slate-200 font-medium leading-snug" dir={currentLanguage.dir || "ltr"}>
+                {translatedDynamic.perspectiveAndAngle || recognition.photoAnalysis?.perspectiveAndAngle || "Ground-level perspective of monument facade"}
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>{t("lighting_atmosphere", "Lighting & Atmosphere")}</span>
+              </div>
+              <p className="text-xs text-slate-200 font-medium leading-snug" dir={currentLanguage.dir || "ltr"}>
+                {translatedDynamic.lightingAndAtmosphere || recognition.photoAnalysis?.lightingAndAtmosphere || "Natural daylight highlighting architectural relief"}
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Landmark className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{t("visible_masonry", "Visible Masonry")}</span>
+              </div>
+              <p className="text-xs text-slate-200 font-medium leading-snug" dir={currentLanguage.dir || "ltr"}>
+                {translatedDynamic.visibleMaterialsAndTextures || recognition.photoAnalysis?.visibleMaterialsAndTextures || "Quarried stone facade with artisanal masonry"}
+              </p>
+            </div>
+          </div>
+
+          {/* Features Spotted in Photo: Click to locate on image */}
+          {((recognition.photoAnalysis?.prominentVisualFeatures && recognition.photoAnalysis.prominentVisualFeatures.length > 0) ||
+            (recognition.arKeypoints && recognition.arKeypoints.length > 0)) && (
+            <div className="pt-2 border-t border-slate-800/80 space-y-2">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>{t("features_spotted", "Features Spotted in Photo (Click to Inspect on Image):")}</span>
+                <span className="text-cyan-400">{t("features_spotted_hint", "Clicking highlights pin & jumps to chapter")}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {recognition.photoAnalysis?.prominentVisualFeatures?.map((feature, i) => {
+                  const translatedFeat = translatedDynamic[`feat_${i}`] || feature;
+                  const matchPin = recognition.arKeypoints.find(
+                    (kp) =>
+                      kp.label.toLowerCase().includes(feature.toLowerCase()) ||
+                      feature.toLowerCase().includes(kp.label.toLowerCase())
+                  );
+                  const isPinActive = activePin && matchPin && activePin.id === matchPin.id;
+
+                  return (
+                    <button
+                      key={`feat-btn-${i}`}
+                      type="button"
+                      id={`photo-feat-${i}`}
+                      onClick={() => {
+                        setShowPins(true);
+                        if (matchPin) {
+                          setActivePin(matchPin);
+                          // Jump to matching chapter if present
+                          const chapIdx = history.chapters?.findIndex(
+                            (c) => c.focusPointId === matchPin.id || c.title.toLowerCase().includes(feature.toLowerCase())
+                          );
+                          if (chapIdx !== undefined && chapIdx >= 0) {
+                            selectChapter(chapIdx);
+                          }
+                        }
+                      }}
+                      className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                        isPinActive
+                          ? "bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-md ring-1 ring-cyan-400/40"
+                          : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-cyan-500/40 hover:text-white"
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isPinActive ? "bg-cyan-300 animate-ping" : "bg-cyan-400"}`} />
+                      <span dir={currentLanguage.dir || "ltr"}>{translatedFeat}</span>
+                      {matchPin && <MapPin className="w-3 h-3 text-cyan-400 ml-0.5" />}
+                    </button>
+                  );
+                })}
+
+                {recognition.arKeypoints?.map((kp) => {
+                  const translatedKp = translatedDynamic[`kp_${kp.id}`] || kp.label;
+                  return (
+                    <button
+                      key={kp.id}
+                      type="button"
+                      onClick={() => {
+                        setShowPins(true);
+                        setActivePin(kp);
+                        const chapIdx = history.chapters?.findIndex((c) => c.focusPointId === kp.id);
+                        if (chapIdx !== undefined && chapIdx >= 0) {
+                          selectChapter(chapIdx);
+                        }
+                      }}
+                      className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                        activePin?.id === kp.id
+                          ? "bg-emerald-500/20 border-emerald-400 text-emerald-200 shadow-md ring-1 ring-emerald-400/40"
+                          : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-emerald-500/40 hover:text-white"
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${activePin?.id === kp.id ? "bg-emerald-300 animate-ping" : "bg-emerald-400"}`} />
+                      <span dir={currentLanguage.dir || "ltr"}>{translatedKp}</span>
+                      <span className="text-[10px] font-mono text-slate-500">({kp.x}%, {kp.y}%)</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

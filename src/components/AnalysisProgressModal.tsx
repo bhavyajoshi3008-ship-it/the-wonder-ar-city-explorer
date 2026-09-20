@@ -1,6 +1,8 @@
-import React from "react";
-import { Sparkles, Search, Volume2, CheckCircle, Loader2, AlertCircle, HelpCircle, RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Sparkles, Search, Volume2, CheckCircle, Loader2, AlertCircle, HelpCircle, RefreshCw, WifiOff } from "lucide-react";
 import { motion } from "motion/react";
+import { useLanguage } from "../context/LanguageContext";
+import { translateText } from "../services/api";
 
 export type AnalysisStage = "idle" | "recognizing" | "grounding" | "synthesizing" | "complete" | "error";
 
@@ -19,28 +21,80 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
   onRetry,
   onCancel,
 }) => {
+  const { t, currentLanguage } = useLanguage();
+  const [localizedLandmarkName, setLocalizedLandmarkName] = useState<string>(landmarkName || "");
+  const [localizedError, setLocalizedError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!landmarkName) {
+      setLocalizedLandmarkName("");
+      return;
+    }
+    if (currentLanguage.code === "en") {
+      setLocalizedLandmarkName(landmarkName);
+      return;
+    }
+    let isMounted = true;
+    translateText(landmarkName, currentLanguage.code, currentLanguage.name)
+      .then((res) => {
+        if (isMounted && res?.translatedText) {
+          setLocalizedLandmarkName(res.translatedText);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLocalizedLandmarkName(landmarkName);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [landmarkName, currentLanguage.code, currentLanguage.name]);
+
+  useEffect(() => {
+    if (!error) {
+      setLocalizedError(null);
+      return;
+    }
+    if (currentLanguage.code === "en") {
+      setLocalizedError(error);
+      return;
+    }
+    let isMounted = true;
+    translateText(error, currentLanguage.code, currentLanguage.name)
+      .then((res) => {
+        if (isMounted && res?.translatedText) {
+          setLocalizedError(res.translatedText);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLocalizedError(error);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [error, currentLanguage.code, currentLanguage.name]);
+
   if (currentStage === "idle" || currentStage === "complete") return null;
 
   const steps = [
     {
       id: "recognizing",
-      title: "Landmark Recognition",
+      title: t("landmark_recognition", "Landmark Recognition"),
       model: "Gemini Vision",
-      desc: "Analyzing architectural geometry & visual keypoints",
+      desc: t("analyzing_geometry", "Analyzing architectural geometry & visual keypoints"),
       icon: Sparkles,
     },
     {
       id: "grounding",
-      title: "Google Search Grounding",
+      title: t("search_grounding", "Google Search Grounding"),
       model: "Gemini + Search",
-      desc: "Querying live web index for history, secrets & milestones",
+      desc: t("querying_web", "Querying live web index for history, secrets & milestones"),
       icon: Search,
     },
     {
       id: "synthesizing",
-      title: "AR Audio Narration",
+      title: t("ar_audio_narration", "AR Audio Narration"),
       model: "Gemini TTS",
-      desc: "Synthesizing spatial tour guide commentary",
+      desc: t("synthesizing_commentary", "Synthesizing spatial tour guide commentary"),
       icon: Volume2,
     },
   ];
@@ -61,11 +115,17 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
     return "pending";
   };
 
+  const isOffline = Boolean(
+    error && (error.toLowerCase().includes("offline") || error.toLowerCase().includes("internet"))
+  );
+
   const isDemandBusy = Boolean(
     error &&
     (error.toLowerCase().includes("high demand") ||
      error.toLowerCase().includes("busy") ||
      error.toLowerCase().includes("503") ||
+     error.toLowerCase().includes("warming up") ||
+     error.toLowerCase().includes("initializing") ||
      error.toLowerCase().includes("service temporarily"))
   );
 
@@ -81,6 +141,21 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
      error.toLowerCase().includes("could not identify"))
   );
 
+  const displayName = localizedLandmarkName || landmarkName;
+  const headerTitle = error
+    ? isOffline
+      ? t("offline_mode_active", "Offline Mode Active")
+      : isDemandBusy
+      ? t("service_high_demand", "AI Service Experiencing High Demand")
+      : isNotLandmark
+      ? t("not_recognized_landmark", "Photo is Not a Recognized Landmark")
+      : t("landmark_not_recognized", "Landmark Not Recognized")
+    : displayName
+    ? t("exploring_landmark", `Exploring ${displayName}...`).replace("{name}", displayName).replace("{landmark}", displayName)
+    : t("analyzing_landmark", "Analyzing City Landmark...");
+
+  const descriptionText = localizedError || error || t("executing_pipeline", "Executing multi-model AI pipeline: computer vision, search grounding, and audio synthesis.");
+
   return (
     <div
       id="analysis-progress-backdrop"
@@ -95,14 +170,16 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
         className="w-full max-w-md bg-slate-900 border border-cyan-500/40 rounded-2xl p-6 shadow-2xl shadow-cyan-950/60 relative overflow-hidden"
       >
         {/* Holographic scanning line at top */}
-        <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent ${error ? (isNotLandmark ? "via-amber-400" : "via-rose-500") : "via-cyan-400"} to-transparent animate-pulse`} />
+        <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent ${error ? (isOffline || isNotLandmark ? "via-amber-400" : "via-rose-500") : "via-cyan-400"} to-transparent animate-pulse`} />
 
         {/* Center Radar / Optic Animation or Error Icon */}
         <div className="flex flex-col items-center text-center">
           <div className="relative w-16 h-16 mb-4 flex items-center justify-center">
             {error ? (
-              <div className={`w-14 h-14 rounded-2xl ${isNotLandmark ? "bg-amber-950/70 border-amber-500/60 shadow-amber-950/60" : "bg-rose-950/70 border-rose-500/60 shadow-rose-950/60"} border flex items-center justify-center shadow-lg`}>
-                {isDemandBusy ? (
+              <div className={`w-14 h-14 rounded-2xl ${isOffline || isNotLandmark ? "bg-amber-950/70 border-amber-500/60 shadow-amber-950/60" : "bg-rose-950/70 border-rose-500/60 shadow-rose-950/60"} border flex items-center justify-center shadow-lg`}>
+                {isOffline ? (
+                  <WifiOff className="w-7 h-7 text-amber-400" />
+                ) : isDemandBusy ? (
                   <RefreshCw className="w-7 h-7 text-amber-400 animate-spin" style={{ animationDuration: "12s" }} />
                 ) : isNotLandmark ? (
                   <HelpCircle className="w-7 h-7 text-amber-400" />
@@ -125,31 +202,23 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
           </div>
 
           <h3 className="text-lg font-bold text-white tracking-tight">
-            {error
-              ? isDemandBusy
-                ? "AI Service Experiencing High Demand"
-                : isNotLandmark
-                ? "Photo is Not a Recognized Landmark"
-                : "Landmark Not Recognized"
-              : landmarkName
-              ? `Exploring ${landmarkName}...`
-              : "Analyzing City Landmark..."}
+            {headerTitle}
           </h3>
 
           <p className="text-xs text-slate-300 mt-2 max-w-sm leading-relaxed">
-            {error || "Executing multi-model AI pipeline: computer vision, search grounding, and audio synthesis."}
+            {descriptionText}
           </p>
 
           {isNotLandmark && (
             <div className="mt-3.5 w-full text-left bg-slate-950/80 border border-amber-500/30 rounded-xl p-3 text-[11px] text-slate-300 space-y-1.5">
               <div className="font-semibold text-amber-400 flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Tips for Landmark Exploration:</span>
+                <span>{t("tips_for_exploration", "Tips for Landmark Exploration:")}</span>
               </div>
               <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1">
-                <li>Capture historical monuments, cathedrals, towers, bridges, or statues.</li>
-                <li>Avoid photos of people, animals, indoor rooms, or ordinary objects.</li>
-                <li>Or try any of the 6 instant presets below on the home screen!</li>
+                <li>{t("tip_monuments", "Capture historical monuments, cathedrals, towers, bridges, or statues.")}</li>
+                <li>{t("tip_avoid_people", "Avoid photos of people, animals, indoor rooms, or ordinary objects.")}</li>
+                <li>{t("tip_try_presets", "Or try any of the iconic presets below on the home screen!")}</li>
               </ul>
             </div>
           )}
@@ -208,7 +277,7 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
                   className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs transition active:scale-95 flex items-center justify-center space-x-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>{isDemandBusy ? "Try Again Now" : "Retry Photo"}</span>
+                  <span>{isDemandBusy ? t("try_again_now", "Try Again Now") : t("retry_photo", "Retry Photo")}</span>
                 </button>
               )}
               {onCancel && (
@@ -218,7 +287,7 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
                   onClick={onCancel}
                   className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition"
                 >
-                  Choose Another Photo
+                  {t("choose_another_photo", "Choose Another Photo")}
                 </button>
               )}
             </div>
@@ -227,10 +296,11 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
 
         <div className="mt-4 pt-3 border-t border-slate-800 text-center">
           <span className="text-[10px] font-mono text-slate-500 tracking-wider">
-            Powered by Google DeepMind Gemini API & Google Search
+            {t("powered_by_gemini", "Powered by Google DeepMind Gemini API & Google Search")}
           </span>
         </div>
       </motion.div>
     </div>
   );
 };
+

@@ -1,14 +1,25 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Camera, RefreshCw, Upload, Sparkles, Image as ImageIcon, MapPin, Compass, AlertCircle } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { SAMPLE_LANDMARKS, SampleLandmark } from "../data/sampleLandmarks";
 import { fileToDataUrl, urlToDataUrl, optimizeBase64Image } from "../utils/imageUtils";
 import { useLanguage } from "../context/LanguageContext";
 
 interface CameraCaptureProps {
-  onPhotoSelected: (imageDataUrl: string, landmarkPreset?: SampleLandmark) => void;
+  onPhotoSelected: (imageDataUrl: string, landmarkPreset?: SampleLandmark, fileNameHint?: string) => void;
   isLoading: boolean;
 }
+
+const cleanFileNameHint = (name: string): string | undefined => {
+  if (!name) return undefined;
+  const base = name.replace(/\.[^/.]+$/, "");
+  const cleaned = base.replace(/[_-]+/g, " ").trim();
+  // Filter out generic camera filenames like IMG_1234, photo, screenshot
+  if (/^(img|dsc|photo|pic|image|screenshot|capture|p)[\s\d_-]*$/i.test(cleaned) || cleaned.length < 3) {
+    return undefined;
+  }
+  return cleaned;
+};
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, isLoading }) => {
   const { t } = useLanguage();
@@ -110,11 +121,16 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      const hint = cleanFileNameHint(file.name);
       const rawDataUrl = await fileToDataUrl(file);
       const optimized = await optimizeBase64Image(rawDataUrl);
-      onPhotoSelected(optimized);
+      onPhotoSelected(optimized, undefined, hint);
     } catch (err) {
       console.error("Error loading photo file:", err);
+    } finally {
+      if (e.target) {
+        e.target.value = "";
+      }
     }
   };
 
@@ -124,9 +140,10 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
       try {
+        const hint = cleanFileNameHint(file.name);
         const rawDataUrl = await fileToDataUrl(file);
         const optimized = await optimizeBase64Image(rawDataUrl);
-        onPhotoSelected(optimized);
+        onPhotoSelected(optimized, undefined, hint);
       } catch (err) {
         console.error("Error loading dropped file:", err);
       }
@@ -163,9 +180,36 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={`relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[580px] bg-slate-900/90 rounded-2xl border ${
-          dragOver ? "border-cyan-400 bg-cyan-950/20" : "border-slate-800"
+          dragOver ? "border-cyan-400 bg-cyan-950/20 shadow-[0_0_30px_rgba(6,182,212,0.3)]" : "border-slate-800"
         } overflow-hidden shadow-2xl flex flex-col items-center justify-center transition-all duration-300`}
       >
+        {/* Animated Drag Over Active Overlay */}
+        <AnimatePresence>
+          {dragOver && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 border-2 border-dashed border-cyan-400 rounded-2xl pointer-events-none"
+            >
+              <motion.div
+                animate={{ y: [0, -8, 0], scale: [1, 1.08, 1] }}
+                transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+                className="w-20 h-20 rounded-2xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-300 shadow-2xl shadow-cyan-500/50 mb-4 ring-4 ring-cyan-400/20"
+              >
+                <Upload className="w-10 h-10 text-cyan-300" />
+              </motion.div>
+              <h4 className="text-xl font-bold text-white tracking-wide mb-1">
+                {t("or_drag_drop", "Drop landmark photo here")}
+              </h4>
+              <p className="text-xs font-mono text-cyan-300">
+                Instant AI Architectural & Landmark Detection
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Live Video Element */}
         <video
           ref={videoRef}
@@ -270,9 +314,6 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
             <h3 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
               {t("take_photo", "Capture a City Landmark")}
             </h3>
-            <p className="text-sm text-slate-400 mt-2 leading-relaxed max-w-md">
-              {t("hero_subtitle", "Take a live photo in the city, upload an image from your device, or test instantly with world landmark presets.")}
-            </p>
 
             <div className="mt-3 inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-900/90 border border-slate-700/60 text-[11px] text-slate-300 font-mono">
               <MapPin className="w-3 h-3 text-cyan-400 shrink-0" />
@@ -286,32 +327,61 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               </div>
             )}
 
-            {/* Action Buttons with Spring Feedback */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                type="button"
-                id="open-live-camera-btn"
-                onClick={() => startCamera("environment")}
-                disabled={isLoading}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-500 hover:from-cyan-300 hover:to-cyan-400 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/30 transition disabled:opacity-50"
-              >
-                <Camera className="w-4 h-4" />
-                <span>{t("take_photo", "Open Live Camera")}</span>
-              </motion.button>
+            {/* Action Buttons with Instant Spring Feedback & Zero-Delay Animations */}
+            <div className="flex flex-wrap items-center justify-center gap-3.5 mt-6">
+              {/* Primary Camera Button with Ambient Glow Aura & Shimmer Sweep */}
+              <div className="relative group">
+                {/* Breathing Ambient Cyan Halo (No delay) */}
+                <div className="absolute -inset-1 rounded-2xl bg-cyan-400/40 blur-md animate-aura opacity-75 group-hover:opacity-100 group-hover:scale-105 pointer-events-none" />
 
+                <motion.button
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.96, y: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                  type="button"
+                  id="open-live-camera-btn"
+                  onClick={() => startCamera("environment")}
+                  disabled={isLoading}
+                  className="relative overflow-hidden flex items-center space-x-2.5 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-cyan-400 hover:from-cyan-300 hover:to-cyan-400 text-slate-950 font-bold text-sm shadow-xl shadow-cyan-500/30 border border-cyan-200/50 disabled:opacity-50 cursor-pointer"
+                >
+                  {/* Immediate Continuous Shimmer Sweep Animation */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
+                    <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/45 to-transparent animate-shimmer" />
+                  </div>
+
+                  {/* Camera Icon with Snappy Micro-tilt on hover */}
+                  <motion.div
+                    whileHover={{ rotate: [-6, 6, 0], scale: 1.18 }}
+                    transition={{ duration: 0.15 }}
+                    className="relative z-10 flex items-center justify-center"
+                  >
+                    <Camera className="w-4 h-4 text-slate-950" />
+                  </motion.div>
+
+                  <span className="relative z-10 font-bold tracking-wide">
+                    {t("take_photo", "Open Live Camera")}
+                  </span>
+                </motion.button>
+              </div>
+
+              {/* Upload Photo Button with Instant Hover & Floating Icon */}
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.96, y: 1 }}
+                transition={{ type: "spring", stiffness: 500, damping: 25 }}
                 type="button"
                 id="upload-photo-btn"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-sm border border-slate-700/90 transition disabled:opacity-50 shadow-sm"
+                className="group flex items-center space-x-2.5 px-6 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white font-semibold text-sm border border-slate-700/90 hover:border-cyan-400/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-colors duration-150 disabled:opacity-50 shadow-sm cursor-pointer"
               >
-                <Upload className="w-4 h-4 text-cyan-400" />
-                <span>{t("upload_photo", "Upload Photo")}</span>
+                {/* Responsive Floating Upload Arrow */}
+                <div className="animate-icon-float flex items-center justify-center text-cyan-400 group-hover:text-cyan-300 transition-colors duration-150">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <span className="tracking-wide">
+                  {t("upload_photo", "Upload Photo")}
+                </span>
               </motion.button>
             </div>
 
@@ -323,9 +393,16 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               onChange={handleFileUpload}
             />
 
-            <span className="text-xs text-slate-500 mt-3 font-mono">
-              {t("or_drag_drop", "Supports JPEG, PNG, WEBP, HEIC (Drag & drop anywhere)")}
-            </span>
+            {/* Drag & Drop Hint (Zero delay, instant render) */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center space-x-2 text-xs text-slate-400 hover:text-cyan-300 mt-3.5 font-mono cursor-pointer transition-colors duration-150 group"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 animate-ping" />
+              <span className="group-hover:underline underline-offset-4">
+                {t("or_drag_drop", "Supports JPEG, PNG, WEBP, HEIC (Drag & drop anywhere)")}
+              </span>
+            </div>
           </div>
         )}
 

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Globe, Check, Search, Sparkles, ChevronDown, Languages } from "lucide-react";
+import { Globe, Check, Search, Sparkles, ChevronDown, Languages, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { WORLD_LANGUAGES, LanguageOption } from "../data/languages";
 import { useLanguage } from "../context/LanguageContext";
 
 export const LanguageSelector: React.FC = () => {
-  const { currentLanguage, setLanguage, t } = useLanguage();
+  const { currentLanguage, setLanguage, t, isTranslatingUI } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -42,7 +42,11 @@ export const LanguageSelector: React.FC = () => {
         title="Choose language (supports every language in the world)"
       >
         <span className="text-base leading-none">{currentLanguage.flag}</span>
-        <Globe className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-45 transition-transform duration-300" />
+        {isTranslatingUI ? (
+          <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+        ) : (
+          <Globe className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-45 transition-transform duration-300" />
+        )}
         <span className="font-semibold text-white tracking-wide">
           {currentLanguage.nativeName}
         </span>
