@@ -3,6 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
@@ -100,6 +101,22 @@ export async function signInWithGoogle(): Promise<FirebaseUser> {
     return result.user;
   } catch (err: any) {
     console.error("Google sign-in failure:", err);
+    throw err;
+  }
+}
+
+/**
+ * Signs in user anonymously as Explorer Guest
+ */
+export async function signInAsGuest(): Promise<FirebaseUser> {
+  try {
+    const result = await signInAnonymously(auth);
+    if (result.user) {
+      await saveUserProfile(result.user);
+    }
+    return result.user;
+  } catch (err: any) {
+    console.error("Guest sign-in failure:", err);
     throw err;
   }
 }

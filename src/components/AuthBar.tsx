@@ -56,26 +56,26 @@ export const AuthBar: React.FC<AuthBarProps> = ({
   };
 
   return (
-    <div id="auth-cloud-bar" className="flex items-center space-x-2">
+    <div id="auth-cloud-bar" className="flex items-center space-x-1 sm:space-x-2 shrink-0">
       {user ? (
-        <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-sm">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 bg-slate-900/90 border border-slate-700/80 rounded-xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 shadow-sm">
           {/* User Avatar */}
           {user.photoURL ? (
             <img
               src={user.photoURL}
               alt={user.displayName || "Traveler"}
-              className="w-6 h-6 rounded-full border border-cyan-500/40 object-cover"
+              className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-cyan-500/40 object-cover shrink-0"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="w-6 h-6 rounded-full bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-cyan-300 text-xs font-semibold">
+            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-cyan-300 text-[10px] sm:text-xs font-semibold shrink-0">
               {(user.displayName || user.email || "U")[0].toUpperCase()}
             </div>
           )}
 
           {/* User Name */}
-          <div className="hidden sm:flex flex-col text-left">
-            <span className="text-xs font-medium text-slate-200 max-w-[120px] truncate leading-tight">
+          <div className="hidden md:flex flex-col text-left">
+            <span className="text-xs font-medium text-slate-200 max-w-[100px] truncate leading-tight">
               {user.displayName || user.email?.split("@")[0] || "Explorer"}
             </span>
             {isSyncing && (
@@ -91,29 +91,32 @@ export const AuthBar: React.FC<AuthBarProps> = ({
             type="button"
             id="signout-button"
             onClick={handleSignOut}
-            className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition text-xs"
+            className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition text-xs cursor-pointer shrink-0"
             title="Sign out of Firebase"
+            aria-label="Sign out"
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : (
-        <div className="flex items-center space-x-1.5">
+        <div className="flex items-center">
           <button
             type="button"
             id="google-signin-button"
             onClick={handleSignIn}
             disabled={isSigningIn || isLoading}
-            className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600/90 to-blue-600/90 hover:from-cyan-500 hover:to-blue-500 text-white font-medium text-xs shadow-md shadow-cyan-950/40 border border-cyan-400/30 transition active:scale-95 disabled:opacity-50"
+            className="flex items-center space-x-1 sm:space-x-2 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-cyan-600/90 to-blue-600/90 hover:from-cyan-500 hover:to-blue-500 text-white font-medium text-xs shadow-md shadow-cyan-950/40 border border-cyan-400/30 transition active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
+            title="Sign in with Google to sync tours across devices"
+            aria-label="Sign in with Google"
           >
             {isSigningIn ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Signing in...</span>
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                <span className="hidden sm:inline">Signing in...</span>
               </>
             ) : (
               <>
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#EA4335"
                     d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.2 9 5 12 5z"
@@ -132,7 +135,7 @@ export const AuthBar: React.FC<AuthBarProps> = ({
                   />
                 </svg>
                 <span className="hidden sm:inline">Sign in with Google</span>
-                <span className="sm:hidden">Sign In</span>
+                <span className="sm:hidden text-[11px] font-semibold">Sign In</span>
               </>
             )}
           </button>

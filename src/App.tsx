@@ -21,6 +21,8 @@ import {
   Flame,
   Globe,
   WifiOff,
+  Menu,
+  Glasses,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "motion/react";
@@ -39,8 +41,12 @@ import { LandmarkMapViewer } from "./components/LandmarkMapViewer";
 import { AnalysisProgressModal, AnalysisStage } from "./components/AnalysisProgressModal";
 import { TourJournal } from "./components/TourJournal";
 import { AuthBar } from "./components/AuthBar";
+import { LoginGate } from "./components/LoginGate";
 import { TravelStampsBackground } from "./components/TravelStampsBackground";
 import { LanguageSelector } from "./components/LanguageSelector";
+import { SeniorModeControl } from "./components/SeniorModeControl";
+import { YouTubeNavigationDrawer } from "./components/YouTubeNavigationDrawer";
+import { useAccessibility } from "./context/AccessibilityContext";
 import { useLanguage } from "./context/LanguageContext";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import {
@@ -66,6 +72,7 @@ const LOCAL_STORAGE_KEY = "citylens_ar_journal_v1";
 
 export default function App() {
   const { currentLanguage, t } = useLanguage();
+  const { isSeniorMode } = useAccessibility();
   const { isOnline } = useOnlineStatus();
   const [viewMode, setViewMode] = useState<AppViewMode>("capture");
   const [activeTab, setActiveTab] = useState<"ar_tour" | "map" | "history">("ar_tour");
@@ -78,6 +85,7 @@ export default function App() {
   const [analysisStage, setAnalysisStage] = useState<AnalysisStage>("idle");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isRegeneratingVoice, setIsRegeneratingVoice] = useState<boolean>(false);
+  const [isNavDrawerOpen, setIsNavDrawerOpen] = useState<boolean>(false);
 
   // User auth state
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -500,6 +508,43 @@ export default function App() {
     setAnalysisError(null);
   };
 
+  // Mandatory Authentication Gate: Without login, no one can access the website
+  if (isAuthLoading) {
+    return (
+      <div
+        id="auth-verifying-screen"
+        className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-slate-100 p-4 relative overflow-hidden selection:bg-cyan-500/30"
+      >
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-cyan-500/40 flex items-center justify-center shadow-xl shadow-cyan-950/60 ring-2 ring-cyan-500/20">
+            <Compass className="w-8 h-8 text-cyan-400 animate-spin" style={{ animationDuration: "8s" }} />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold tracking-tight text-white">CityLens AR</h2>
+            <p className="text-xs font-mono text-cyan-400 flex items-center justify-center space-x-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Verifying authentication session...</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If not logged in, block all application access and present the Login Gate
+  if (!user) {
+    return (
+      <LoginGate
+        onLoginSuccess={(authedUser) => {
+          setUser(authedUser);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden">
       {/* High-Performance Atmospheric Background & Travel Sticker Stamps Watermark */}
@@ -513,40 +558,60 @@ export default function App() {
       {/* Top Header Navigation Bar */}
       <header
         id="app-header"
-        className="sticky top-0 z-40 w-full bg-slate-950/85 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-6 py-3 shadow-lg shadow-black/20"
+        className="sticky top-0 z-40 w-full bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 px-2 sm:px-6 py-2 sm:py-3 shadow-lg shadow-black/20"
       >
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          {/* Brand Logo & Name */}
-          <motion.div
-            id="brand-logo"
-            onClick={resetToCapture}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-3 cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-600 p-[1px] shadow-lg shadow-cyan-500/25">
-              <div className="w-full h-full rounded-[11px] bg-slate-950 flex items-center justify-center group-hover:bg-slate-900 transition">
-                <Compass className="w-5 h-5 text-cyan-400 group-hover:rotate-90 transition-transform duration-500" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1.5">
-                  CityLens AR
-                </h1>
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 shadow-sm">
-                  <Sparkles className="w-2.5 h-2.5 text-cyan-400 animate-spin" style={{ animationDuration: "10s" }} />
-                  AR Engine
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                Recognize Landmarks • Live Search Grounding • AR Audio Commentary
-              </p>
-            </div>
-          </motion.div>
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-1.5 sm:gap-4 w-full">
+          {/* Hamburger Menu Toggle (YouTube Style) & Brand Logo */}
+          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            <motion.button
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.94 }}
+              type="button"
+              id="youtube-hamburger-toggle-btn"
+              onClick={() => setIsNavDrawerOpen(true)}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white flex items-center justify-center border border-slate-700/80 transition shadow-sm cursor-pointer shrink-0"
+              title="Open Navigation Menu"
+              aria-label="Navigation Menu"
+            >
+              <Menu className="w-5 h-5 text-slate-200" />
+            </motion.button>
 
-          {/* Right Header Action Items */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Brand Logo & Name */}
+            <motion.div
+              id="brand-logo"
+              onClick={resetToCapture}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-600 p-[1px] shadow-lg shadow-cyan-500/25 shrink-0">
+                <div className="w-full h-full rounded-[11px] bg-slate-950 flex items-center justify-center group-hover:bg-slate-900 transition">
+                  <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 group-hover:rotate-90 transition-transform duration-500" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <h1 className="text-sm sm:text-lg font-bold tracking-tight text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1">
+                    CityLens
+                    <span className="text-cyan-400 font-mono text-xs sm:text-sm">AR</span>
+                  </h1>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hidden md:inline-flex items-center gap-1 shadow-sm">
+                    <Sparkles className="w-2.5 h-2.5 text-cyan-400 animate-spin" style={{ animationDuration: "10s" }} />
+                    AR Engine
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 hidden lg:block">
+                  Recognize Landmarks • Live Search Grounding • AR Audio Commentary
+                </p>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Desktop Navigation Items */}
+          <div className="hidden sm:flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+            {/* Senior Citizen Friendly & Easy View Controls */}
+            <SeniorModeControl />
+
             {/* Global Language Selector (Every Language in the World) */}
             <LanguageSelector />
 
@@ -557,47 +622,68 @@ export default function App() {
                 type="button"
                 id="scan-another-btn"
                 onClick={resetToCapture}
-                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-medium text-xs border border-cyan-500/35 transition shadow-sm"
+                className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-medium text-xs border border-cyan-500/35 transition shadow-sm cursor-pointer shrink-0"
+                title="Scan Another Landmark"
+                aria-label="Scan Another Landmark"
               >
-                <Camera className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">{t("scan_another", "Scan Another")}</span>
-                <span className="sm:hidden">Scan</span>
+                <Camera className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span>{t("scan_another", "Scan Another")}</span>
               </motion.button>
             )}
+          </div>
 
+          {/* Mobile Right Navigation Items - Guaranteed High Touch Targets & Zero Clipping */}
+          <div className="flex sm:hidden items-center space-x-1.5 shrink-0">
+            {/* Dedicated Mobile Senior Citizen Button */}
             <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
-              id="open-journal-btn"
-              onClick={() => setShowJournal(true)}
-              className="relative flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 font-medium text-xs border border-slate-700/80 transition shadow-sm"
-              title="View Scanned Landmark Journal"
+              id="mobile-senior-citizen-header-btn"
+              onClick={() => setIsNavDrawerOpen(true)}
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition shadow-sm cursor-pointer shrink-0 ${
+                isSeniorMode
+                  ? "bg-amber-500/25 text-amber-300 border-amber-500/60 ring-1 ring-amber-500/40"
+                  : "bg-slate-900/90 text-slate-200 border-slate-700/80 hover:text-white"
+              }`}
+              title="Senior Citizen Mode"
+              aria-label="Senior Citizen Mode"
             >
-              <HistoryIcon className="w-3.5 h-3.5 text-slate-400" />
-              <span>{t("tour_journal", "Tour Journal")}</span>
-              {syncingIds.length > 0 ? (
-                <span className="inline-flex items-center space-x-1 ml-1 px-1.5 py-0.5 rounded-full bg-cyan-950/90 border border-cyan-500/40 text-cyan-300 text-[10px] font-mono animate-pulse">
-                  <Loader2 className="w-2.5 h-2.5 animate-spin text-cyan-400" />
-                  <span className="hidden sm:inline">Syncing</span>
-                </span>
-              ) : journalEntries.length > 0 ? (
-                <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 font-bold text-[10px] flex items-center justify-center ml-1 shadow-sm">
-                  {journalEntries.length}
-                </span>
-              ) : null}
+              <Glasses className={`w-4 h-4 ${isSeniorMode ? "text-amber-400" : "text-amber-400"}`} />
+              <span className="text-[11px] font-bold tracking-tight">
+                {isSeniorMode ? "Senior: ON" : "Senior Mode"}
+              </span>
             </motion.button>
 
-            {/* Google Sign-in & Cloud Firestore Account Bar */}
-            <AuthBar
-              user={user}
-              isLoading={isAuthLoading}
-              syncCount={journalEntries.length}
-              isSyncing={syncingIds.length > 0}
-            />
+            {viewMode === "ar_tour" && (
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                type="button"
+                id="mobile-scan-another-btn"
+                onClick={resetToCapture}
+                className="w-8 h-8 rounded-xl bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 flex items-center justify-center transition shadow-sm cursor-pointer shrink-0"
+                title="Scan Another"
+                aria-label="Scan Another Landmark"
+              >
+                <Camera className="w-3.5 h-3.5 text-cyan-400" />
+              </motion.button>
+            )}
           </div>
         </div>
       </header>
+
+      {/* YouTube-Style Slide-out Navigation Drawer */}
+      <YouTubeNavigationDrawer
+        isOpen={isNavDrawerOpen}
+        onClose={() => setIsNavDrawerOpen(false)}
+        viewMode={viewMode}
+        onResetToCapture={resetToCapture}
+        onOpenJournal={() => setShowJournal(true)}
+        journalCount={journalEntries.length}
+        syncingCount={syncingIds.length}
+        user={user}
+      />
 
       {/* Offline Status Notification Banner */}
       {!isOnline && (
@@ -625,15 +711,15 @@ export default function App() {
       )}
 
       {/* Main App Content Viewport */}
-      <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col items-center">
+      <main className="flex-1 p-3 sm:p-6 md:p-8 pb-6 sm:pb-8 flex flex-col items-center">
         {viewMode === "capture" && (
-          <div className="w-full max-w-5xl space-y-6">
-            <div className="text-center max-w-2xl mx-auto mb-2">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <div className="w-full max-w-5xl lg:max-w-6xl space-y-4 sm:space-y-6 lg:space-y-8">
+            <div className="text-center max-w-2xl lg:max-w-3xl mx-auto mb-1 sm:mb-2 lg:mb-4 px-1">
+              <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
                 {t("hero_title", "Explore Any City Landmark in Augmented Reality")}
               </h2>
-              <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-                {t("hero_subtitle", "Take a photo or upload an image of any monument, building, temple, mosque, or religious structure of every religion in the world. Our multi-model AI recognizes the architecture, grounds its history via live Google Search, and renders an interactive AR-narrated clip with integrated Google Maps.")}
+              <p className="text-xs sm:text-sm lg:text-base text-slate-400 mt-1 sm:mt-2 lg:mt-3 leading-relaxed max-w-xl lg:max-w-2xl mx-auto">
+                {t("hero_subtitle", "Take a photo or upload an image of any monument, temple, cathedral, or historic architecture in the world. AI detects structure, grounds history via live Google Search, and renders an interactive AR tour.")}
               </p>
             </div>
 
@@ -647,65 +733,90 @@ export default function App() {
         {viewMode === "ar_tour" && activePhoto && recognition && history && (
           <div className="w-full max-w-5xl space-y-6 animate-in fade-in duration-300">
             {/* Top Quick Bar with Tab Selector */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-bold text-white">{recognition.name}</span>
-                <span className="text-xs text-slate-400">({recognition.city}, {recognition.country})</span>
-              </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 bg-slate-900/80 p-2.5 sm:p-3 rounded-2xl border border-slate-800">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center space-x-2 min-w-0 flex-1">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                    <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                  </div>
+                  <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+                    <h2 className="text-xs sm:text-sm font-bold text-white truncate" title={recognition.name}>
+                      {recognition.name}
+                    </h2>
+                    {recognition.city && (
+                      <span className="text-[11px] text-cyan-300/80 font-mono shrink-0 hidden xs:inline">
+                        ({recognition.city})
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-              {/* Navigation Tabs */}
-              <div className="flex items-center space-x-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800">
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  id="tab-ar-tour"
-                  onClick={() => setActiveTab("ar_tour")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
-                    activeTab === "ar_tour"
-                      ? "bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{t("voice_narration", "AR Tour")}</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  id="tab-map"
-                  onClick={() => setActiveTab("map")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
-                    activeTab === "map"
-                      ? "bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <Compass className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{t("interactive_map", "Google Maps & Radar")}</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  id="tab-history"
-                  onClick={() => setActiveTab("history")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
-                    activeTab === "history"
-                      ? "bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{t("historical_context", "History & Secrets")}</span>
-                </motion.button>
-              </div>
-
-              <div className="flex items-center space-x-2">
                 <motion.button
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   type="button"
                   id="rescan-top-btn"
+                  onClick={resetToCapture}
+                  className="sm:hidden px-2.5 py-1.5 rounded-xl text-xs font-semibold text-cyan-300 bg-cyan-950/70 border border-cyan-500/30 hover:bg-cyan-900/60 transition flex items-center space-x-1.5 shadow-sm shrink-0 cursor-pointer"
+                  title="Scan Another Landmark"
+                >
+                  <RotateCcw className="w-3 h-3 text-cyan-400" />
+                  <span className="text-[11px] whitespace-nowrap">Scan New</span>
+                </motion.button>
+              </div>
+
+              {/* Navigation Tabs - Grid on Mobile, Flex on Desktop */}
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  id="tab-ar-tour"
+                  onClick={() => setActiveTab("ar_tour")}
+                  className={`py-1.5 px-2 sm:px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+                    activeTab === "ar_tour"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="hidden sm:inline">{t("voice_narration", "AR Tour")}</span>
+                  <span className="sm:hidden">AR Tour</span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  id="tab-map"
+                  onClick={() => setActiveTab("map")}
+                  className={`py-1.5 px-2 sm:px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+                    activeTab === "map"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="hidden sm:inline">{t("google_maps", "Google Maps")}</span>
+                  <span className="sm:hidden">Maps</span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  id="tab-history"
+                  onClick={() => setActiveTab("history")}
+                  className={`py-1.5 px-2 sm:px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+                    activeTab === "history"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="hidden sm:inline">{t("historical_context", "History")}</span>
+                  <span className="sm:hidden">History</span>
+                </motion.button>
+              </div>
+
+              <div className="hidden sm:flex items-center space-x-2">
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  type="button"
+                  id="rescan-top-btn-desktop"
                   onClick={resetToCapture}
                   className="px-3 py-1.5 rounded-xl text-xs font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 hover:bg-cyan-900/60 transition flex items-center space-x-1 shadow-sm"
                 >
@@ -730,7 +841,7 @@ export default function App() {
               </section>
             )}
 
-            {/* Tab 2: Interactive Google Maps & Radar Explorer */}
+            {/* Tab 2: Interactive Google Maps Explorer */}
             {activeTab === "map" && (
               <section id="landmark-map-section">
                 <LandmarkMapViewer
@@ -754,7 +865,7 @@ export default function App() {
               <div className="mt-4 p-4 bg-slate-900/80 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                    <Compass className="w-4 h-4" />
+                    <MapPin className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white">Location & Google Maps Navigation</div>
@@ -766,10 +877,10 @@ export default function App() {
                 <button
                   id="btn-open-map-tab"
                   onClick={() => setActiveTab("map")}
-                  className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-semibold rounded-xl text-xs transition flex items-center space-x-1.5 shadow-md shadow-cyan-950"
+                  className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-semibold rounded-xl text-xs transition flex items-center space-x-1.5 shadow-md shadow-cyan-950 cursor-pointer"
                 >
                   <MapPin className="w-3.5 h-3.5" />
-                  <span>Explore on Google Maps & Radar</span>
+                  <span>Explore on Google Maps</span>
                 </button>
               </div>
             )}
@@ -789,6 +900,7 @@ export default function App() {
       <AnalysisProgressModal
         currentStage={analysisStage}
         landmarkName={recognition?.name || activePreset?.name}
+        photoUrl={activePhoto || activePreset?.imageUrl}
         error={analysisError}
         onRetry={() => {
           if (activePhoto) handlePhotoSelected(activePhoto, activePreset);

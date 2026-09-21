@@ -56,15 +56,17 @@ export const TourJournal: React.FC<TourJournalProps> = ({
   return (
     <div
       id="tour-journal-modal"
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.93, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="w-full max-w-2xl max-h-[85vh] bg-slate-900 border border-slate-800 rounded-2xl flex flex-col shadow-2xl overflow-hidden"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 30 }}
+        transition={{ type: "spring", damping: 26, stiffness: 320 }}
+        className="w-full sm:max-w-2xl h-[88vh] sm:h-auto sm:max-h-[85vh] bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl flex flex-col shadow-2xl overflow-hidden pb-4 sm:pb-0"
       >
+        {/* Mobile drag handle indicator */}
+        <div className="w-10 h-1 rounded-full bg-slate-700 mx-auto mt-2.5 sm:hidden" />
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center space-x-2.5">

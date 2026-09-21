@@ -26,13 +26,18 @@ import {
   RefreshCw,
   SkipBack,
   SkipForward,
+  Glasses,
+  X,
+  GraduationCap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { LandmarkRecognition, LandmarkHistory, NarrationAudio, ARKeypoint, TourChapter } from "../types";
 import { TRAVEL_STICKERS, TravelSticker } from "../data/travelStickers";
 import { SAMPLE_LANDMARKS } from "../data/sampleLandmarks";
 import { useLanguage } from "../context/LanguageContext";
+import { useAccessibility } from "../context/AccessibilityContext";
 import { translateText, generateNarration, translateUIBatch } from "../services/api";
+import { ARScanOverlay } from "./ARScanOverlay";
 import { Globe } from "lucide-react";
 
 interface ARNarratedClipProps {
@@ -76,14 +81,29 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   const playbackRateRef = useRef<number>(1);
   const isMutedRef = useRef<boolean>(false);
   const autoAdvanceRef = useRef<boolean>(true);
+  const isPausedRef = useRef<boolean>(false);
+  const speechSessionIdRef = useRef<number>(0);
 
-  // Speech synthesis queue and heartbeat refs
+  // Speech synthesis queue and playback refs
   const sentencesQueueRef = useRef<string[]>([]);
   const sentenceIndexRef = useRef<number>(0);
   const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speechTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const keepAliveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activePlaybackModeRef = useRef<"html5" | "speech" | "none">("none");
+
+  // Pre-load speech synthesis voices on mount to eliminate voice-list latency or robotic default accents
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      const onVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
+      return () => {
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+      };
+    }
+  }, []);
 
   // Synchronize state values into refs
   useEffect(() => {
@@ -122,12 +142,60 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [activeSticker, setActiveSticker] = useState<TravelSticker | null>(() => TRAVEL_STICKERS[0]);
   const [showStickerPicker, setShowStickerPicker] = useState<boolean>(false);
+  const [stickerGenerationFilter, setStickerGenerationFilter] = useState<string>("All");
+  const [imageAspect, setImageAspect] = useState<number | null>(null);
   const translationCacheRef = useRef<Record<string, string>>({});
+
+  // Close sticker picker on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showStickerPicker) {
+        setShowStickerPicker(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showStickerPicker]);
+
+  // Clean, high-legibility short badge for mobile AR HUD telemetry
+  const getMobileShortBadge = () => {
+    if (!recognition.periodEra || recognition.periodEra === "N/A") {
+      return recognition.city || recognition.country || "ACTIVE";
+    }
+    // Extract primary 3-4 digit year(s) from complex strings like "Fountain: 1782; Palace: 1919 (Neoclassical...)"
+    const years = recognition.periodEra.match(/\b\d{3,4}(?:[–-]\d{2,4})?\b/g);
+    if (years && years.length > 0) {
+      const yearStr = years.slice(0, 2).join(" · ");
+      return recognition.city ? `${recognition.city} · ${yearStr}` : yearStr;
+    }
+    // For classical or ancient dates like "70–80 AD"
+    const classicalMatch = recognition.periodEra.match(/\b\d{1,3}(?:[–-]\d{1,3})?\s*(?:AD|BC|BCE|CE)\b/i);
+    if (classicalMatch) {
+      return recognition.city ? `${recognition.city} · ${classicalMatch[0]}` : classicalMatch[0];
+    }
+    // Fallback: short phrase before punctuation
+    const shortEra = recognition.periodEra.split(/[;(,]/)[0].trim();
+    const cleanEra = shortEra.length > 16 ? shortEra.slice(0, 14) + "…" : shortEra;
+    return recognition.city ? `${recognition.city} · ${cleanEra}` : cleanEra;
+  };
 
   // Multi-Language Tour Guide Support
   const { currentLanguage, t } = useLanguage();
+  const { isSeniorMode, speechRate } = useAccessibility();
   const [translatedScript, setTranslatedScript] = useState<string>("");
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
+
+  // Synchronize senior mode playback rate
+  useEffect(() => {
+    if (isSeniorMode) {
+      const targetRate = speechRate || 0.85;
+      setPlaybackRate(targetRate);
+      playbackRateRef.current = targetRate;
+      if (audioRef.current) {
+        audioRef.current.playbackRate = targetRate;
+      }
+    }
+  }, [isSeniorMode, speechRate]);
 
   // Dynamic Photo Architecture & Chapters Translation
   const [translatedDynamic, setTranslatedDynamic] = useState<Record<string, string>>({});
@@ -228,8 +296,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       const voiceKey = narration.voiceName || selectedVoice;
       if (narration.audioBase64) {
         languageAudioMapRef.current[`${currentLanguage.code}_${voiceKey}`] = narration;
+        languageAudioMapRef.current[`${currentLanguage.code}_chap_0_${voiceKey}`] = narration;
         if (currentLanguage.code === "en") {
           languageAudioMapRef.current[`en_${voiceKey}`] = narration;
+          languageAudioMapRef.current[`en_chap_0_${voiceKey}`] = narration;
         }
       }
       setActiveNarration(narration);
@@ -359,13 +429,11 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   // Clean stop for all playback engines (HTML5 audio & Web Speech API)
   const stopAllPlayback = () => {
     activePlaybackModeRef.current = "none";
+    isPausedRef.current = false;
+    speechSessionIdRef.current += 1;
     if (speechTimerRef.current) {
       clearInterval(speechTimerRef.current);
       speechTimerRef.current = null;
-    }
-    if (keepAliveTimerRef.current) {
-      clearInterval(keepAliveTimerRef.current);
-      keepAliveTimerRef.current = null;
     }
     sentencesQueueRef.current = [];
     sentenceIndexRef.current = 0;
@@ -400,15 +468,12 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   // Naturally called when a chapter is 100% finished
   const onChapterNaturallyFinished = () => {
     if (!isPlayingRef.current) return;
-    if (currentTimeRef.current < 4) return; // Guard against instantaneous false triggers
+    // Guard against instant false triggers while ensuring completed chapters finish
+    if (currentTimeRef.current < 1 && durationRef.current > 3) return;
 
     if (speechTimerRef.current) {
       clearInterval(speechTimerRef.current);
       speechTimerRef.current = null;
-    }
-    if (keepAliveTimerRef.current) {
-      clearInterval(keepAliveTimerRef.current);
-      keepAliveTimerRef.current = null;
     }
 
     const currentIdx = activeChapterIndexRef.current;
@@ -423,22 +488,40 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
     if (autoAdvanceRef.current && currentIdx < totalChapters - 1) {
       const nextIdx = currentIdx + 1;
-      // 500ms audio transition pause between chapters
+      // 400ms smooth audio transition pause between chapters
       setTimeout(() => {
         if (isPlayingRef.current) {
           playChapter(nextIdx);
         }
-      }, 500);
+      }, 400);
     } else {
       // Completed entire tour or auto-advance off
       setIsPlaying(false);
       isPlayingRef.current = false;
+      isPausedRef.current = false;
       setCurrentTime(durationRef.current);
       activePlaybackModeRef.current = "none";
     }
   };
 
-  // Sequential sentence-by-sentence speaker for uninterrupted narration
+  // Helper to start the progress timer for speech synthesis
+  const startSpeechTimer = (initialElapsedSec = 0, totalDurationSec = 30) => {
+    if (speechTimerRef.current) clearInterval(speechTimerRef.current);
+    const startTimestamp = Date.now() - initialElapsedSec * 1000;
+    speechTimerRef.current = setInterval(() => {
+      if (!isPlayingRef.current || activePlaybackModeRef.current !== "speech") return;
+      const elapsed = (Date.now() - startTimestamp) / 1000;
+      if (elapsed >= totalDurationSec) {
+        setCurrentTime(totalDurationSec);
+        currentTimeRef.current = totalDurationSec;
+      } else {
+        setCurrentTime(elapsed);
+        currentTimeRef.current = elapsed;
+      }
+    }, 200);
+  };
+
+  // Sequential sentence-by-sentence speaker for uninterrupted narration without jitter or overlapping voices
   const speakNextSentence = () => {
     if (!isPlayingRef.current || activePlaybackModeRef.current !== "speech") return;
     const sentences = sentencesQueueRef.current;
@@ -456,11 +539,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       return;
     }
 
+    const sessionId = speechSessionIdRef.current;
     const utterance = new SpeechSynthesisUtterance(sentenceText);
     utterance.rate = playbackRateRef.current;
-    if (isMutedRef.current) {
-      utterance.volume = 0;
-    }
+    utterance.volume = isMutedRef.current ? 0 : 1;
 
     // BCP-47 regional pronunciation mapping
     const langMap: Record<string, string> = {
@@ -473,28 +555,43 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       const voices = window.speechSynthesis.getVoices();
-      const match = voices.find((v) => v.lang === bcp47 || v.lang.startsWith(currentLanguage.code));
-      if (match) utterance.voice = match;
+      if (voices.length > 0) {
+        const isFemale = selectedVoice === "Kore" || selectedVoice === "Zephyr";
+        const langVoices = voices.filter((v) => v.lang === bcp47 || v.lang.startsWith(currentLanguage.code));
+        const genderMatch = isFemale
+          ? langVoices.find((v) => /female|zira|samantha|victoria|karen|siri/i.test(v.name))
+          : langVoices.find((v) => /male|david|alex|george|daniel|guy/i.test(v.name));
+
+        const match = genderMatch || langVoices[0] || voices.find((v) => v.lang.startsWith(currentLanguage.code));
+        if (match) utterance.voice = match;
+      }
     }
 
     utterance.onend = () => {
       activeUtteranceRef.current = null;
       (window as any).__activeTourUtterance = null;
+      if (speechSessionIdRef.current !== sessionId) return;
+
       sentenceIndexRef.current = idx + 1;
       setTimeout(() => {
-        if (isPlayingRef.current && activePlaybackModeRef.current === "speech") {
+        if (speechSessionIdRef.current === sessionId && isPlayingRef.current && activePlaybackModeRef.current === "speech") {
           speakNextSentence();
         }
-      }, 150);
+      }, 70);
     };
 
     utterance.onerror = (e) => {
-      console.warn("Speech synthesis notice:", e);
       activeUtteranceRef.current = null;
       (window as any).__activeTourUtterance = null;
+      if (speechSessionIdRef.current !== sessionId) return;
+
       if (e.error !== "canceled" && e.error !== "interrupted") {
         sentenceIndexRef.current = idx + 1;
-        speakNextSentence();
+        setTimeout(() => {
+          if (speechSessionIdRef.current === sessionId && isPlayingRef.current && activePlaybackModeRef.current === "speech") {
+            speakNextSentence();
+          }
+        }, 70);
       }
     };
 
@@ -503,7 +600,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     window.speechSynthesis.speak(utterance);
   };
 
-  const startSentenceSpeech = (fullText: string, totalEstimatedSec: number) => {
+  const startSentenceSpeech = (fullText: string, totalEstimatedSec: number, resumeFromIdx = 0, resumeElapsedSec = 0) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       setIsPlaying(false);
       isPlayingRef.current = false;
@@ -511,6 +608,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     }
 
     activePlaybackModeRef.current = "speech";
+    speechSessionIdRef.current += 1;
     window.speechSynthesis.cancel();
 
     // Natural sentence splitting preserving punctuation boundaries
@@ -522,39 +620,20 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
     const sentences = rawSentences.length > 0 ? rawSentences : [fullText];
     sentencesQueueRef.current = sentences;
-    sentenceIndexRef.current = 0;
+    sentenceIndexRef.current = Math.min(resumeFromIdx, Math.max(0, sentences.length - 1));
 
     setIsPlaying(true);
     isPlayingRef.current = true;
+    isPausedRef.current = false;
 
-    const startTime = Date.now();
-    if (speechTimerRef.current) clearInterval(speechTimerRef.current);
-    speechTimerRef.current = setInterval(() => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      if (elapsed >= totalEstimatedSec) {
-        setCurrentTime(totalEstimatedSec);
-        currentTimeRef.current = totalEstimatedSec;
-      } else {
-        setCurrentTime(elapsed);
-        currentTimeRef.current = elapsed;
-      }
-    }, 250);
-
-    // Keep-alive heartbeat ensures Chromium doesn't pause speech
-    if (keepAliveTimerRef.current) clearInterval(keepAliveTimerRef.current);
-    keepAliveTimerRef.current = setInterval(() => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.speaking) {
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
-      }
-    }, 8000);
-
+    startSpeechTimer(resumeElapsedSec, totalEstimatedSec);
     speakNextSentence();
   };
 
   // Play designated chapter reliably
   const playChapter = (chapIdx: number) => {
     stopAllPlayback();
+    isPausedRef.current = false;
     setActiveChapterIndex(chapIdx);
     activeChapterIndexRef.current = chapIdx;
     setCurrentTime(0);
@@ -579,17 +658,22 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     setDuration(estSec);
     durationRef.current = estSec;
 
-    // HTML5 studio audio is only used for English Chapter 0 if base64 exists
-    const canUseStudioAudio =
-      currentLanguage.code === "en" &&
-      chapIdx === 0 &&
-      Boolean(narration?.audioBase64) &&
-      !narration?.useClientFallback &&
-      !audioPlaybackError;
+    // Check if studio audio is available in cache or props
+    const cacheKey = `${currentLanguage.code}_chap_${chapIdx}_${selectedVoice}`;
+    const cachedChapterAudio = languageAudioMapRef.current[cacheKey];
+    const candidateAudio = cachedChapterAudio?.audioBase64
+      ? cachedChapterAudio
+      : (chapIdx === 0 && currentLanguage.code === "en" && narration?.audioBase64 && !narration?.useClientFallback)
+      ? narration
+      : (activeNarration?.audioBase64 && !activeNarration?.useClientFallback && !audioPlaybackError)
+      ? activeNarration
+      : null;
+
+    const canUseStudioAudio = Boolean(candidateAudio?.audioBase64) && !audioPlaybackError;
 
     if (canUseStudioAudio && audioRef.current) {
       activePlaybackModeRef.current = "html5";
-      audioRef.current.src = narration!.audioBase64;
+      audioRef.current.src = candidateAudio!.audioBase64;
       audioRef.current.playbackRate = playbackRateRef.current;
       audioRef.current.muted = isMutedRef.current;
       audioRef.current.currentTime = 0;
@@ -601,12 +685,12 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
           setAudioPlaybackError(false);
         })
         .catch((err) => {
-          console.warn("Studio audio play failed, falling back to speech synthesis:", err);
+          console.warn("Studio audio play notice, smoothly continuing via browser speech:", err);
           setAudioPlaybackError(true);
-          startSentenceSpeech(scriptText, estSec);
+          startSentenceSpeech(scriptText, estSec, 0, 0);
         });
     } else {
-      startSentenceSpeech(scriptText, estSec);
+      startSentenceSpeech(scriptText, estSec, 0, 0);
     }
   };
 
@@ -624,19 +708,48 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   };
 
   const handleAudioEnded = () => {
-    if (activePlaybackModeRef.current === "html5" && currentTimeRef.current >= 4) {
+    if (activePlaybackModeRef.current === "html5") {
       onChapterNaturallyFinished();
     }
   };
 
-  // User playback controls
+  // User playback controls with genuine Pause & Resume support
   const togglePlay = () => {
     if (isPlaying) {
-      stopAllPlayback();
+      // Pause current playback
+      isPausedRef.current = true;
       setIsPlaying(false);
       isPlayingRef.current = false;
+      if (speechTimerRef.current) {
+        clearInterval(speechTimerRef.current);
+        speechTimerRef.current = null;
+      }
+      if (activePlaybackModeRef.current === "html5" && audioRef.current) {
+        audioRef.current.pause();
+      } else if (activePlaybackModeRef.current === "speech") {
+        speechSessionIdRef.current += 1;
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+        }
+      }
     } else {
-      playChapter(activeChapterIndex);
+      // Resume if paused and within same chapter, otherwise play chapter fresh
+      if (isPausedRef.current && currentTimeRef.current < durationRef.current - 0.5) {
+        setIsPlaying(true);
+        isPlayingRef.current = true;
+        isPausedRef.current = false;
+        if (activePlaybackModeRef.current === "html5" && audioRef.current) {
+          audioRef.current.play().catch(() => {
+            const scriptText = getActiveChapterScript(activeChapterIndexRef.current);
+            startSentenceSpeech(scriptText, durationRef.current, sentenceIndexRef.current, currentTimeRef.current);
+          });
+        } else {
+          const scriptText = getActiveChapterScript(activeChapterIndexRef.current);
+          startSentenceSpeech(scriptText, durationRef.current, sentenceIndexRef.current, currentTimeRef.current);
+        }
+      } else {
+        playChapter(activeChapterIndex);
+      }
     }
   };
 
@@ -646,10 +759,30 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     currentTimeRef.current = target;
     if (activePlaybackModeRef.current === "html5" && audioRef.current) {
       audioRef.current.currentTime = target;
+    } else if (activePlaybackModeRef.current === "speech") {
+      const dur = durationRef.current || 1;
+      const fraction = Math.min(0.99, Math.max(0, target / dur));
+      const sentences = sentencesQueueRef.current;
+      if (sentences.length > 0) {
+        const targetSentenceIdx = Math.min(
+          sentences.length - 1,
+          Math.floor(fraction * sentences.length)
+        );
+        sentenceIndexRef.current = targetSentenceIdx;
+        speechSessionIdRef.current += 1;
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+        }
+        if (isPlayingRef.current) {
+          startSpeechTimer(target, dur);
+          speakNextSentence();
+        }
+      }
     }
   };
 
   const restartAudio = () => {
+    isPausedRef.current = false;
     playChapter(activeChapterIndex);
   };
 
@@ -660,8 +793,12 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     if (audioRef.current) {
       audioRef.current.muted = nextMuted;
     }
-    if (activeUtteranceRef.current) {
-      activeUtteranceRef.current.volume = nextMuted ? 0 : 1;
+    if (activePlaybackModeRef.current === "speech" && typeof window !== "undefined" && "speechSynthesis" in window) {
+      if (nextMuted) {
+        window.speechSynthesis.cancel();
+      } else if (isPlayingRef.current) {
+        speakNextSentence();
+      }
     }
   };
 
@@ -670,6 +807,19 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     playbackRateRef.current = rate;
     if (audioRef.current) {
       audioRef.current.playbackRate = rate;
+    }
+    if (activePlaybackModeRef.current === "speech" && isPlayingRef.current) {
+      speechSessionIdRef.current += 1;
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      speakNextSentence();
+      const scriptText = getActiveChapterScript(activeChapterIndexRef.current);
+      const words = scriptText.split(/\s+/).filter(Boolean).length;
+      const newDuration = Math.max(12, Math.round(words / (2.4 * rate)));
+      setDuration(newDuration);
+      durationRef.current = newDuration;
+      startSpeechTimer(currentTimeRef.current, newDuration);
     }
   };
 
@@ -818,13 +968,22 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       <div
         ref={viewportContainerRef}
         id="ar-viewport-stage"
-        className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[620px] bg-slate-950 rounded-2xl border border-cyan-500/40 overflow-hidden shadow-2xl shadow-cyan-950/40 select-none group"
+        onClick={() => setActivePin(null)}
+        style={imageAspect ? { aspectRatio: `${imageAspect}` } : { minHeight: "340px" }}
+        className="relative w-full bg-slate-950 rounded-2xl border border-cyan-500/40 overflow-hidden shadow-2xl shadow-cyan-950/40 select-none max-h-[640px] flex items-center justify-center cursor-default"
       >
-        {/* Landmark Photo Layer */}
+        {/* Landmark Photo Layer - Matches container aspect ratio with zero empty letterbox bands */}
         <img
           src={imageDataUrl}
           alt={recognition.name}
-          className="absolute inset-0 w-full h-full object-contain sm:object-cover bg-slate-950"
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (img.naturalWidth && img.naturalHeight) {
+              const ratio = img.naturalWidth / img.naturalHeight;
+              setImageAspect(Math.max(0.72, Math.min(ratio, 1.95)));
+            }
+          }}
+          className="w-full h-full object-cover select-none pointer-events-none block"
         />
 
         {/* AR Optics Vignette and Holographic Shading */}
@@ -835,33 +994,87 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
         {/* Animated AR Laser Scanline */}
         {showScanline && (
-          <div
-            className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] pointer-events-none opacity-80 animate-ar-scan"
+          <ARScanOverlay
+            variant="active"
+            label="LIDAR // AR MESH TRACKING"
+            showLabel={true}
           />
         )}
 
         {/* TOP AR TELEMETRY HUD */}
         {showTelemetry && (
-          <div className="absolute top-3 inset-x-3 sm:top-5 sm:inset-x-5 flex items-start justify-between z-20 pointer-events-none">
-            {/* Top Left: Landmark HUD Badge */}
-            <div className="bg-slate-950/80 backdrop-blur-md border border-cyan-500/30 px-3.5 py-2 rounded-xl text-left pointer-events-auto shadow-lg">
+          <div className="absolute top-2.5 inset-x-2.5 sm:top-4 sm:inset-x-4 flex items-start justify-between z-20 pointer-events-none">
+            {/* Mobile Compact AR Status Pill - High legibility with always-vibrant beacon and clean short badge */}
+            <div className="sm:hidden flex items-center space-x-1.5 max-w-[96%]">
+              <div className="bg-slate-950/90 backdrop-blur-md border border-cyan-500/40 px-2.5 py-1 rounded-full text-left pointer-events-auto shadow-lg flex items-center space-x-1.5 min-w-0">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+                </span>
+                <span className="text-[10px] font-mono tracking-wider text-cyan-300 uppercase font-semibold shrink-0">
+                  {recognition.isLandmark === false ? "TRACKING" : "AR LOCKED"}
+                </span>
+                <span className="text-slate-600 text-xs shrink-0">•</span>
+                <span className="text-[10px] font-mono text-cyan-400/90 truncate font-medium">
+                  {getMobileShortBadge()}
+                </span>
+              </div>
+
+              {activeSticker && (
+                <button
+                  type="button"
+                  onClick={() => setShowStickerPicker(true)}
+                  className="pointer-events-auto bg-slate-950/90 backdrop-blur-md border border-pink-500/50 px-2 py-1 rounded-full shadow-lg flex items-center space-x-1 shrink-0 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                  title="Change travel sticker stamp"
+                >
+                  <span className="text-xs">{activeSticker.emoji}</span>
+                  <span className={`text-[9px] font-black uppercase tracking-wider ${activeSticker.textColor}`}>
+                    {activeSticker.label.split(" ")[0]}
+                  </span>
+                </button>
+              )}
+            </div>
+
+            {/* Desktop Full Landmark HUD Badge */}
+            <div className="hidden sm:block bg-slate-950/85 backdrop-blur-md border border-cyan-500/30 px-3.5 py-2 rounded-xl text-left pointer-events-auto shadow-lg max-w-md">
               <div className="flex items-center space-x-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+                </span>
                 <span className="text-[10px] font-mono tracking-wider text-cyan-300 uppercase font-semibold">
                   {recognition.isLandmark === false ? "VISUAL SUBJECT TRACKING • LOCKED" : "AR OPTIC TRACKING • LOCKED"}
                 </span>
               </div>
-              <h2 className="text-base sm:text-xl font-bold text-white tracking-tight mt-0.5">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight mt-0.5 truncate" title={recognition.name}>
                 {recognition.name}
               </h2>
-              <div className="flex items-center space-x-2 text-xs text-slate-300 font-mono mt-0.5">
-                <MapPin className="w-3 h-3 text-cyan-400" />
-                <span>
+              <div className="flex items-center space-x-2 text-xs text-slate-300 font-mono mt-0.5 truncate">
+                <MapPin className="w-3 h-3 text-cyan-400 shrink-0" />
+                <span className="truncate">
                   {recognition.city ? `${recognition.city}, ${recognition.country}` : (recognition.country || recognition.detectedCategory?.toUpperCase() || "VISUAL ANALYSIS")}
                 </span>
                 <span className="text-slate-600">•</span>
-                <span className="text-cyan-400/90">{recognition.periodEra && recognition.periodEra !== "N/A" ? recognition.periodEra : "FEATURED"}</span>
+                <span className="text-cyan-400/90 shrink-0">{recognition.periodEra && recognition.periodEra !== "N/A" ? recognition.periodEra : "FEATURED"}</span>
               </div>
+
+              {/* UNESCO / College Official Badges */}
+              {(recognition.unescoInfo?.isWorldHeritage || recognition.collegeInfo?.isCollegeOrUniversity) && (
+                <div className="flex items-center space-x-1.5 mt-1.5 pt-1.5 border-t border-slate-800">
+                  {recognition.unescoInfo?.isWorldHeritage && (
+                    <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-950/80 text-cyan-300 border border-cyan-600/60 shadow-sm">
+                      <Globe className="w-3 h-3 text-cyan-400 shrink-0" />
+                      <span>UNESCO #{recognition.unescoInfo.unescoId || "HERITAGE"} {recognition.unescoInfo.inscriptionYear ? `(${recognition.unescoInfo.inscriptionYear})` : ""}</span>
+                    </span>
+                  )}
+                  {recognition.collegeInfo?.isCollegeOrUniversity && (
+                    <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-950/80 text-amber-300 border border-amber-600/60 shadow-sm">
+                      <GraduationCap className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span>{recognition.collegeInfo.institutionName || "HISTORIC UNIVERSITY"} {recognition.collegeInfo.foundedYear ? `EST. ${recognition.collegeInfo.foundedYear}` : ""}</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Top Right: Telemetry Diagnostics & Travel Sticker Stamp */}
@@ -913,30 +1126,27 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         {showPins &&
           recognition.arKeypoints.map((pin) => {
             const isSelected = activePin?.id === pin.id;
-            const isNearLeft = pin.x < 30;
-            const isNearRight = pin.x > 70;
-            const isNearBottom = pin.y > 65;
-
-            const popupAlignClass = isNearLeft
-              ? "left-0 translate-x-0"
-              : isNearRight
-              ? "right-0 translate-x-0"
-              : "left-1/2 -translate-x-1/2";
-
-            const popupVerticalClass = isNearBottom ? "bottom-8" : "top-8";
+            const hasOtherSelected = activePin !== null && !isSelected;
+            const safeX = Math.min(Math.max(pin.x, 8), 92);
+            const safeY = Math.min(Math.max(pin.y, 8), 92);
 
             return (
               <div
                 key={pin.id}
                 id={`ar-pin-${pin.id}`}
-                style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
-                className="absolute z-20 -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
+                style={{ left: `${safeX}%`, top: `${safeY}%` }}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto transition-opacity duration-200 ${
+                  isSelected ? "z-30" : hasOtherSelected ? "z-20 opacity-40 hover:opacity-100" : "z-20 opacity-100"
+                }`}
               >
-                {/* Pulsing Target Reticle */}
+                {/* Pulsing Target Reticle - Scoped to group/pin so hovering doesn't open all other labels */}
                 <button
                   type="button"
-                  onClick={() => setActivePin(isSelected ? null : pin)}
-                  className="group relative flex items-center justify-center p-1 focus:outline-none"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePin(isSelected ? null : pin);
+                  }}
+                  className="group/pin relative flex items-center justify-center p-1 focus:outline-none cursor-pointer"
                   title={`${pin.label}: Click to inspect in AR`}
                 >
                   {/* Outer Pulsing Rings */}
@@ -944,7 +1154,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     className={`absolute w-7 h-7 rounded-full border transition-all duration-300 ${
                       isSelected
                         ? "border-cyan-400 bg-cyan-400/20 scale-125 animate-ping"
-                        : "border-cyan-400/50 group-hover:border-cyan-300 group-hover:scale-110"
+                        : "border-cyan-400/50 group-hover/pin:border-cyan-300 group-hover/pin:scale-110"
                     }`}
                     style={{ animationDuration: "2.5s" }}
                   />
@@ -954,63 +1164,143 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shadow-lg transition-all duration-200 ${
                       isSelected
                         ? "bg-cyan-400 border-white text-slate-950 scale-110 shadow-cyan-400"
-                        : "bg-slate-950/90 border-cyan-400 text-cyan-300 group-hover:bg-cyan-400 group-hover:text-slate-950"
+                        : "bg-slate-950/90 border-cyan-400 text-cyan-300 group-hover/pin:bg-cyan-400 group-hover/pin:text-slate-950"
                     }`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
                   </div>
 
-                  {/* Label pill on hover or active */}
+                  {/* Desktop-only individual hover label (Never clutters mobile screen, hidden when selected) */}
                   <div
-                    className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-0.5 rounded text-[10px] font-mono whitespace-nowrap backdrop-blur-md border shadow-lg transition-all duration-200 ${
+                    className={`hidden sm:block absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-2 py-0.5 rounded text-[10px] font-mono whitespace-nowrap backdrop-blur-md border shadow-lg transition-all duration-150 pointer-events-none z-30 ${
                       isSelected
-                        ? "bg-cyan-950/90 text-cyan-200 border-cyan-400 opacity-100"
-                        : "bg-slate-950/80 text-slate-300 border-slate-700/70 opacity-0 group-hover:opacity-100"
+                        ? "hidden"
+                        : "bg-slate-950/90 text-cyan-200 border-cyan-500/40 opacity-0 group-hover/pin:opacity-100"
                     }`}
                   >
                     {pin.label}
                   </div>
                 </button>
-
-                {/* Floating AR Inspection Card when pin is clicked with smart edge clamping */}
-                {isSelected && (
-                  <div
-                    id={`ar-popup-${pin.id}`}
-                    className={`absolute ${popupVerticalClass} ${popupAlignClass} w-60 sm:w-72 bg-slate-950/95 backdrop-blur-xl border border-cyan-400/80 rounded-xl p-3.5 shadow-2xl text-left z-30 animate-in fade-in zoom-in-95 duration-150`}
-                  >
-                    <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1.5 mb-2">
-                      <div className="flex items-center space-x-1.5">
-                        <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 font-semibold">
-                          FEATURE INSPECTION
-                        </span>
-                      </div>
-                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
-                        {pin.featureType}
-                      </span>
-                    </div>
-                    <div className="text-sm font-bold text-white">{pin.label}</div>
-                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                      {pin.description}
-                    </p>
-                    <div className="mt-2.5 flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400">
-                      <span>COORD ({pin.x}%, {pin.y}%)</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActivePin(null);
-                        }}
-                        className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer"
-                      >
-                        [Dismiss]
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
+
+        {/* DEDICATED AR FEATURE INSPECTION CARD (Rendered above all pins at z-40 to prevent reticle poke-through) */}
+        <AnimatePresence>
+          {showPins && activePin && (
+            <>
+              {/* Mobile View: Docked neatly above bottom controls without covering them or overlapping pins */}
+              <motion.div
+                key={`mobile-popup-${activePin.id}`}
+                initial={{ opacity: 0, y: 15, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.96 }}
+                transition={{ duration: 0.18 }}
+                id={`ar-popup-mobile-${activePin.id}`}
+                className="sm:hidden absolute bottom-14 inset-x-2.5 z-40 bg-slate-950/95 backdrop-blur-xl border border-cyan-400/80 rounded-2xl p-3 shadow-2xl text-left pointer-events-auto shadow-cyan-950/60"
+              >
+                <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1.5 mb-1.5">
+                  <div className="flex items-center space-x-1.5">
+                    <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse shrink-0" />
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 font-semibold">
+                      FEATURE INSPECTION
+                    </span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                      {activePin.featureType}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePin(null);
+                    }}
+                    className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                    title="Close Inspection"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="text-sm font-bold text-white tracking-tight">{activePin.label}</div>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed line-clamp-3">
+                  {activePin.description}
+                </p>
+                <div className="mt-2 flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px] font-mono text-slate-400">
+                  <span className="text-cyan-400/80">TARGET COORD: {activePin.x}%, {activePin.y}%</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePin(null);
+                    }}
+                    className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* Desktop View: Anchored near the pin with smart vertical & horizontal clamping */}
+              <motion.div
+                key={`desktop-popup-${activePin.id}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                id={`ar-popup-${activePin.id}`}
+                style={{
+                  left: `${Math.min(Math.max(activePin.x, 20), 80)}%`,
+                  top: activePin.y > 60 ? `${Math.max(activePin.y - 4, 18)}%` : `${Math.min(activePin.y + 4, 65)}%`,
+                }}
+                className={`hidden sm:block absolute ${
+                  activePin.y > 60 ? "-translate-y-full" : "translate-y-2"
+                } -translate-x-1/2 w-72 bg-slate-950/95 backdrop-blur-xl border border-cyan-400/80 rounded-xl p-3.5 shadow-2xl text-left z-40 pointer-events-auto`}
+              >
+                <div className="flex items-center justify-between border-b border-cyan-500/30 pb-1.5 mb-2">
+                  <div className="flex items-center space-x-1.5">
+                    <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 font-semibold">
+                      FEATURE INSPECTION
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                      {activePin.featureType}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActivePin(null);
+                      }}
+                      className="w-5 h-5 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+                      title="Close"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="text-sm font-bold text-white">{activePin.label}</div>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  {activePin.description}
+                </p>
+                <div className="mt-2.5 flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400 border-t border-slate-800/80">
+                  <span>COORD ({activePin.x}%, {activePin.y}%)</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePin(null);
+                    }}
+                    className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline"
+                  >
+                    [Dismiss]
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* BOTTOM HUD CONTROLS OVERLAY */}
         <div className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 z-20 flex items-center justify-between pointer-events-auto">
@@ -1058,14 +1348,16 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
             <button
               type="button"
               id="toggle-ar-stickers-btn"
-              onClick={() => setShowStickerPicker(!showStickerPicker)}
-              className={`p-1.5 rounded-lg text-xs font-mono flex items-center space-x-1 transition ${
-                showStickerPicker ? "bg-pink-500/25 text-pink-300 border border-pink-500/50" : "text-slate-400 hover:text-pink-300"
+              onClick={() => setShowStickerPicker(true)}
+              className={`p-1.5 rounded-lg text-xs font-mono flex items-center space-x-1 transition cursor-pointer ${
+                showStickerPicker || activeSticker
+                  ? "bg-pink-500/25 text-pink-300 border border-pink-500/50"
+                  : "text-slate-400 hover:text-pink-300"
               }`}
               title="Pick Travel Sticker Stamp"
             >
               <Tag className="w-3.5 h-3.5 text-pink-400" />
-              <span className="hidden sm:inline">Sticker</span>
+              <span className="hidden sm:inline">Stickers</span>
             </button>
           </div>
 
@@ -1093,61 +1385,6 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Floating Sticker Picker Drawer in AR Viewport */}
-        {showStickerPicker && (
-          <div
-            id="ar-sticker-picker-modal"
-            className="absolute bottom-14 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 max-h-72 bg-slate-950/95 backdrop-blur-xl border border-pink-500/50 rounded-2xl p-3.5 z-30 shadow-2xl overflow-y-auto pointer-events-auto animate-in fade-in zoom-in-95 duration-150"
-          >
-            <div className="flex items-center justify-between border-b border-pink-500/30 pb-2 mb-2.5">
-              <div className="flex items-center space-x-1.5">
-                <Tag className="w-3.5 h-3.5 text-pink-400" />
-                <span className="text-xs font-bold text-white tracking-wide">
-                  Choose AR Travel Sticker
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowStickerPicker(false)}
-                className="text-slate-400 hover:text-white text-xs font-mono px-1.5 py-0.5"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {TRAVEL_STICKERS.map((stk) => {
-                const isCurrent = activeSticker?.id === stk.id;
-                return (
-                  <button
-                    key={stk.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveSticker(stk);
-                      setShowStickerPicker(false);
-                    }}
-                    className={`p-2 rounded-xl text-left border transition flex flex-col justify-between bg-gradient-to-b ${stk.bgGradient} ${
-                      isCurrent
-                        ? `${stk.borderColor} ring-2 ring-pink-400 shadow-md`
-                        : "border-slate-800 hover:border-slate-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg">{stk.emoji}</span>
-                      <span className="text-[8px] font-mono text-slate-400 uppercase">
-                        {stk.generation}
-                      </span>
-                    </div>
-                    <div className={`text-[10px] font-black mt-1 leading-tight ${stk.textColor}`}>
-                      {stk.label}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* AR NARRATION AUDIO PLAYER & TELEPROMPTER DECK */}
@@ -1156,41 +1393,41 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 sm:p-5 shadow-xl space-y-4"
       >
         {/* Top Header: Voice synthesis status & Live wave */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-500/30 flex items-center justify-center shadow-inner">
-              <Sparkles className="w-5 h-5 text-cyan-400" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-800 pb-3">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyan-950 border border-cyan-500/30 flex items-center justify-center shadow-inner shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-semibold text-slate-200">
-                  {t("voice_narration", "AR Narrated Audio Guide")}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-xs sm:text-sm font-bold text-slate-100">
+                  {t("voice_narration", "AR Audio Narration")}
                 </span>
                 {isRegeneratingVoice || isGeneratingLanguageAudio ? (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1">
-                    <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
-                    <span>Synthesizing Studio Audio ({currentLanguage.name})...</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1 shrink-0">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin text-cyan-400" />
+                    <span>Synthesizing ({currentLanguage.name})...</span>
                   </span>
                 ) : (!audioPlaybackError && activeNarration?.audioBase64 && !activeNarration?.useClientFallback) ? (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30 flex items-center space-x-1 shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Gemini 3.1 Flash TTS ({currentLanguage.name})</span>
+                    <span>Gemini 3.1 TTS ({currentLanguage.name})</span>
                   </span>
                 ) : (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/30 flex items-center space-x-1">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/30 flex items-center space-x-1 shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span>Browser Speech Engine ({currentLanguage.name})</span>
+                    <span>Speech Engine ({currentLanguage.name})</span>
                   </span>
                 )}
               </div>
-              <div className="text-xs text-slate-400 flex items-center space-x-2 mt-0.5">
+              <div className="text-[11px] sm:text-xs text-slate-400 flex flex-wrap items-center gap-1.5 sm:gap-2 mt-0.5">
                 {isRegeneratingVoice || isGeneratingLanguageAudio ? (
-                  <span>Generating {currentLanguage.name} narration with Gemini Flash TTS...</span>
+                  <span>Generating {currentLanguage.name} narration...</span>
                 ) : (!audioPlaybackError && activeNarration?.audioBase64 && !activeNarration?.useClientFallback) ? (
-                  <span>AI Tour Guide Voice: <strong className="text-cyan-300 font-medium">{selectedVoice}</strong> (24kHz Studio Audio • {currentLanguage.name})</span>
+                  <span>Voice: <strong className="text-cyan-300 font-medium">{selectedVoice}</strong> (Studio 24kHz)</span>
                 ) : (
                   <div className="flex items-center space-x-2">
-                    <span>Voice Guide: Natural Spoken Narration ({currentLanguage.name})</span>
+                    <span>Natural Spoken Audio</span>
                     {onRegenerateVoice && (
                       <button
                         type="button"
@@ -1198,8 +1435,8 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                         onClick={() => handleVoiceChange({ target: { value: selectedVoice } } as any)}
                         className="text-[11px] text-cyan-400 hover:text-cyan-300 underline font-mono flex items-center space-x-1 cursor-pointer"
                       >
-                        <RefreshCw className="w-3 h-3" />
-                        <span>Retry Studio Audio</span>
+                        <RefreshCw className="w-2.5 h-2.5" />
+                        <span>Retry AI Audio</span>
                       </button>
                     )}
                   </div>
@@ -1208,48 +1445,50 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
             </div>
           </div>
 
-          {/* Animated Audio Equalizer Wave */}
-          <div className="flex items-center space-x-1 h-6 px-3 py-1 rounded-lg bg-slate-950/80 border border-slate-800">
-            {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.45, 0.95, 0.6, 0.35].map((_, idx) => (
-              <div
-                key={idx}
-                className={`w-1 rounded-full bg-cyan-400 ${
-                  isPlaying ? "animate-soundwave" : "opacity-30 h-1"
-                }`}
-                style={{
-                  animationDelay: `${idx * 0.12}s`,
-                }}
-              />
-            ))}
-          </div>
+          {/* Audio Controls & Equalizer row */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+            {/* Animated Audio Equalizer Wave */}
+            <div className="flex items-center space-x-1 h-7 px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800">
+              {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.45, 0.95, 0.6, 0.35].map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`w-1 rounded-full bg-cyan-400 ${
+                    isPlaying ? "animate-soundwave" : "opacity-30 h-1"
+                  }`}
+                  style={{
+                    animationDelay: `${idx * 0.12}s`,
+                  }}
+                />
+              ))}
+            </div>
 
-          {/* Voice Selector Dropdown */}
-          <div className="flex items-center space-x-2 text-xs">
-            <Sliders className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-400">Voice:</span>
-            <select
-              id="voice-selector"
-              value={selectedVoice}
-              onChange={handleVoiceChange}
-              disabled={isRegeneratingVoice}
-              className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:ring-1 focus:ring-cyan-500 outline-none"
-            >
-              <option value="Kore">Kore (Warm Female)</option>
-              <option value="Fenrir">Fenrir (Deep Male)</option>
-              <option value="Puck">Puck (Energetic)</option>
-              <option value="Zephyr">Zephyr (Serene)</option>
-            </select>
+            {/* Voice Selector Dropdown */}
+            <div className="flex items-center space-x-1.5 text-xs">
+              <Sliders className="w-3.5 h-3.5 text-slate-400" />
+              <select
+                id="voice-selector"
+                value={selectedVoice}
+                onChange={handleVoiceChange}
+                disabled={isRegeneratingVoice}
+                className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-cyan-500 outline-none cursor-pointer max-w-[135px] sm:max-w-none truncate"
+              >
+                <option value="Kore">Kore (Warm)</option>
+                <option value="Fenrir">Fenrir (Deep)</option>
+                <option value="Puck">Puck (Energetic)</option>
+                <option value="Zephyr">Zephyr (Serene)</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Audio Scrubber & Controls */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-            <span>{formatTime(currentTime)}</span>
-            <span className="text-[11px] text-cyan-400/90">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-0.5">
+            <span className="shrink-0">{formatTime(currentTime)}</span>
+            <span className="text-[11px] text-cyan-400/90 truncate max-w-[180px] sm:max-w-xs text-center px-1">
               {activeChapter ? `${activeChapter.title}` : "Interactive Landmark Tour"}
             </span>
-            <span>{formatTime(duration)}</span>
+            <span className="shrink-0">{formatTime(duration)}</span>
           </div>
 
           {/* Scrubber bar */}
@@ -1265,71 +1504,70 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
           />
 
           {/* Playback Button Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-center justify-center sm:justify-start space-x-1.5 sm:space-x-2">
               {/* Previous Chapter */}
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
                 type="button"
                 id="narration-prev-chapter-btn"
                 onClick={goToPreviousChapter}
                 disabled={activeChapterIndex === 0}
-                className={`p-2 rounded-full transition cursor-pointer ${
+                className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center transition cursor-pointer ${
                   activeChapterIndex === 0
                     ? "text-slate-600 cursor-not-allowed opacity-40"
-                    : "text-slate-400 hover:text-cyan-300 hover:bg-slate-800"
+                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-800"
                 }`}
                 title="Previous Chapter"
               >
                 <SkipBack className="w-4 h-4" />
               </motion.button>
 
-              {/* Play / Pause with Motion Spring */}
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                type="button"
-                id="narration-play-pause-btn"
-                onClick={togglePlay}
-                className="w-11 h-11 rounded-full bg-gradient-to-tr from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/35 transition cursor-pointer"
-                title={isPlaying ? "Pause Tour" : "Play Tour"}
-              >
-                {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
-              </motion.button>
+              {/* Play / Pause */}
+              <div className="relative">
+                {isPlaying && (
+                  <div className="absolute -inset-1 rounded-2xl bg-cyan-400/30 animate-pulse pointer-events-none" />
+                )}
+                <motion.button
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
+                  type="button"
+                  id="narration-play-pause-btn"
+                  onClick={togglePlay}
+                  className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/30 transition cursor-pointer"
+                  title={isPlaying ? "Pause Tour" : "Play Tour"}
+                >
+                  {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                </motion.button>
+              </div>
 
               {/* Next Chapter */}
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
                 type="button"
                 id="narration-next-chapter-btn"
                 onClick={goToNextChapter}
                 disabled={activeChapterIndex >= (history.chapters?.length || 1) - 1}
-                className={`p-2 rounded-full transition cursor-pointer ${
+                className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center transition cursor-pointer ${
                   activeChapterIndex >= (history.chapters?.length || 1) - 1
                     ? "text-slate-600 cursor-not-allowed opacity-40"
-                    : "text-slate-400 hover:text-cyan-300 hover:bg-slate-800"
+                    : "text-slate-300 hover:text-cyan-300 hover:bg-slate-800"
                 }`}
                 title="Next Chapter"
               >
                 <SkipForward className="w-4 h-4" />
               </motion.button>
 
-              {!isPlaying && (
-                <span className="text-xs font-semibold text-cyan-300 tracking-wide select-none hidden sm:inline">
-                  {t("play_audio_tour", "Play Audio Tour")}
-                </span>
-              )}
-
               {/* Restart */}
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
                 type="button"
                 id="narration-restart-btn"
                 onClick={restartAudio}
-                className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center justify-center cursor-pointer"
                 title="Restart Audio"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -1337,54 +1575,61 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
               {/* Mute */}
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
                 type="button"
                 id="narration-mute-btn"
                 onClick={toggleMute}
-                className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center justify-center cursor-pointer"
                 title={isMuted ? "Unmute" : "Mute"}
               >
                 {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
               </motion.button>
+            </div>
 
+            {/* Auto-Advance & Playback Speed Controls - Guaranteed zero clipping on all mobile devices */}
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-1.5 sm:gap-2 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800/80 w-full sm:w-auto">
               {/* Auto-Advance Toggle */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
+              <button
                 type="button"
                 id="narration-auto-advance-toggle"
                 onClick={() => setAutoAdvance(!autoAdvance)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition flex items-center space-x-1.5 cursor-pointer ${
+                className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-mono border transition flex items-center space-x-1.5 cursor-pointer shrink-0 ${
                   autoAdvance
                     ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-300"
-                    : "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300"
+                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
                 }`}
                 title="Auto-advance to next chapter upon completion"
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${autoAdvance ? "bg-cyan-400 animate-pulse" : "bg-slate-600"}`} />
-                <span>Auto-Advance: {autoAdvance ? "ON" : "OFF"}</span>
-              </motion.button>
-            </div>
+                <span>Auto: {autoAdvance ? "ON" : "OFF"}</span>
+              </button>
 
-            {/* Playback speed buttons */}
-            <div className="flex items-center space-x-1 text-xs font-mono">
-              {[1, 1.25, 1.5].map((rate) => (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  key={rate}
-                  type="button"
-                  id={`speed-btn-${rate}x`}
-                  onClick={() => changePlaybackRate(rate)}
-                  className={`px-2.5 py-1 rounded-lg transition ${
-                    playbackRate === rate
-                      ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 font-bold shadow-sm"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  {rate}x
-                </motion.button>
-              ))}
+              {/* Playback speed buttons */}
+              <div className="flex items-center gap-1 sm:space-x-1 text-xs font-mono shrink-0">
+                {[0.85, 1, 1.25, 1.5].map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    id={`speed-btn-${rate}x`}
+                    onClick={() => changePlaybackRate(rate)}
+                    className={`h-8 sm:h-9 px-1.5 sm:px-2.5 rounded-lg transition cursor-pointer text-[11px] sm:text-xs whitespace-nowrap ${
+                      playbackRate === rate
+                        ? rate === 0.85
+                          ? "bg-amber-500/25 text-amber-300 border border-amber-500/50 font-bold"
+                          : "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 font-bold"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800 bg-slate-950/60 border border-transparent"
+                    }`}
+                    title={
+                      rate === 0.85
+                        ? "Gentle 0.85x speech pace for senior comfort and clear enunciation"
+                        : `${rate}x speed`
+                    }
+                  >
+                    {rate === 0.85 ? "0.85x 👓" : `${rate}x`}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1635,6 +1880,176 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
           )}
         </div>
       )}
+
+      {/* Spacious, Full-Featured AR Travel Sticker Stamps Modal Dialog */}
+      <AnimatePresence>
+        {showStickerPicker && (
+          <div
+            id="ar-sticker-picker-modal"
+            className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200 cursor-pointer"
+            onClick={() => setShowStickerPicker(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 35, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 35, scale: 0.96 }}
+              transition={{ type: "spring", damping: 25, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl max-h-[88vh] sm:max-h-[82vh] bg-slate-950 border border-pink-500/50 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-pink-950/60 flex flex-col overflow-hidden cursor-default pointer-events-auto"
+            >
+              {/* Mobile Drag Indicator */}
+              <div className="w-12 h-1 rounded-full bg-slate-800 mx-auto mt-2.5 mb-1 sm:hidden" />
+
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-pink-500/30 bg-slate-900/40">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-pink-950/80 border border-pink-500/40 flex items-center justify-center text-pink-400 shadow-md shadow-pink-950/50 shrink-0">
+                    <Tag className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center space-x-2">
+                      <span>AR Travel Sticker Stamps</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-950/80 text-pink-300 border border-pink-500/30">
+                        {TRAVEL_STICKERS.length} Souvenirs
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
+                      Select a multi-generational souvenir badge to overlay on your live tour photograph
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  id="close-sticker-picker-btn"
+                  onClick={() => setShowStickerPicker(false)}
+                  className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition cursor-pointer"
+                  title="Close Sticker Picker (Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Generation & Vibe Filter Tabs */}
+              <div className="px-5 py-2.5 border-b border-slate-800/80 bg-slate-900/20 flex items-center space-x-2 overflow-x-auto no-scrollbar shrink-0">
+                {[
+                  { id: "All", label: "All Stamps" },
+                  { id: "Gen Z", label: "✨ Gen Z" },
+                  { id: "Millennial", label: "🥐 Millennial" },
+                  { id: "Gen X", label: "🚂 Gen X" },
+                  { id: "Boomer / Golden", label: "🏛️ Golden Era" },
+                ].map((tab) => {
+                  const isSelected = stickerGenerationFilter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setStickerGenerationFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium font-mono whitespace-nowrap transition cursor-pointer ${
+                        isSelected
+                          ? "bg-pink-500/25 text-pink-300 border border-pink-500/50 shadow-sm"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Large, Rich Sticker Cards Grid */}
+              <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 overflow-y-auto custom-dark-scrollbar max-h-[58vh]">
+                {TRAVEL_STICKERS.filter(
+                  (s) => stickerGenerationFilter === "All" || s.generation === stickerGenerationFilter || s.generation === "All"
+                ).map((stk) => {
+                  const isCurrent = activeSticker?.id === stk.id;
+                  return (
+                    <button
+                      key={stk.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveSticker(stk);
+                        setShowStickerPicker(false);
+                      }}
+                      className={`group relative p-4 sm:p-4.5 rounded-2xl text-left border-2 transition-all duration-200 flex flex-col justify-between bg-gradient-to-br ${stk.bgGradient} ${
+                        isCurrent
+                          ? `${stk.borderColor} ring-2 ring-pink-400/90 shadow-xl shadow-pink-950/60 scale-[1.02]`
+                          : "border-slate-800/80 hover:border-slate-600/80 hover:scale-[1.01]"
+                      } cursor-pointer`}
+                    >
+                      {/* Top Row: Huge Emoji + Badges */}
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-3xl sm:text-4xl filter drop-shadow select-none">
+                          {stk.emoji}
+                        </span>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-full bg-slate-950/85 border border-slate-700/80 text-slate-300 font-bold tracking-wider">
+                            {stk.generation}
+                          </span>
+                          {isCurrent && (
+                            <span className="w-6 h-6 rounded-full bg-pink-500 text-slate-950 flex items-center justify-center shadow-md">
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Row: Big Bold Title + Tagline */}
+                      <div className="mt-3">
+                        <div className={`text-sm sm:text-base font-black tracking-wide leading-tight ${stk.textColor}`}>
+                          {stk.label}
+                        </div>
+                        <p className="text-xs text-slate-300/90 mt-1 line-clamp-2 leading-relaxed font-medium italic">
+                          "{stk.tagline}"
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3.5 border-t border-slate-800/90 bg-slate-900/60 flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center space-x-2 min-w-0">
+                  {activeSticker ? (
+                    <div className="flex items-center space-x-2 text-xs text-slate-300 truncate">
+                      <span className="text-slate-400 font-mono">Stamped:</span>
+                      <span className="text-sm">{activeSticker.emoji}</span>
+                      <span className={`font-black truncate ${activeSticker.textColor}`}>
+                        {activeSticker.label}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-500 font-mono">No sticker stamp active</span>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  {activeSticker && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSticker(null);
+                        setShowStickerPicker(false);
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
+                    >
+                      Clear Stamp
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowStickerPicker(false)}
+                    className="px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-950/50 transition cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

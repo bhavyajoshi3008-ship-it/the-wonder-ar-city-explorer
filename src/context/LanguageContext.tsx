@@ -2,16 +2,21 @@ import React, { createContext, useContext, useState, useEffect, useRef } from "r
 import { WORLD_LANGUAGES, CORE_TRANSLATIONS, LanguageOption } from "../data/languages";
 import { translateUIBatch } from "../services/api";
 
+export const DEFAULT_ENGLISH_LANGUAGE: LanguageOption =
+  WORLD_LANGUAGES.find((l) => l.code === "en") || WORLD_LANGUAGES[0];
+
 interface LanguageContextType {
   currentLanguage: LanguageOption;
   setLanguage: (lang: LanguageOption) => void;
+  resetToEnglish: () => void;
   t: (key: string, defaultVal?: string) => string;
   isTranslatingUI: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
-  currentLanguage: WORLD_LANGUAGES[0],
+  currentLanguage: DEFAULT_ENGLISH_LANGUAGE,
   setLanguage: () => {},
+  resetToEnglish: () => {},
   t: (key: string, defaultVal?: string) => defaultVal || key,
   isTranslatingUI: false,
 });
@@ -19,13 +24,15 @@ const LanguageContext = createContext<LanguageContextType>({
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentLanguage, setCurrentLanguage] = useState<LanguageOption>(() => {
     try {
+      // Honors user's last changed language
       const savedCode = localStorage.getItem("citylens_selected_language");
       if (savedCode) {
         const found = WORLD_LANGUAGES.find((l) => l.code === savedCode);
         if (found) return found;
       }
     } catch {}
-    return WORLD_LANGUAGES[0];
+    // Defaults strictly to English
+    return DEFAULT_ENGLISH_LANGUAGE;
   });
 
   const [dynamicTranslations, setDynamicTranslations] = useState<Record<string, Record<string, string>>>(() => {
@@ -144,8 +151,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return defaultVal || key;
   };
 
+  const resetToEnglish = () => {
+    setLanguage(DEFAULT_ENGLISH_LANGUAGE);
+  };
+
   return (
-    <LanguageContext.Provider value={{ currentLanguage, setLanguage, t, isTranslatingUI }}>
+    <LanguageContext.Provider value={{ currentLanguage, setLanguage, resetToEnglish, t, isTranslatingUI }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -16,6 +16,7 @@ import { motion } from "motion/react";
 import { LandmarkRecognition, LandmarkHistory } from "../types";
 import { useLanguage } from "../context/LanguageContext";
 import { translateUIBatch } from "../services/api";
+import { SeniorFriendlySummaryCard } from "./SeniorFriendlySummaryCard";
 
 interface HistoryGroundingPanelProps {
   recognition: LandmarkRecognition;
@@ -128,6 +129,9 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 text-left">
+      {/* Senior Citizen Friendly Quick Guide & Gentle Read-Aloud */}
+      <SeniorFriendlySummaryCard recognition={recognition} history={history} />
+
       {/* Google Search Grounding Badge & Verified Sources */}
       <div
         id="google-search-grounding-card"

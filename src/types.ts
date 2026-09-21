@@ -16,6 +16,27 @@ export interface PhotoAnalysis {
   compositionNotes?: string;
 }
 
+export interface UnescoHeritageInfo {
+  isWorldHeritage: boolean;
+  officialName?: string;
+  inscriptionYear?: number | string;
+  criteria?: string;
+  category?: 'Cultural' | 'Natural' | 'Mixed';
+  unescoId?: string | number;
+  region?: string;
+  dangerStatus?: boolean;
+}
+
+export interface HistoricCollegeInfo {
+  isCollegeOrUniversity: boolean;
+  institutionName?: string;
+  collegiateUnit?: string;
+  foundedYear?: number | string;
+  notableCollegesOrHalls?: string[];
+  collegiateFeatures?: string[];
+  famousAlumniOrScholars?: string[];
+}
+
 export interface LandmarkRecognition {
   name: string;
   localName?: string;
@@ -35,6 +56,8 @@ export interface LandmarkRecognition {
   isLandmark?: boolean;
   detectedCategory?: 'landmark' | 'person' | 'animal' | 'nature' | 'food' | 'object' | 'indoor' | 'other';
   notLandmarkReason?: string;
+  unescoInfo?: UnescoHeritageInfo;
+  collegeInfo?: HistoricCollegeInfo;
 }
 
 export interface GroundingSource {

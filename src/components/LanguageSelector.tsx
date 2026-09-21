@@ -38,37 +38,56 @@ export const LanguageSelector: React.FC = () => {
         type="button"
         id="global-language-selector-btn"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-xs font-medium border border-slate-700/80 transition-all shadow-sm group hover:border-cyan-500/50"
+        className="flex items-center space-x-1 sm:space-x-1.5 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-xs font-medium border border-slate-700/80 transition-all shadow-sm group hover:border-cyan-500/50 shrink-0"
         title="Choose language (supports every language in the world)"
+        aria-label="Change Language"
       >
-        <span className="text-base leading-none">{currentLanguage.flag}</span>
+        <span className="text-sm sm:text-base leading-none">{currentLanguage.flag}</span>
         {isTranslatingUI ? (
           <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
         ) : (
-          <Globe className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-45 transition-transform duration-300" />
+          <span className="hidden sm:inline-flex">
+            <Globe className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-45 transition-transform duration-300" />
+          </span>
         )}
-        <span className="font-semibold text-white tracking-wide">
+        <span className="font-semibold text-white tracking-wide hidden sm:inline">
           {currentLanguage.nativeName}
         </span>
+        <span className="sm:hidden font-bold text-white text-[11px] font-mono uppercase">
+          {currentLanguage.code}
+        </span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+          className={`w-3 h-3 text-slate-400 transition-transform duration-200 shrink-0 ${
             isOpen ? "rotate-180 text-cyan-400" : ""
           }`}
         />
       </button>
 
-      {/* Dropdown Modal */}
+      {/* Dropdown Modal / Mobile Bottom Sheet */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-slate-950/95 border border-slate-700/90 shadow-2xl backdrop-blur-2xl z-50 overflow-hidden flex flex-col max-h-96"
-          >
-            {/* Header with Search and Universal Badge */}
-            <div className="p-3 border-b border-slate-800/80 bg-slate-900/60">
+          <>
+            {/* Mobile Backdrop Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 sm:hidden"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl sm:rounded-2xl bg-slate-950 border-t sm:border border-slate-700/80 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-auto sm:mt-2 sm:w-80 backdrop-blur-2xl overflow-hidden flex flex-col max-h-[80vh] sm:max-h-96 pb-6 sm:pb-0"
+            >
+              {/* Mobile Drawer Grab Bar */}
+              <div className="w-10 h-1 rounded-full bg-slate-700 mx-auto mt-3 mb-1 sm:hidden" />
+
+              {/* Header with Search and Universal Badge */}
+              <div className="p-3 border-b border-slate-800/80 bg-slate-900/60">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
                   <Languages className="w-4 h-4 text-cyan-400" />
@@ -152,6 +171,7 @@ export const LanguageSelector: React.FC = () => {
               <span className="text-slate-500">100+ Dialects</span>
             </div>
           </motion.div>
+        </>
         )}
       </AnimatePresence>
     </div>

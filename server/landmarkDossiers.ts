@@ -1,4 +1,5 @@
 import { RELIGIOUS_STRUCTURE_DOSSIERS, RELIGIOUS_ALIASES } from "./religiousStructuresKnowledge";
+import { HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS, HISTORIC_COLLEGES_AND_UNESCO_ALIASES } from "./historicCollegesAndUnescoDossiers";
 
 export interface FallbackLandmarkData {
   name: string;
@@ -34,6 +35,23 @@ export interface FallbackLandmarkData {
     script: string;
     focusPointId: string;
   }>;
+  unescoYear?: number;
+  unescoId?: number | string;
+  unescoInfo?: {
+    isWorldHeritage: boolean;
+    officialName: string;
+    inscriptionYear: number;
+    criteria?: string;
+    category?: string;
+    unescoId?: string;
+  };
+  collegeInfo?: {
+    isHistoricCollege: boolean;
+    institutionName: string;
+    foundationYear: number;
+    tradition?: string;
+    notableAlumni?: string[];
+  };
 }
 
 export const KNOWN_LANDMARK_DOSSIERS: Record<string, FallbackLandmarkData> = {
@@ -192,44 +210,6 @@ export const KNOWN_LANDMARK_DOSSIERS: Record<string, FallbackLandmarkData> = {
       { id: "chap-4", title: "The Living Heritage", timestampHint: "1:15", script: "Financed purely through ticket admissions and private donations, its ongoing construction connects generations of craftsmen.", focusPointId: "pt-2" }
     ]
   },
-  "big ben": {
-    name: "Elizabeth Tower (Big Ben)",
-    localName: "Big Ben Clock Tower",
-    city: "London",
-    country: "United Kingdom",
-    architecturalStyle: "Victorian Gothic Revival",
-    periodEra: "1843–1859",
-    confidence: 98,
-    summary: "Rising 96 meters above the Houses of Parliament, this four-dial clock tower is the world's most famous acoustic timekeeper and a symbol of British parliamentary democracy.",
-    coordinatesEstimate: { lat: 51.5007, lng: -0.1246 },
-    arKeypoints: [
-      { id: "pt-1", label: "Great Clock Four-Dial Faces", featureType: "clock", description: "Each 7-meter dial contains 324 pieces of pot opal glass framed in gilded cast iron.", x: 50, y: 38 },
-      { id: "pt-2", label: "Lantern Spire & Ayrton Light", featureType: "spire", description: "Gilded roof housing the Ayrton Light, which illuminates whenever Parliament sits after dark.", x: 50, y: 14 },
-      { id: "pt-3", label: "Great Bell (Big Ben)", featureType: "facade", description: "The 13.7-tonne bell tuned to E-natural, cracked in 1859, giving it its distinctive resonance.", x: 50, y: 48 },
-    ],
-    historicalTimeline: [
-      { yearOrEra: "1834", event: "The Great Fire of Westminster", description: "Destruction of the old Palace of Westminster spurred a competition won by architect Charles Barry." },
-      { yearOrEra: "1859", event: "The Clock Starts Ticking", description: "The Great Clock began keeping time on May 31, and the Great Bell first struck on July 11." },
-      { yearOrEra: "2017–2022", event: "The Great Restoration", description: "Scaffolding cocooned the tower for 5 years for painstaking cleaning, re-glazing, and mechanical restoration." }
-    ],
-    architecturalSecrets: [
-      "The pendulum is adjusted using pre-decimal British penny coins placed on its weight tray; adding one penny changes the clock speed by two-fifths of a second per day.",
-      "The tower leans slightly to the northwest by approximately 0.28 degrees (43.5 cm) due to tunnel excavations over a century.",
-      "Latin inscriptions at the base of each clock face read: 'DOMINE SALVAM FAC REGINAM NOSTRAM VICTORIAM PRIMAM' (Lord keep safe our Queen Victoria the First)."
-    ],
-    culturalSignificance: "During World War II, Big Ben's chimes were broadcast live across Europe by the BBC as a reassuring beacon of hope and resilience against totalitarianism.",
-    visitorTips: [
-      "Stand across Westminster Bridge near St Thomas' Hospital for the premier postcard photograph.",
-      "Listen at the top of the hour for the famous Westminster Quarters melody followed by the deep strikes of the Great Bell."
-    ],
-    narrationScript: "Welcome to Westminster in London. Towering above the River Thames stands the Elizabeth Tower, universally known by the nickname of its colossal 13.7-tonne bell, Big Ben. Designed by Charles Barry and Augustus Pugin in glorious Gothic Revival style, its four magnificent clock dials are illuminated by hundreds of opal glass panes. For over 160 years, its resonant chimes have marked historic moments, broadcasts of peace, and the cadence of London life.",
-    chapters: [
-      { id: "chap-1", title: "The Grand Arrival", timestampHint: "0:00", script: "Approaching Westminster Bridge, the 96-meter limestone and cast-iron tower reflects into the River Thames.", focusPointId: "pt-2" },
-      { id: "chap-2", title: "Horological Genius", timestampHint: "0:25", script: "The double three-legged gravity escapement designed by Lord Grimthorpe isolates the pendulum from external wind pressure on the hands.", focusPointId: "pt-1" },
-      { id: "chap-3", title: "The Cracked Great Bell", timestampHint: "0:50", script: "When the original bell cracked during testing in 1859, the hammer was turned and a smaller weight fitted, creating its signature timbre.", focusPointId: "pt-3" },
-      { id: "chap-4", title: "The Living Heritage", timestampHint: "1:15", script: "Freshly restored to its original Victorian Prussian blue and gilded glory, Big Ben strikes as the enduring pulse of Great Britain.", focusPointId: "pt-1" }
-    ]
-  },
   "fushimi inari": {
     name: "Fushimi Inari Taisha",
     localName: "伏見稲荷大社",
@@ -383,13 +363,127 @@ export const KNOWN_LANDMARK_DOSSIERS: Record<string, FallbackLandmarkData> = {
       { id: "chap-3", title: "The King's Inner Sanctum", timestampHint: "0:50", script: "Deep inside, the Grand Gallery ascends steeply to the King's Chamber, carved entirely of red Aswan granite.", focusPointId: "pt-2" },
       { id: "chap-4", title: "Eternal Legacy", timestampHint: "1:15", script: "As the ancient proverb goes: Man fears Time, but Time fears the Pyramids.", focusPointId: "pt-1" }
     ]
+  },
+  "great wall of china": {
+    name: "The Great Wall of China",
+    localName: "Wanli Changcheng (Ten-Thousand-Mile Long Wall)",
+    city: "Beijing / Huairou",
+    country: "China",
+    architecturalStyle: "Ming Dynasty Military Fortification & Ashlar Masonry",
+    periodEra: "7th c. BC – 1644 AD / Ming Section c. 1505",
+    confidence: 99,
+    summary: "The world's longest man-made military defense fortification, winding over 21,000 kilometers across mountain ridges, deserts, and plateaus with iconic crenellated ramparts and watchtowers.",
+    coordinatesEstimate: { lat: 40.4319, lng: 116.5704 },
+    arKeypoints: [
+      { id: "pt-1", label: "Crenellated Battlements & Arrow Slits", featureType: "facade", description: "Defensive stone parapets engineered with downward-angled embrasures for archers and crossbowmen.", x: 50, y: 35 },
+      { id: "pt-2", label: "Multi-Storey Beacon Watchtower", featureType: "spire", description: "Signal tower used to communicate impending raids across hundreds of kilometers via smoke by day and fire by night.", x: 65, y: 22 },
+      { id: "pt-3", label: "Steep Mountain Ashlar Wall Path", featureType: "entrance", description: "Paved granite and kilned brick thoroughfare wide enough for five horses or ten infantrymen abreast.", x: 35, y: 65 },
+      { id: "pt-4", label: "Natural Mountain Ridge Integration", featureType: "relief", description: "Walls follow the knife-edge crests of steep precipices, using cliffs as impassable defensive shields.", x: 20, y: 80 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "770–221 BC", event: "Warring States Origins", description: "Individual feudal states built separate regional rammed-earth border walls to repel rival invaders." },
+      { yearOrEra: "221 BC", event: "Qin Shi Huang Unification", description: "The First Emperor of China unified the regional walls into a continuous northern defense against the Xiongnu." },
+      { yearOrEra: "1368–1644", event: "Ming Dynasty Stone Reconstruction", description: "Ming emperors completely rebuilt the wall with kiln-fired bricks, stone ashlar slabs, and 25,000 watchtowers." }
+    ],
+    architecturalSecrets: [
+      "The Ming Dynasty mortar contains sticky rice flour (amylopectin), which created a water-resistant bond stronger than standard lime mortar.",
+      "The total length of all wall sections built across all Chinese dynasties measures 21,196 kilometers (13,171 miles).",
+      "Contrary to popular myth, the Great Wall cannot be seen from low Earth orbit with the unaided human eye."
+    ],
+    culturalSignificance: "Symbol of Chinese perseverance, civil engineering mastery, and national resilience, designated a UNESCO World Heritage site and one of the New 7 Wonders of the World.",
+    visitorTips: [
+      "Visit the Mutianyu or Jinshanling sections for magnificent restored battlements with far fewer crowds than Badaling.",
+      "Wear sturdy walking shoes with ankle support as stone steps can be exceptionally steep and polished smooth by centuries of footsteps."
+    ],
+    narrationScript: "Stretching like a stone dragon across the jagged ridgelines of Northern China, the Great Wall is the grandest defensive project in human history. Reaching across mountains, deserts, and steppes for over 21,000 kilometers, its Ming-era ramparts were mortared with an ingenious blend of lime and sticky rice. Gaze down the crenellated parapets toward the watchtowers—from here, soldiers relayed smoke and fire signals across empires in hours.",
+    chapters: [
+      { id: "chap-1", title: "The Mountain Dragon", timestampHint: "0:00", script: "Riding the crest of perilous mountain precipices, the stone wall snakes into the horizon.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Beacon System", timestampHint: "0:25", script: "Watchtowers stood within sight of one another, using wolf dung smoke by day and lantern fires by night.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Sticky Rice Engineering", timestampHint: "0:50", script: "Ming dynasty masons bonded heavy granite blocks with sticky rice mortar that remains rock-solid today.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Eternal Bastion", timestampHint: "1:15", script: "A monumental testament to human resolve, standing as an enduring symbol of Chinese civil civilization.", focusPointId: "pt-4" }
+    ]
+  },
+  "big ben": {
+    name: "Elizabeth Tower (Big Ben & Palace of Westminster)",
+    localName: "Elizabeth Tower / Houses of Parliament",
+    city: "London",
+    country: "United Kingdom",
+    architecturalStyle: "Perpendicular Gothic Revival",
+    periodEra: "1843–1859",
+    confidence: 98,
+    summary: "The iconic 96-meter Gothic clock tower at the north end of the Palace of Westminster on the River Thames, famed for its 13.7-ton Great Bell and four 7-meter opal glass clock faces.",
+    coordinatesEstimate: { lat: 51.5007, lng: -0.1246 },
+    arKeypoints: [
+      { id: "pt-1", label: "Gothic Spire & Lantern (Ayrton Light)", featureType: "spire", description: "Cast-iron framed spire crowned by the Ayrton Light, illuminated whenever Parliament sits after dark.", x: 50, y: 15 },
+      { id: "pt-2", label: "Opal Glass Great Clock Face", featureType: "clock", description: "7-meter dial composed of 312 individual pieces of pot opal glass, with gilded Latin inscription Domine Salvam Fac Reginam Nostram Victoriam Primam.", x: 50, y: 40 },
+      { id: "pt-3", label: "Belfry Housing the 13.7-Ton Great Bell", featureType: "facade", description: "Resonates on the musical note E natural with four smaller quarter bells striking the Westminster Quarters.", x: 50, y: 28 },
+      { id: "pt-4", label: "Gilded Tudor Heraldry & Base Pier", featureType: "relief", description: "Anston limestone and clipsham freestone walls carved with royal coats of arms and portcullises.", x: 50, y: 78 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1834", event: "Old Palace Fire", description: "A devastating blaze destroyed the medieval Palace of Westminster, leading to an architectural competition." },
+      { yearOrEra: "1859", event: "Clock Commences Ticking", description: "Architects Charles Barry and Augustus Pugin completed the tower; the Great Clock began keeping time on May 31, 1859." },
+      { yearOrEra: "2012", event: "Renamed Elizabeth Tower", description: "Renamed from the Clock Tower to Elizabeth Tower in tribute to Queen Elizabeth II's Diamond Jubilee." },
+      { yearOrEra: "2017–2022", event: "Comprehensive Conservation", description: "Five-year conservation project restoring the original Prussian blue and gilded color scheme." }
+    ],
+    architecturalSecrets: [
+      "The clock mechanism's pendulum rate is adjusted using pre-decimal British copper pennies placed atop the pendulum weight.",
+      "Strictly speaking, 'Big Ben' is the nickname of the 13.7-tonne Great Bell inside, not the tower itself (the Elizabeth Tower).",
+      "During the London Blitz of WWII, the clock faces were blacked out, but the Great Bell continued to strike the hour without interruption."
+    ],
+    culturalSignificance: "The acoustic and visual heart of London and British constitutional democracy, broadcasting its resonant hourly chimes worldwide via BBC Radio since 1923.",
+    visitorTips: [
+      "The premier photo perspective is from the center of Westminster Bridge framing the tower with iconic red London double-decker buses.",
+      "Visit at dusk when the four dial faces illuminate with glowing warm white LEDs behind the opal glass."
+    ],
+    narrationScript: "Rising majestically over the River Thames, welcome to the Elizabeth Tower, universally known as Big Ben. Designed in rich Gothic Revival style by Charles Barry and Augustus Welby Pugin, this 96-meter tower was completed in 1859. Above the four 7-meter opal glass clock dials hangs the 13-ton Great Bell. Listen closely—for over 160 years, its famous Westminster Quimes have set the rhythm of London and the British Parliament.",
+    chapters: [
+      { id: "chap-1", title: "Thameside Sentinel", timestampHint: "0:00", script: "Standing proudly beside the Palace of Westminster, the gilded Gothic spire dominates the Westminster skyline.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Pugin's Masterpiece Dial", timestampHint: "0:25", script: "Each dial is assembled from over 300 pieces of translucent opal glass, bearing Victoria's royal prayer.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "The Heartbeat of Time", timestampHint: "0:50", script: "Engineered by Edmund Beckett Denison, the double three-legged gravity escapement maintains second-perfect time.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Democratic Symbol", timestampHint: "1:15", script: "A steadfast beacon of British parliamentary democracy that kept striking through the darkest days of the Blitz.", focusPointId: "pt-4" }
+    ]
+  },
+  "santiago bernabeu": {
+    name: "Santiago Bernabéu Stadium",
+    localName: "Estadio Santiago Bernabéu",
+    city: "Madrid",
+    country: "Spain",
+    architecturalStyle: "Contemporary Parametric High-Tech Stadium Architecture",
+    periodEra: "Inaugurated 1947 / Remodeled 2019–2024",
+    confidence: 97,
+    summary: "The legendary home ground of Real Madrid CF in Chamartín, transformed into a state-of-the-art avant-garde arena featuring a parametric stainless steel skin, 360-degree LED halo, and subterranean automated pitch greenhouse.",
+    coordinatesEstimate: { lat: 40.4531, lng: -3.6883 },
+    arKeypoints: [
+      { id: "pt-1", label: "Parametric Stainless Steel Louvre Facade", featureType: "facade", description: "Curved metallic louvres that reflect shifting sunlight and allow natural ventilation while functioning as a projection screen.", x: 50, y: 30 },
+      { id: "pt-2", label: "Retractable Membrane Roof", featureType: "dome", description: "Ultra-lightweight truss roof structure capable of fully closing over the 84,000-seat bowl in under 15 minutes.", x: 50, y: 15 },
+      { id: "pt-3", label: "360-Degree Continuous LED Video Halo", featureType: "clock", description: "Suspended circular high-definition video ribbon encircling the entire roof perimeter for immersive matchday displays.", x: 50, y: 45 },
+      { id: "pt-4", label: "Hypogeum Retractable Pitch Greenhouse", featureType: "entrance", description: "30-meter-deep subterranean chamber with automated hydraulic trays, LED growth lights, and irrigation to preserve grass.", x: 50, y: 75 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1947", event: "Inauguration as Estadio Chamartín", description: "Club president Santiago Bernabéu oversaw construction of Europe's most ambitious post-war sports venue." },
+      { yearOrEra: "1982", event: "FIFA World Cup Final", description: "Hosted the 1982 World Cup final between Italy and West Germany after adding stadium roofing." },
+      { yearOrEra: "2024", event: "Next-Gen Transformation", description: "Unveiled GMP Architekten and L35's complete futuristic remodel with automated subterranean turf storage." }
+    ],
+    architecturalSecrets: [
+      "The turf divides longitudinally into six motorized trays that sink into an underground climate-controlled greenhouse cave when concerts occur.",
+      "The metallic exterior skin contains zero screws on its visible surfaces, utilizing invisible robotic clamping systems.",
+      "A 360-degree skywalk running along the roof offers unobstructed panoramic views of the Madrid city skyline."
+    ],
+    culturalSignificance: "The cathedral of modern football and home to Real Madrid's record 15 European Cups, bridging sports history with 21st-century civil engineering.",
+    visitorTips: [
+      "Take the Tour Bernabéu to walk the players' tunnel, presidential box, and view the iconic Champions League trophy room.",
+      "Walk the Paseo de la Castellana at night when dynamic LED backlighting illuminates the undulating steel bands."
+    ],
+    narrationScript: "Standing in Madrid's Chamartín district, welcome to the Santiago Bernabéu Stadium. First opened in 1947 and completely reimagined in 2024, this is the grand cathedral of Real Madrid. Encased in a shimmering parametric skin of curved stainless steel, it boasts a retractable roof and a 360-degree digital video halo. Deep underground lies its greatest secret: an automated greenhouse that stores the pitch on hydraulic trays beneath the floor.",
+    chapters: [
+      { id: "chap-1", title: "Temple of Kings", timestampHint: "0:00", script: "Rising over Paseo de la Castellana, the futuristic metallic skin bends sunlight across Madrid.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Subterranean Cave", timestampHint: "0:25", script: "Thirty meters below ground, an automated horticultural vault keeps the grass in ideal condition year-round.", focusPointId: "pt-4" },
+      { id: "chap-3", title: "The 360-Degree Halo", timestampHint: "0:50", script: "Suspended overhead, a continuous ring of high-definition displays illuminates 85,000 spectators.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "European Glory", timestampHint: "1:15", script: "From Di Stéfano to the modern era, the Bernabéu remains football's most celebrated stage.", focusPointId: "pt-2" }
+    ]
   }
 };
 
-/**
- * Finds the most relevant dossier based on any landmark name, city, or query.
- * Returns null if no match is found (unless fallbackToDefault is true).
- */
 /**
  * Normalized lookup that finds a dossier ONLY if the landmark name genuinely matches.
  * Strictly prevents false matches on generic words (like "tower", "temple", "bridge")
@@ -397,7 +491,13 @@ export const KNOWN_LANDMARK_DOSSIERS: Record<string, FallbackLandmarkData> = {
  */
 export function findLandmarkDossier(query?: string): FallbackLandmarkData | null {
   if (!query) return null;
-  const norm = query.toLowerCase().replace(/[^a-z0-9 ]/g, " ").trim();
+  const norm = query
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!norm) return null;
 
   // Normalized key aliases
@@ -410,8 +510,38 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     "taj mahal": "taj mahal",
     "statue of liberty": "statue of liberty",
     "liberty enlightening the world": "statue of liberty",
-    "great pyramid of giza": "great pyramid of giza",
-    "pyramid of khufu": "great pyramid of giza",
+    // Pyramids & Giza
+    "pyramids": "pyramids",
+    "pyramid": "pyramids",
+    "great pyramid of giza": "pyramids",
+    "pyramids of giza": "pyramids",
+    "pyramids of giza great sphinx": "pyramids",
+    "giza pyramids": "pyramids",
+    "giza pyramid": "pyramids",
+    "khufu pyramid": "pyramids",
+    "pyramid of khufu": "pyramids",
+    // Great Wall
+    "great wall": "great wall of china",
+    "great wall of china": "great wall of china",
+    "the great wall of china": "great wall of china",
+    "the great wall": "great wall of china",
+    "wanli changcheng": "great wall of china",
+    "mutianyu": "great wall of china",
+    "badaling": "great wall of china",
+    // Big Ben
+    "big ben": "big ben",
+    "elizabeth tower": "big ben",
+    "elizabeth tower big ben": "big ben",
+    "clock tower london": "big ben",
+    "palace of westminster": "big ben",
+    "houses of parliament": "big ben",
+    // Bernabeu
+    "bernabeu": "santiago bernabeu",
+    "santiago bernabeu": "santiago bernabeu",
+    "santiago bernabeu stadium": "santiago bernabeu",
+    "estadio santiago bernabeu": "santiago bernabeu",
+    "real madrid stadium": "santiago bernabeu",
+    // Senso-ji & others
     "senso ji": "senso-ji temple",
     "sensoji": "senso-ji temple",
     "senso-ji temple": "senso-ji temple",
@@ -421,12 +551,14 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     "sagrada familia": "sagrada familia",
     "basilica de la sagrada familia": "sagrada familia",
     ...RELIGIOUS_ALIASES,
+    ...HISTORIC_COLLEGES_AND_UNESCO_ALIASES,
   };
 
   // Combined dossiers map
   const allDossiers: Record<string, FallbackLandmarkData> = {
     ...KNOWN_LANDMARK_DOSSIERS,
     ...RELIGIOUS_STRUCTURE_DOSSIERS,
+    ...HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS,
   };
 
   // Direct alias check
