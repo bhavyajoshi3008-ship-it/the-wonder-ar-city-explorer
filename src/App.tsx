@@ -591,18 +591,24 @@ export default function App() {
               </div>
               <div>
                 <div className="flex items-center space-x-1 sm:space-x-2">
-                  <h1 className="text-sm sm:text-lg font-bold tracking-tight text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1">
-                    CityLens
+                  <h1 className="text-sm sm:text-lg font-bold tracking-tight text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1.5">
+                    <span>CityLens</span>
                     <span className="text-cyan-400 font-mono text-xs sm:text-sm">AR</span>
+                    <span className="text-[11px] font-sans font-medium text-slate-400 border-l border-slate-700/80 pl-2 hidden sm:inline">
+                      by Bhavya Joshi
+                    </span>
                   </h1>
                   <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hidden md:inline-flex items-center gap-1 shadow-sm">
                     <Sparkles className="w-2.5 h-2.5 text-cyan-400 animate-spin" style={{ animationDuration: "10s" }} />
                     AR Engine
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 hidden lg:block">
-                  Recognize Landmarks • Live Search Grounding • AR Audio Commentary
-                </p>
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] text-cyan-400/90 font-medium sm:hidden">by Bhavya Joshi</span>
+                  <p className="text-xs text-slate-400 hidden sm:block">
+                    Recognize Landmarks • Live Search Grounding • AR Audio Commentary
+                  </p>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -891,7 +897,10 @@ export default function App() {
       {/* Footer */}
       <footer className="w-full border-t border-slate-900 bg-slate-950 px-4 py-4 text-center text-xs font-mono text-slate-500">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Photo Tourism & Landmark AR Explorer • Powered by Google AI Studio</span>
+          <span className="flex items-center space-x-1.5">
+            <span className="text-slate-300 font-semibold">CityLens</span>
+            <span>• Crafted by Bhavya Joshi • Powered by Google AI Studio</span>
+          </span>
           <span className="text-slate-600">Multimodal Vision • Search Grounding • Speech Synthesis</span>
         </div>
       </footer>

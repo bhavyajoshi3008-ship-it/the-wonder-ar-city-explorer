@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Photo Tourism & Landmark AR Explorer",
-  "short_name": "CityLens AR",
-  "description": "AI-powered city tourism app that recognizes landmarks, provides interactive AR tours, and persists historical journals and narrated guides for offline access.",
+  "name": "CityLens by Bhavya Joshi",
+  "short_name": "CityLens",
+  "description": "AI-powered city tourism app created by Bhavya Joshi that recognizes landmarks, provides interactive AR tours, and persists historical journals and narrated guides for offline access.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -336,13 +336,15 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               </div>
             </div>
 
-            <h3 className="text-lg sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold text-white tracking-tight">
-              {t("take_photo", "Capture a City Landmark")}
+            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+              {t("capture_landmark_title", "Capture a City Landmark")}
             </h3>
 
-            <div className="mt-1.5 sm:mt-2 lg:mt-3 inline-flex items-center space-x-1.5 lg:space-x-2 px-3 py-0.5 sm:py-1 lg:px-4 lg:py-1.5 rounded-full bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs lg:text-sm text-slate-300 font-mono">
-              <MapPin className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-cyan-400 shrink-0" />
-              <span className="truncate">Historic monuments, cathedrals, temples & shrines</span>
+            <div className="mt-2 sm:mt-2.5 flex items-center justify-center px-4 w-full">
+              <p className="text-xs sm:text-sm text-slate-400 text-center flex items-center justify-center gap-1.5 leading-none">
+                <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0 translate-y-[0.5px]" />
+                <span className="leading-none">{t("landmark_types_hint", "Monuments, cathedrals, temples & historic sites")}</span>
+              </p>
             </div>
 
             {cameraError && (
@@ -368,7 +370,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                 <div className="absolute inset-0 w-1/3 bg-white/30 skew-x-12 group-hover:translate-x-[350%] transition-transform duration-700 pointer-events-none" />
                 <Camera className="w-4 h-4 lg:w-5 lg:h-5 text-slate-950 shrink-0" />
                 <span className="tracking-wide whitespace-nowrap">
-                  {t("take_photo", "Open Live Camera")}
+                  {t("open_camera", "Open Live Camera")}
                 </span>
               </motion.button>
 

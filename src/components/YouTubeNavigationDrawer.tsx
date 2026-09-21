@@ -169,13 +169,16 @@ export const YouTubeNavigationDrawer: React.FC<YouTubeNavigationDrawerProps> = (
                       <Compass className="w-3.5 h-3.5 text-cyan-400" />
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <span className="font-bold text-base tracking-tight text-white group-hover:text-cyan-300 transition">
-                      CityLens
-                    </span>
-                    <span className="text-[10px] font-mono text-cyan-400 font-bold ml-1 px-1 py-0.2 rounded bg-cyan-950 border border-cyan-500/40">
-                      AR
-                    </span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center">
+                      <span className="font-bold text-base tracking-tight text-white group-hover:text-cyan-300 transition">
+                        CityLens
+                      </span>
+                      <span className="text-[10px] font-mono text-cyan-400 font-bold ml-1 px-1 py-0.2 rounded bg-cyan-950 border border-cyan-500/40">
+                        AR
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-sans -mt-0.5">by Bhavya Joshi</span>
                   </div>
                 </div>
               </div>
@@ -558,7 +561,7 @@ export const YouTubeNavigationDrawer: React.FC<YouTubeNavigationDrawerProps> = (
 
             {/* Bottom Footer Info */}
             <div className="p-3 border-t border-slate-800/80 bg-[#0f0f0f] text-[10px] font-mono text-slate-500 flex items-center justify-between shrink-0">
-              <span>CityLens AR v3.4</span>
+              <span>CityLens AR • by Bhavya Joshi</span>
               <span className="text-cyan-500/70">Powered by Gemini</span>
             </div>
           </motion.div>
