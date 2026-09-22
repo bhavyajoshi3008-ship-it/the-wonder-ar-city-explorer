@@ -153,9 +153,9 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
       : isNotLandmark
       ? t("not_recognized_landmark", "Photo is Not a Recognized Landmark")
       : t("landmark_not_recognized", "Landmark Not Recognized")
-    : displayName
-    ? t("exploring_landmark", `Exploring ${displayName}...`).replace("{name}", displayName).replace("{landmark}", displayName)
-    : t("analyzing_landmark", "Analyzing City Landmark...");
+    : currentStage === "recognizing" || !displayName
+    ? t("exploring", "Exploring...")
+    : t("exploring_landmark", `Exploring ${displayName}...`).replace("{name}", displayName).replace("{landmark}", displayName);
 
   const descriptionText = localizedError || error || t("executing_pipeline", "Executing multi-model AI pipeline: computer vision, search grounding, and audio synthesis.");
 

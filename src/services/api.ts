@@ -82,7 +82,9 @@ async function fetchWithRetry(
 
 export async function recognizeLandmark(
   imageDataUrl: string,
-  hintName?: string
+  hintName?: string,
+  targetLanguage?: string,
+  targetLanguageName?: string
 ): Promise<LandmarkRecognition> {
   const mimeMatch = imageDataUrl.match(/^data:([^;]+);/);
   const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
@@ -96,6 +98,8 @@ export async function recognizeLandmark(
         image: imageDataUrl,
         mimeType,
         hintName,
+        targetLanguage,
+        targetLanguageName,
       }),
     },
     "landmark recognition service"
@@ -116,6 +120,8 @@ export async function fetchLandmarkHistory(params: {
   isLandmark?: boolean;
   detectedCategory?: string;
   notLandmarkReason?: string;
+  targetLanguage?: string;
+  targetLanguageName?: string;
 }): Promise<LandmarkHistory> {
   const response = await fetchWithRetry(
     "/api/fetch-history",
@@ -133,7 +139,8 @@ export async function fetchLandmarkHistory(params: {
 export async function generateNarration(
   text: string,
   voiceName: string = "Kore",
-  targetLanguageName?: string
+  targetLanguageName?: string,
+  targetLanguage?: string
 ): Promise<NarrationAudio> {
   try {
     const response = await fetchWithRetry(
@@ -141,7 +148,7 @@ export async function generateNarration(
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voiceName, targetLanguageName }),
+        body: JSON.stringify({ text, voiceName, targetLanguageName, targetLanguage }),
       },
       "audio narration service"
     );

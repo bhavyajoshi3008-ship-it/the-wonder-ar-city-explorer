@@ -140,17 +140,18 @@ export const TourJournal: React.FC<TourJournalProps> = ({
           </div>
         )}
 
-        {/* Sync Status Banner if user is not signed in and is online */}
-        {!user && isOnline && (
+        {/* Sync Status Banner if user is not signed in with Google and is online */}
+        {(!user || !user.email) && isOnline && (
           <div className="bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-slate-950 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2 text-slate-300">
               <Cloud className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>Sign in with Google to sync your travel journal to Cloud Firestore.</span>
+              <span>Connect Google to back up your journal to Cloud Firestore.</span>
             </div>
             <button
               type="button"
+              id="journal-connect-google-btn"
               onClick={() => signInWithGoogle()}
-              className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-medium transition text-xs shrink-0 flex items-center space-x-1"
+              className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-medium transition text-xs shrink-0 flex items-center space-x-1 cursor-pointer"
             >
               <LogIn className="w-3 h-3" />
               <span>Connect</span>

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Camera, RefreshCw, Upload, Sparkles, Image as ImageIcon, MapPin, Compass, AlertCircle, GraduationCap, Globe, BookOpen, Layers } from "lucide-react";
+import { Camera, RefreshCw, Upload, Sparkles, Image as ImageIcon, MapPin, Compass, AlertCircle, GraduationCap, Globe, BookOpen, Layers, Landmark } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SAMPLE_LANDMARKS, SampleLandmark } from "../data/sampleLandmarks";
 import { fileToDataUrl, urlToDataUrl, optimizeBase64Image } from "../utils/imageUtils";
@@ -33,7 +33,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [sampleLoadingId, setSampleLoadingId] = useState<string | null>(null);
   const [presetDeckView, setPresetDeckView] = useState<"quick" | "unesco_catalog">("quick");
-  const [quickFilter, setQuickFilter] = useState<"all" | "colleges" | "unesco">("all");
+  const [quickFilter, setQuickFilter] = useState<"all" | "wonders" | "unesco" | "monuments">("all");
 
   // Start/Stop Camera
   const startCamera = async (facing: "environment" | "user" = facingMode) => {
@@ -60,7 +60,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
       }
     } catch (err: any) {
       console.warn("Camera access failed or unavailable:", err);
-      setCameraError("Camera unavailable or permission denied. You can still upload a photo or choose a sample landmark.");
+      setCameraError(t("camera_error", "Camera unavailable or permission denied. You can still upload a photo or choose a sample landmark."));
       setCameraActive(false);
     }
   };
@@ -221,7 +221,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                 {t("or_drag_drop", "Drop landmark photo here")}
               </h4>
               <p className="text-xs lg:text-sm font-mono text-cyan-300">
-                Instant AI Architectural & Landmark Detection
+                {t("instant_detection_desc", "Instant AI Architectural & Landmark Detection")}
               </p>
             </motion.div>
           )}
@@ -244,17 +244,17 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
             <div className="flex items-center justify-between text-xs lg:text-sm font-mono text-cyan-300 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 lg:px-4 lg:py-2 rounded-full border border-cyan-500/30 shadow-lg">
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span className="font-semibold tracking-wider text-[11px] sm:text-xs lg:text-sm">CAMERA ACTIVE</span>
+                <span className="font-semibold tracking-wider text-[11px] sm:text-xs lg:text-sm">{t("camera_active", "CAMERA ACTIVE")}</span>
               </div>
               <div className="flex items-center space-x-2 sm:space-x-3 text-slate-300 text-[10px] sm:text-xs lg:text-sm">
-                <span>AI VISION</span>
+                <span>{t("ai_vision", "AI VISION")}</span>
                 <span className="hidden sm:inline">FOV 84°</span>
-                <span>READY</span>
+                <span>{t("ready", "READY")}</span>
               </div>
             </div>
 
             {/* Volumetric AR Laser Scanning Beam */}
-            <ARScanOverlay variant="active" label="LIDAR // OPTIC ACTIVE" showLabel={true} />
+            <ARScanOverlay variant="active" label={t("ar_optic_active", "LIDAR // OPTIC ACTIVE")} showLabel={true} />
 
             {/* Target Reticle */}
             <div className="relative w-40 h-40 sm:w-56 sm:h-56 lg:w-72 lg:h-72 mx-auto my-auto border border-cyan-400/40 rounded-2xl lg:rounded-3xl shadow-[0_0_20px_rgba(6,182,212,0.15)]">
@@ -270,7 +270,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               </div>
               <div className="absolute -bottom-6 lg:-bottom-8 inset-x-0 text-center">
                 <span className="text-[10px] lg:text-xs font-mono text-cyan-300 uppercase tracking-wider bg-slate-950/80 px-2.5 py-0.5 rounded border border-cyan-500/30">
-                  Align monument in frame
+                  {t("align_monument_in_frame", "Align monument in frame")}
                 </span>
               </div>
             </div>
@@ -281,7 +281,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                 type="button"
                 id="camera-flip-btn"
                 onClick={toggleFacingMode}
-                title="Switch Camera"
+                title={t("switch_camera", "Switch Camera")}
                 className="w-11 h-11 lg:w-12 lg:h-12 rounded-full text-slate-200 hover:text-white hover:bg-slate-800 transition flex items-center justify-center cursor-pointer active:rotate-180 duration-300"
               >
                 <RefreshCw className="w-5 h-5 lg:w-6 lg:h-6" />
@@ -295,7 +295,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                   id="camera-shutter-btn"
                   onClick={takeSnapshot}
                   disabled={isLoading}
-                  title="Capture Landmark Photo"
+                  title={t("capture_landmark_photo", "Capture Landmark Photo")}
                   className="relative w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 rounded-full border-2 border-white/90 p-1 flex items-center justify-center hover:scale-105 active:scale-95 transition cursor-pointer shadow-lg shadow-cyan-500/40"
                 >
                   <div className="w-full h-full rounded-full bg-cyan-400 hover:bg-cyan-300 flex items-center justify-center shadow-md transition">
@@ -308,10 +308,10 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                 type="button"
                 id="camera-close-btn"
                 onClick={stopCamera}
-                title="Close Camera"
+                title={t("close_camera", "Close Camera")}
                 className="h-10 lg:h-11 px-3 lg:px-4 rounded-full text-xs lg:text-sm font-semibold text-slate-300 hover:text-rose-400 hover:bg-slate-800 transition flex items-center justify-center cursor-pointer"
               >
-                Cancel
+                {t("cancel", "Cancel")}
               </button>
             </div>
           </div>
@@ -426,7 +426,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               }`}
             >
               <Compass className="w-3.5 h-3.5" />
-              <span>{t("sample_landmarks", "Iconic Presets")}</span>
+              <span>{t("sample_landmarks", "Famous Landmarks")}</span>
             </button>
 
             <button
@@ -440,10 +440,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
-              <span>All UNESCO Sites & Colleges</span>
-              <span className="ml-1 text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 border border-amber-500/30">
-                NEW
-              </span>
+              <span>{t("unesco_sites_photos_tab", "UNESCO Sites (40+ With Photos)")}</span>
             </button>
           </div>
 
@@ -456,17 +453,17 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                   quickFilter === "all" ? "bg-slate-800 text-cyan-300 font-medium" : "text-slate-400 hover:text-slate-300"
                 }`}
               >
-                All
+                {t("all_landmarks", "All Landmarks")}
               </button>
               <button
                 type="button"
-                onClick={() => setQuickFilter("colleges")}
+                onClick={() => setQuickFilter("wonders")}
                 className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center space-x-1 text-xs ${
-                  quickFilter === "colleges" ? "bg-slate-800 text-amber-300 font-medium" : "text-slate-400 hover:text-slate-300"
+                  quickFilter === "wonders" ? "bg-slate-800 text-amber-300 font-medium" : "text-slate-400 hover:text-slate-300"
                 }`}
               >
-                <GraduationCap className="w-3 h-3 text-amber-400" />
-                <span>Colleges</span>
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>{t("wonders_filter", "Wonders")}</span>
               </button>
               <button
                 type="button"
@@ -476,7 +473,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                 }`}
               >
                 <Globe className="w-3 h-3 text-cyan-400" />
-                <span>UNESCO</span>
+                <span>{t("unesco_filter", "UNESCO")}</span>
+              </button>
+              <button
+                type="button"
+                id="btn-filter-monuments"
+                onClick={() => setQuickFilter("monuments")}
+                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center space-x-1 text-xs ${
+                  quickFilter === "monuments" ? "bg-slate-800 text-purple-300 font-medium" : "text-slate-400 hover:text-slate-300"
+                }`}
+              >
+                <Landmark className="w-3 h-3 text-purple-400" />
+                <span>{t("monuments_filter", "Monuments")}</span>
               </button>
             </div>
           )}
@@ -487,8 +495,9 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
           <div className="space-y-2.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
               {SAMPLE_LANDMARKS.filter((sample) => {
-                if (quickFilter === "colleges") return sample.isCollege;
-                if (quickFilter === "unesco") return sample.isUnesco && !sample.isCollege;
+                if (quickFilter === "wonders") return sample.category === "wonder";
+                if (quickFilter === "unesco") return sample.isUnesco;
+                if (quickFilter === "monuments") return sample.isMonument || sample.category === "monument";
                 return true;
               }).map((sample) => {
                 const isCurrentlyLoading = sampleLoadingId === sample.id;
@@ -512,7 +521,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                           const target = e.currentTarget;
                           if (!target.dataset.triedFallback) {
                             target.dataset.triedFallback = "true";
-                            target.src = sample.imageUrl || "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=300&q=75";
+                            target.src = sample.imageUrl;
                           }
                         }}
                         className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
@@ -526,15 +535,23 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                           {sample.city}
                         </span>
 
-                        {sample.isCollege ? (
+                        {quickFilter === "monuments" || sample.category === "monument" ? (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-600/80 backdrop-blur-sm">
+                            {t("monument_badge", "Monument")}
+                          </span>
+                        ) : sample.category === "wonder" ? (
                           <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/80 backdrop-blur-sm">
-                            College
+                            {t("wonder_badge", "Wonder")}
                           </span>
                         ) : sample.isUnesco ? (
                           <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-600/80 backdrop-blur-sm">
-                            UNESCO
+                            {t("unesco_pill", "UNESCO")}
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-slate-900/90 text-slate-300 border border-slate-700 backdrop-blur-sm">
+                            {t("monument_badge", "Monument")}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -551,11 +568,11 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
 
                       <div className="mt-2 text-[10px] font-mono text-cyan-400 flex items-center space-x-1">
                         {isCurrentlyLoading ? (
-                          <span className="text-amber-400 animate-pulse">Loading...</span>
+                          <span className="text-amber-400 animate-pulse">{t("loading", "Loading...")}</span>
                         ) : (
                           <>
                             <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
-                            <span>Run AR Scan</span>
+                            <span>{t("run_ar_scan", "Run AR Scan")}</span>
                           </>
                         )}
                       </div>
@@ -573,7 +590,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                 className="inline-flex items-center space-x-2 text-xs font-mono text-slate-400 hover:text-cyan-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-900/60"
               >
                 <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Browse All World UNESCO Sites & Historic Colleges</span>
+                <span>{t("explore_unesco_sites_photos", "Explore All 40+ UNESCO World Heritage Sites (With Photos)")}</span>
                 <span className="text-cyan-400">→</span>
               </button>
             </div>

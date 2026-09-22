@@ -1,4 +1,5 @@
 import React from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 interface ARScanOverlayProps {
   variant?: "active" | "ambient" | "dense" | "analyzing";
@@ -10,11 +11,13 @@ interface ARScanOverlayProps {
 
 export const ARScanOverlay: React.FC<ARScanOverlayProps> = ({
   variant = "active",
-  label = "LiDAR // OPTIC SCAN",
+  label,
   showLabel = true,
   showReticle = false,
   className = "",
 }) => {
+  const { t } = useLanguage();
+  const displayLabel = label || t("ar_lidar_tracking", "LiDAR // OPTIC SCAN");
   const isActive = variant === "active" || variant === "analyzing" || variant === "dense";
 
   return (
@@ -76,7 +79,7 @@ export const ARScanOverlay: React.FC<ARScanOverlayProps> = ({
             {showLabel && (
               <span className="inline-flex items-center space-x-1.5 text-[8.5px] sm:text-[9.5px] lg:text-[10px] font-mono font-semibold tracking-wider sm:tracking-widest text-cyan-200 uppercase px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full bg-slate-950/90 border border-cyan-500/40 backdrop-blur-md shadow-lg">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="truncate max-w-[120px] sm:max-w-[200px]">{label}</span>
+                <span className="truncate max-w-[120px] sm:max-w-[200px]">{displayLabel}</span>
               </span>
             )}
           </div>
@@ -85,10 +88,10 @@ export const ARScanOverlay: React.FC<ARScanOverlayProps> = ({
           <div className="absolute -top-2 right-2 sm:right-4 lg:right-6 flex items-center space-x-1.5 sm:space-x-2 pointer-events-none">
             {showLabel && (
               <span className="hidden sm:inline-flex items-center space-x-1.5 text-[8.5px] sm:text-[9.5px] lg:text-[10px] font-mono text-cyan-300 uppercase px-2 py-0.5 rounded-full bg-slate-950/90 border border-cyan-500/30 backdrop-blur-md">
-                <span className="text-slate-400">FPS</span>
+                <span className="text-slate-400">{t("fps_label", "FPS")}</span>
                 <span className="font-bold text-cyan-300">60</span>
                 <span className="text-slate-500 hidden md:inline">|</span>
-                <span className="hidden md:inline text-cyan-400">DEPTH 1.8M</span>
+                <span className="hidden md:inline text-cyan-400">{t("depth_value_label", "DEPTH 1.8M")}</span>
               </span>
             )}
             <span className="relative flex h-2 sm:h-2.5 w-2 sm:w-2.5 shrink-0">

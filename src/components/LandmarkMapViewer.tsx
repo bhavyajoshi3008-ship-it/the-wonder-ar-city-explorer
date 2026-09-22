@@ -16,6 +16,7 @@ import { LandmarkRecognition } from "../types";
 
 interface LandmarkMapViewerProps {
   recognition: LandmarkRecognition;
+  photoUrl?: string | null;
   className?: string;
   onClose?: () => void;
 }
@@ -32,6 +33,7 @@ interface NearbySpot {
 
 export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
   recognition,
+  photoUrl,
   className = "",
   onClose,
 }) => {
@@ -151,9 +153,20 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
       {/* Header Bar */}
       <div className="p-3 sm:p-4 bg-slate-950/80 border-b border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
-            <MapPin className="w-5 h-5" />
-          </div>
+          {photoUrl ? (
+            <div className="w-12 h-12 rounded-xl overflow-hidden border border-cyan-500/40 shrink-0 bg-slate-950 shadow-md">
+              <img
+                src={photoUrl}
+                alt={landmarkName}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+              <MapPin className="w-5 h-5" />
+            </div>
+          )}
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
               <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">

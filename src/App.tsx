@@ -66,6 +66,8 @@ import {
   deleteScanFromFirestore,
   subscribeToUserScans,
   syncLocalScansToFirestore,
+  getStoredGuestUser,
+  clearLocalGuestUser,
 } from "./services/firebase";
 
 const LOCAL_STORAGE_KEY = "citylens_ar_journal_v1";
@@ -134,11 +136,12 @@ export default function App() {
 
   // Firebase Auth State Listener & Local-to-Cloud Sync
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setIsAuthLoading(false);
-
+    const handleAuthSync = async (currentUser: FirebaseUser | null) => {
       if (currentUser) {
+        clearLocalGuestUser();
+        setUser(currentUser);
+        setIsAuthLoading(false);
+
         // Sync any local scans to Firestore so no data is lost
         try {
           const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -159,10 +162,33 @@ export default function App() {
         } catch (syncErr) {
           console.warn("Local-to-cloud scan sync notice:", syncErr);
         }
+      } else {
+        const storedGuest = getStoredGuestUser();
+        setUser(storedGuest);
+        setIsAuthLoading(false);
       }
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      handleAuthSync(currentUser);
     });
 
-    return () => unsubscribe();
+    const handleCustomAuthChange = () => {
+      if (auth.currentUser) {
+        handleAuthSync(auth.currentUser);
+      } else {
+        const storedGuest = getStoredGuestUser();
+        setUser(storedGuest);
+        setIsAuthLoading(false);
+      }
+    };
+
+    window.addEventListener("citylens:auth-changed", handleCustomAuthChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("citylens:auth-changed", handleCustomAuthChange);
+    };
   }, []);
 
   // Firestore Real-Time Scans Subscription
@@ -852,6 +878,7 @@ export default function App() {
               <section id="landmark-map-section">
                 <LandmarkMapViewer
                   recognition={recognition}
+                  photoUrl={activePhoto || activePreset?.imageUrl}
                 />
               </section>
             )}
@@ -862,6 +889,7 @@ export default function App() {
                 <HistoryGroundingPanel
                   recognition={recognition}
                   history={history}
+                  photoUrl={activePhoto || activePreset?.imageUrl}
                 />
               </section>
             )}

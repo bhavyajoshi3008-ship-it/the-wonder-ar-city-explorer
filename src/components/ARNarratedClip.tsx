@@ -996,7 +996,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         {showScanline && (
           <ARScanOverlay
             variant="active"
-            label="LIDAR // AR MESH TRACKING"
+            label={t("ar_lidar_tracking", "LIDAR // AR MESH TRACKING")}
             showLabel={true}
           />
         )}
@@ -1012,7 +1012,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
                 </span>
                 <span className="text-[10px] font-mono tracking-wider text-cyan-300 uppercase font-semibold shrink-0">
-                  {recognition.isLandmark === false ? "TRACKING" : "AR LOCKED"}
+                  {recognition.isLandmark === false ? t("ar_tracking", "TRACKING") : t("ar_locked", "AR LOCKED")}
                 </span>
                 <span className="text-slate-600 text-xs shrink-0">•</span>
                 <span className="text-[10px] font-mono text-cyan-400/90 truncate font-medium">
@@ -1043,7 +1043,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
                 </span>
                 <span className="text-[10px] font-mono tracking-wider text-cyan-300 uppercase font-semibold">
-                  {recognition.isLandmark === false ? "VISUAL SUBJECT TRACKING • LOCKED" : "AR OPTIC TRACKING • LOCKED"}
+                  {recognition.isLandmark === false ? t("ar_subject_tracking", "VISUAL SUBJECT TRACKING • LOCKED") : t("ar_optic_tracking", "AR OPTIC TRACKING • LOCKED")}
                 </span>
               </div>
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight mt-0.5 truncate" title={recognition.name}>
@@ -1082,12 +1082,12 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               <div className="flex flex-col items-end space-y-1 bg-slate-950/80 backdrop-blur-md border border-slate-700/60 px-3 py-1.5 rounded-xl font-mono text-[11px] text-slate-300 shadow-lg">
                 <div className="flex items-center space-x-2 text-cyan-400">
                   <Compass className="w-3.5 h-3.5" />
-                  <span>BEARING 042° NNE</span>
+                  <span>{t("ar_bearing", "BEARING 042° NNE")}</span>
                   <span className="text-slate-600">|</span>
-                  <span>ALT 84M</span>
+                  <span>{t("ar_alt", "ALT 84M")}</span>
                 </div>
                 <div className="text-[10px] text-slate-400">
-                  CONFIDENCE: <span className="text-emerald-400 font-semibold">{recognition.confidence}%</span> |{" "}
+                  {t("ar_confidence", "CONFIDENCE:")} <span className="text-emerald-400 font-semibold">{recognition.confidence}%</span> |{" "}
                   <span className="text-cyan-300">
                     {recognition.isLandmark === false
                       ? (recognition.detectedCategory?.toUpperCase() || "SUBJECT")
@@ -1203,7 +1203,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   <div className="flex items-center space-x-1.5">
                     <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse shrink-0" />
                     <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 font-semibold">
-                      FEATURE INSPECTION
+                      {t("ar_feature_inspection", "FEATURE INSPECTION")}
                     </span>
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
                       {activePin.featureType}
@@ -1216,7 +1216,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                       setActivePin(null);
                     }}
                     className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
-                    title="Close Inspection"
+                    title={t("close_inspection", "Close Inspection")}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -1226,7 +1226,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   {activePin.description}
                 </p>
                 <div className="mt-2 flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px] font-mono text-slate-400">
-                  <span className="text-cyan-400/80">TARGET COORD: {activePin.x}%, {activePin.y}%</span>
+                  <span className="text-cyan-400/80">{t("ar_target_coord", "TARGET COORD:")} {activePin.x}%, {activePin.y}%</span>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1235,7 +1235,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     }}
                     className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline"
                   >
-                    Dismiss
+                    {t("dismiss", "Dismiss")}
                   </button>
                 </div>
               </motion.div>
@@ -1260,7 +1260,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   <div className="flex items-center space-x-1.5">
                     <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
                     <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300 font-semibold">
-                      FEATURE INSPECTION
+                      {t("ar_feature_inspection", "FEATURE INSPECTION")}
                     </span>
                   </div>
                   <div className="flex items-center space-x-1.5">
@@ -1274,7 +1274,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                         setActivePin(null);
                       }}
                       className="w-5 h-5 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
-                      title="Close"
+                      title={t("close_inspection", "Close Inspection")}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1285,7 +1285,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   {activePin.description}
                 </p>
                 <div className="mt-2.5 flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400 border-t border-slate-800/80">
-                  <span>COORD ({activePin.x}%, {activePin.y}%)</span>
+                  <span>{t("coord_label", "COORD")} ({activePin.x}%, {activePin.y}%)</span>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1294,7 +1294,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     }}
                     className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline"
                   >
-                    [Dismiss]
+                    [{t("dismiss", "Dismiss")}]
                   </button>
                 </div>
               </motion.div>
@@ -1313,10 +1313,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               className={`p-1.5 rounded-lg text-xs font-mono flex items-center space-x-1 transition ${
                 showPins ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" : "text-slate-400 hover:text-white"
               }`}
-              title="Toggle AR Spatial Pins"
+              title={t("toggle_pins_title", "Toggle AR Spatial Pins")}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Pins</span>
+              <span className="hidden sm:inline">{t("pins_label", "Pins")}</span>
             </button>
 
             <button
@@ -1326,10 +1326,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               className={`p-1.5 rounded-lg text-xs font-mono flex items-center space-x-1 transition ${
                 showScanline ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" : "text-slate-400 hover:text-white"
               }`}
-              title="Toggle Laser Scanline"
+              title={t("toggle_scanline_title", "Toggle Laser Scanline")}
             >
               <Radio className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Scan</span>
+              <span className="hidden sm:inline">{t("scan_label", "Scan")}</span>
             </button>
 
             <button
@@ -1339,10 +1339,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               className={`p-1.5 rounded-lg text-xs font-mono flex items-center space-x-1 transition ${
                 showTelemetry ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" : "text-slate-400 hover:text-white"
               }`}
-              title="Toggle Telemetry HUD"
+              title={t("toggle_hud_title", "Toggle Telemetry HUD")}
             >
               {showTelemetry ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">HUD</span>
+              <span className="hidden sm:inline">{t("hud_label", "HUD")}</span>
             </button>
 
             <button
@@ -1354,10 +1354,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   ? "bg-pink-500/25 text-pink-300 border border-pink-500/50"
                   : "text-slate-400 hover:text-pink-300"
               }`}
-              title="Pick Travel Sticker Stamp"
+              title={t("pick_sticker_title", "Pick Travel Sticker Stamp")}
             >
               <Tag className="w-3.5 h-3.5 text-pink-400" />
-              <span className="hidden sm:inline">Stickers</span>
+              <span className="hidden sm:inline">{t("stickers_label", "Stickers")}</span>
             </button>
           </div>
 
@@ -1368,10 +1368,10 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               id="ar-share-btn"
               onClick={handleCopyShare}
               className="p-1.5 rounded-lg text-xs font-mono text-slate-300 hover:text-white transition flex items-center space-x-1"
-              title="Share Landmark Tour"
+              title={t("share_tour_title", "Share Landmark Tour")}
             >
               {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copiedLink ? "Copied" : "Share"}</span>
+              <span className="hidden sm:inline">{copiedLink ? t("copied", "Copied") : t("share_tour", "Share")}</span>
             </button>
 
             <button
@@ -1908,13 +1908,13 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center space-x-2">
-                      <span>AR Travel Sticker Stamps</span>
+                      <span>{t("travel_stickers_title", "AR Travel Sticker Stamps")}</span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-950/80 text-pink-300 border border-pink-500/30">
-                        {TRAVEL_STICKERS.length} Souvenirs
+                        {TRAVEL_STICKERS.length} {t("souvenirs_count", "Souvenirs")}
                       </span>
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
-                      Select a multi-generational souvenir badge to overlay on your live tour photograph
+                      {t("travel_stickers_subtitle", "Select a multi-generational souvenir badge to overlay on your live tour photograph")}
                     </p>
                   </div>
                 </div>
@@ -1924,7 +1924,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   id="close-sticker-picker-btn"
                   onClick={() => setShowStickerPicker(false)}
                   className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition cursor-pointer"
-                  title="Close Sticker Picker (Esc)"
+                  title={t("close_modal", "Close Sticker Picker (Esc)")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1933,11 +1933,11 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               {/* Generation & Vibe Filter Tabs */}
               <div className="px-5 py-2.5 border-b border-slate-800/80 bg-slate-900/20 flex items-center space-x-2 overflow-x-auto no-scrollbar shrink-0">
                 {[
-                  { id: "All", label: "All Stamps" },
-                  { id: "Gen Z", label: "✨ Gen Z" },
-                  { id: "Millennial", label: "🥐 Millennial" },
-                  { id: "Gen X", label: "🚂 Gen X" },
-                  { id: "Boomer / Golden", label: "🏛️ Golden Era" },
+                  { id: "All", label: t("all_stamps", "All Stamps") },
+                  { id: "Gen Z", label: `✨ ${t("gen_z", "Gen Z")}` },
+                  { id: "Millennial", label: `🥐 ${t("millennial", "Millennial")}` },
+                  { id: "Gen X", label: `🚂 ${t("gen_x", "Gen X")}` },
+                  { id: "Boomer / Golden", label: `🏛️ ${t("golden_era", "Golden Era")}` },
                 ].map((tab) => {
                   const isSelected = stickerGenerationFilter === tab.id;
                   return (
@@ -2013,14 +2013,14 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 <div className="flex items-center space-x-2 min-w-0">
                   {activeSticker ? (
                     <div className="flex items-center space-x-2 text-xs text-slate-300 truncate">
-                      <span className="text-slate-400 font-mono">Stamped:</span>
+                      <span className="text-slate-400 font-mono">{t("stamped_label", "Stamped:")}</span>
                       <span className="text-sm">{activeSticker.emoji}</span>
                       <span className={`font-black truncate ${activeSticker.textColor}`}>
                         {activeSticker.label}
                       </span>
                     </div>
                   ) : (
-                    <span className="text-xs text-slate-500 font-mono">No sticker stamp active</span>
+                    <span className="text-xs text-slate-500 font-mono">{t("no_sticker_active", "No sticker stamp active")}</span>
                   )}
                 </div>
 
@@ -2034,7 +2034,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                       }}
                       className="px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
                     >
-                      Clear Stamp
+                      {t("clear_stamp", "Clear Stamp")}
                     </button>
                   )}
                   <button
@@ -2042,7 +2042,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     onClick={() => setShowStickerPicker(false)}
                     className="px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-950/50 transition cursor-pointer"
                   >
-                    Done
+                    {t("done_btn", "Done")}
                   </button>
                 </div>
               </div>

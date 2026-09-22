@@ -520,15 +520,15 @@ export const YouTubeNavigationDrawer: React.FC<YouTubeNavigationDrawerProps> = (
                           {user.displayName || "Travel Explorer"}
                         </div>
                         <div className="text-[11px] text-slate-400 truncate">
-                          {user.email}
+                          {user.email || "Offline & Local Explorer"}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-slate-800/80 text-slate-400">
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        <span>Cloud Synced</span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${user.email ? "bg-emerald-400" : "bg-cyan-400"}`} />
+                        <span>{user.email ? "Cloud Synced" : "Guest Mode"}</span>
                       </span>
                       <button
                         type="button"
@@ -539,6 +539,18 @@ export const YouTubeNavigationDrawer: React.FC<YouTubeNavigationDrawerProps> = (
                         <span>Sign Out</span>
                       </button>
                     </div>
+
+                    {!user.email && (
+                      <button
+                        type="button"
+                        id="drawer-upgrade-google-btn"
+                        onClick={handleSignIn}
+                        className="w-full mt-1.5 py-1.5 px-3 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/35 text-[11px] font-medium flex items-center justify-center space-x-1.5 transition cursor-pointer"
+                      >
+                        <LogIn className="w-3 h-3" />
+                        <span>Connect Google Account</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">

@@ -6,7 +6,7 @@ import {
   signInAnonymously,
   signOut,
   onAuthStateChanged,
-  User as FirebaseUser,
+  User as NativeFirebaseUser,
 } from "firebase/auth";
 import {
   initializeFirestore,
@@ -64,20 +64,77 @@ function initFirestoreInstance() {
 
 export const db = initFirestoreInstance();
 
-export type { FirebaseUser };
+export type FirebaseUser =
+  | NativeFirebaseUser
+  | {
+      uid: string;
+      displayName: string | null;
+      email: string | null;
+      photoURL: string | null;
+      isAnonymous?: boolean;
+    };
+
+const GUEST_USER_STORAGE_KEY = "citylens_guest_explorer_user";
+
+export function getStoredGuestUser(): FirebaseUser | null {
+  try {
+    const raw = localStorage.getItem(GUEST_USER_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.uid) {
+      return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not read local guest user:", e);
+  }
+  return null;
+}
+
+export function createLocalGuestUser(): FirebaseUser {
+  const guestUser: FirebaseUser = {
+    uid: "guest_" + Math.random().toString(36).substring(2, 10) + "_" + Date.now().toString(36),
+    displayName: "Guest Explorer",
+    email: null,
+    photoURL: null,
+    isAnonymous: true,
+  };
+  try {
+    localStorage.setItem(GUEST_USER_STORAGE_KEY, JSON.stringify(guestUser));
+  } catch (e) {
+    console.warn("Could not persist guest user:", e);
+  }
+  return guestUser;
+}
+
+export function isLocalGuest(uid?: string | null): boolean {
+  if (!uid) return false;
+  return uid.startsWith("guest_");
+}
+
+export function clearLocalGuestUser(): void {
+  try {
+    localStorage.removeItem(GUEST_USER_STORAGE_KEY);
+  } catch {}
+}
+
+export function notifyAuthChange(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("citylens:auth-changed"));
+  }
+}
 
 /**
  * Creates or updates user record in Firestore upon sign in
  */
 export async function saveUserProfile(user: FirebaseUser) {
-  if (!user.uid) return;
+  if (!user.uid || isLocalGuest(user.uid) || !auth.currentUser) return;
   try {
     const userRef = doc(db, "users", user.uid);
     await setDoc(
       userRef,
       {
         uid: user.uid,
-        displayName: user.displayName || "Anonymous Traveler",
+        displayName: user.displayName || "Traveler",
         email: user.email || "",
         photoURL: user.photoURL || "",
         lastLoginAt: new Date().toISOString(),
@@ -89,43 +146,83 @@ export async function saveUserProfile(user: FirebaseUser) {
   }
 }
 
+let googleSignInPromise: Promise<FirebaseUser | null> | null = null;
+
 /**
  * Signs in user with Google Auth Popup
  */
-export async function signInWithGoogle(): Promise<FirebaseUser> {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    if (result.user) {
-      await saveUserProfile(result.user);
-    }
-    return result.user;
-  } catch (err: any) {
-    console.error("Google sign-in failure:", err);
-    throw err;
+export async function signInWithGoogle(): Promise<FirebaseUser | null> {
+  if (googleSignInPromise) {
+    return googleSignInPromise;
   }
+
+  googleSignInPromise = (async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result.user) {
+        clearLocalGuestUser();
+        await saveUserProfile(result.user);
+        notifyAuthChange();
+      }
+      return result.user;
+    } catch (err: any) {
+      if (
+        err?.code === "auth/cancelled-popup-request" ||
+        err?.code === "auth/popup-closed-by-user"
+      ) {
+        // User closed or superseded the popup intentionally - not an error
+        console.info("Google sign-in popup was closed or superseded.");
+        return null;
+      }
+      console.warn("Google sign-in notice:", err?.message || err);
+      throw err;
+    } finally {
+      googleSignInPromise = null;
+    }
+  })();
+
+  return googleSignInPromise;
 }
 
 /**
- * Signs in user anonymously as Explorer Guest
+ * Signs in user as Explorer Guest.
+ * If Firebase Anonymous Auth provider is restricted (auth/admin-restricted-operation)
+ * or unconfigured in the Firebase console, it seamlessly provides a local Guest Explorer
+ * profile so travelers can immediately discover landmarks without interruption.
  */
 export async function signInAsGuest(): Promise<FirebaseUser> {
   try {
     const result = await signInAnonymously(auth);
     if (result.user) {
+      clearLocalGuestUser();
       await saveUserProfile(result.user);
+      notifyAuthChange();
+      return result.user;
     }
-    return result.user;
   } catch (err: any) {
-    console.error("Guest sign-in failure:", err);
-    throw err;
+    // When Firebase project has not enabled Anonymous sign-in in Firebase console,
+    // auth/admin-restricted-operation is returned.
+    console.info(
+      "Firebase anonymous sign-in is restricted by console configuration. Activating local Guest Explorer session:",
+      err?.message || err
+    );
   }
+
+  const existingGuest = getStoredGuestUser();
+  const guestUser = existingGuest || createLocalGuestUser();
+  notifyAuthChange();
+  return guestUser;
 }
 
 /**
  * Signs out current user
  */
 export async function logOutUser(): Promise<void> {
-  await signOut(auth);
+  clearLocalGuestUser();
+  if (auth.currentUser) {
+    await signOut(auth);
+  }
+  notifyAuthChange();
 }
 
 /**
@@ -183,7 +280,7 @@ export async function saveScanToFirestore(
   userId: string,
   entry: ScannedLandmarkEntry
 ): Promise<void> {
-  if (!userId || !entry) return;
+  if (!userId || !entry || isLocalGuest(userId) || !auth.currentUser) return;
   try {
     const scanRef = doc(db, "users", userId, "scans", entry.id);
     const optimizedImage = await createCompressedThumbnail(entry.imageDataUrl);
@@ -218,7 +315,7 @@ export async function deleteScanFromFirestore(
   userId: string,
   scanId: string
 ): Promise<void> {
-  if (!userId || !scanId) return;
+  if (!userId || !scanId || isLocalGuest(userId) || !auth.currentUser) return;
   try {
     const scanRef = doc(db, "users", userId, "scans", scanId);
     await deleteDoc(scanRef);
@@ -236,8 +333,7 @@ export function subscribeToUserScans(
   onUpdate: (scans: ScannedLandmarkEntry[]) => void,
   onError?: (err: Error) => void
 ): () => void {
-  if (!userId) {
-    onUpdate([]);
+  if (!userId || isLocalGuest(userId) || !auth.currentUser) {
     return () => {};
   }
 
@@ -281,7 +377,7 @@ export async function syncLocalScansToFirestore(
   localScans: ScannedLandmarkEntry[],
   onProgress?: (scanId: string, status: "syncing" | "synced") => void
 ): Promise<number> {
-  if (!userId || !localScans.length) return 0;
+  if (!userId || isLocalGuest(userId) || !auth.currentUser || !localScans.length) return 0;
   let count = 0;
   for (const scan of localScans) {
     try {

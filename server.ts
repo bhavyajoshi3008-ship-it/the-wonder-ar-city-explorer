@@ -174,7 +174,7 @@ async function startServer() {
    * Tier 4: Clear "not_landmark" or "service_busy" error response — NEVER blindly default to Eiffel Tower!
    */
   app.post("/api/recognize-landmark", async (req, res) => {
-    const { image, mimeType = "image/jpeg", hintName } = req.body || {};
+    const { image, mimeType = "image/jpeg", hintName, targetLanguage, targetLanguageName } = req.body || {};
 
     try {
       if (!image) {
@@ -182,7 +182,8 @@ async function startServer() {
       }
 
       // If user selected a known landmark preset/sample/catalog entry AND hint matches a verified dossier:
-      if (hintName) {
+      // Only bypass AI if requested in English, otherwise let Gemini generate localized dossier
+      if (hintName && (!targetLanguage || targetLanguage === "en")) {
         const directDossier = findLandmarkDossier(hintName);
         if (directDossier) {
           return res.json({
@@ -320,6 +321,12 @@ Return raw JSON without markdown code fences or backticks.`;
       let fullPrompt = prompt;
       if (hintName) {
         fullPrompt += `\n\nContext Hint: The user or camera selected "${hintName}". Validate whether this photo actually depicts ${hintName} or not.`;
+      }
+      if (targetLanguage && targetLanguage !== "en") {
+        fullPrompt += `\n\nCRITICAL LANGUAGE REQUIREMENT:
+The user has chosen ${targetLanguageName || targetLanguage} (${targetLanguage}) as their application language.
+All descriptive text (summary, architecturalStyle, periodEra, notLandmarkReason, photoAnalysis values, prominentVisualFeatures, and arKeypoints label and description) MUST be written in ${targetLanguageName || targetLanguage}.
+Do NOT output them in English. Write natural, native ${targetLanguageName || targetLanguage}.`;
       }
 
       let rawResponseText = "";
@@ -643,6 +650,8 @@ Return raw JSON without markdown code fences or backticks.`;
       isLandmark,
       detectedCategory,
       notLandmarkReason,
+      targetLanguage,
+      targetLanguageName,
     } = req.body || {};
 
     try {
@@ -653,7 +662,7 @@ Return raw JSON without markdown code fences or backticks.`;
       const isSubjectOrFigure = isLandmark === false || detectedCategory === "person" || detectedCategory === "animal" || detectedCategory === "object";
 
       // Fast-path: If models in cooldown AND authentic dossier match exists
-      if (!isModelAvailable("gemini-3.1-flash-lite") && !isModelAvailable("gemini-3.8-flash") && !isSubjectOrFigure) {
+      if (!isModelAvailable("gemini-3.1-flash-lite") && !isModelAvailable("gemini-3.8-flash") && !isSubjectOrFigure && (!targetLanguage || targetLanguage === "en")) {
         const dossier = getLandmarkDossier(landmarkName);
         if (dossier) {
           return res.json({
