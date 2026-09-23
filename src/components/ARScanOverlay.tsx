@@ -17,7 +17,7 @@ export const ARScanOverlay: React.FC<ARScanOverlayProps> = ({
   className = "",
 }) => {
   const { t } = useLanguage();
-  const displayLabel = label || t("ar_lidar_tracking", "LiDAR // OPTIC SCAN");
+  const displayLabel = label || t("ar_optic_scan", "AR // OPTIC SCAN");
   const isActive = variant === "active" || variant === "analyzing" || variant === "dense";
 
   return (

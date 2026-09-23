@@ -743,5 +743,3 @@ export const UNESCO_WORLD_HERITAGE_CATALOG: UnescoSiteEntry[] = [
   },
 ];
 
-export const UNESCO_AND_COLLEGES_CATALOG = UNESCO_WORLD_HERITAGE_CATALOG;
-

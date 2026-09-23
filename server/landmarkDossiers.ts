@@ -48,7 +48,7 @@ export interface FallbackLandmarkData {
   collegeInfo?: {
     isHistoricCollege: boolean;
     institutionName: string;
-    foundationYear: number;
+    foundationYear: number | string;
     tradition?: string;
     notableAlumni?: string[];
   };
@@ -489,15 +489,21 @@ export const KNOWN_LANDMARK_DOSSIERS: Record<string, FallbackLandmarkData> = {
  * Strictly prevents false matches on generic words (like "tower", "temple", "bridge")
  * or broad city/country names, ensuring user pictures are never replaced with wrong landmarks.
  */
-export function findLandmarkDossier(query?: string): FallbackLandmarkData | null {
-  if (!query) return null;
-  const norm = query
+export function normalizeLookupKey(str?: string): string {
+  if (!str) return "";
+  return str
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/['’`]/g, "")
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function findLandmarkDossier(query?: string): FallbackLandmarkData | null {
+  if (!query) return null;
+  const norm = normalizeLookupKey(query);
   if (!norm) return null;
 
   // Normalized key aliases
@@ -561,20 +567,44 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     ...HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS,
   };
 
-  // Direct alias check
-  for (const [alias, dossierKey] of Object.entries(canonicalAliases)) {
-    if (norm === alias || norm.startsWith(alias) || norm.includes(alias)) {
-      if (allDossiers[dossierKey]) {
-        return allDossiers[dossierKey];
-      }
+  // 1. Direct exact match in allDossiers keys or dossier names
+  if (allDossiers[norm]) {
+    return allDossiers[norm];
+  }
+
+  for (const dossier of Object.values(allDossiers)) {
+    const dNameNorm = normalizeLookupKey(dossier.name);
+    const dLocalNorm = normalizeLookupKey(dossier.localName);
+    if (norm === dNameNorm || (dLocalNorm && norm === dLocalNorm)) {
+      return dossier;
     }
   }
 
-  // Exact match against primary name or localName in all dossiers
+  // 2. Exact match in canonicalAliases
+  if (canonicalAliases[norm] && allDossiers[canonicalAliases[norm]]) {
+    return allDossiers[canonicalAliases[norm]];
+  }
+
+  // 3. Substring & word boundary match sorted by alias length descending (longest / most specific match first)
+  const sortedAliases = Object.entries(canonicalAliases).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, dossierKey] of sortedAliases) {
+    if (!allDossiers[dossierKey]) continue;
+    if (alias.length < 3) {
+      // Require word boundary for short abbreviations like 'tcd', 'ust', 'uva'
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const boundaryRegex = new RegExp(`(^|\\b)${escaped}(\\b|$)`, "i");
+      if (boundaryRegex.test(norm)) {
+        return allDossiers[dossierKey];
+      }
+    } else if (norm.includes(alias) || alias.includes(norm)) {
+      return allDossiers[dossierKey];
+    }
+  }
+
+  // 4. Secondary token overlap match
   for (const [key, dossier] of Object.entries(allDossiers)) {
     const dName = dossier.name.toLowerCase();
-    const dLocal = (dossier.localName || "").toLowerCase();
-    if (norm === key || norm === dName || (dLocal && norm === dLocal)) {
+    if (dName.includes(norm) || norm.includes(dName)) {
       return dossier;
     }
   }

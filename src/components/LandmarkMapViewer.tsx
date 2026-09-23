@@ -43,9 +43,20 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
   const [geoError, setGeoError] = useState<string | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<NearbySpot | null>(null);
 
-  const coords = recognition.coordinatesEstimate || { lat: 48.8584, lng: 2.2945 };
   const landmarkName = recognition.name;
   const cityName = recognition.city;
+  const coords = recognition.coordinatesEstimate || { lat: 0, lng: 0 };
+
+  const isDefaultParis =
+    Math.abs(coords.lat - 48.8584) < 0.005 &&
+    Math.abs(coords.lng - 2.2945) < 0.005 &&
+    !cityName?.toLowerCase().includes("paris") &&
+    !landmarkName?.toLowerCase().includes("eiffel");
+
+  const effectiveQuery = [landmarkName, cityName, recognition.country].filter(Boolean).join(", ");
+  const mapQueryParam = isDefaultParis || (coords.lat === 0 && coords.lng === 0)
+    ? encodeURIComponent(effectiveQuery || "World Landmark")
+    : `${coords.lat},${coords.lng}`;
 
   // Contextual nearby viewpoints and POIs around coordinates
   const nearbySpots: NearbySpot[] = [
@@ -143,7 +154,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
     : `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`;
   const googleStreetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coords.lat},${coords.lng}`;
   const googleEarthUrl = `https://earth.google.com/web/search/${encodeURIComponent(`${landmarkName} ${cityName}`)}`;
-  const googleMapsEmbedUrl = `https://maps.google.com/maps?q=${coords.lat},${coords.lng}&z=16&output=embed`;
+  const googleMapsEmbedUrl = `https://maps.google.com/maps?q=${mapQueryParam}&z=16&output=embed`;
 
   return (
     <div

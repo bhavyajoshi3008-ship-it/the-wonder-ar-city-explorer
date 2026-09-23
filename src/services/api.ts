@@ -1,4 +1,4 @@
-import { LandmarkRecognition, LandmarkHistory, NarrationAudio } from "../types";
+import { LandmarkRecognition, LandmarkHistory, NarrationAudio, GoogleMapsGroundingInfo } from "../types";
 
 /**
  * Resilient helper to parse JSON response with automatic handling of
@@ -84,7 +84,9 @@ export async function recognizeLandmark(
   imageDataUrl: string,
   hintName?: string,
   targetLanguage?: string,
-  targetLanguageName?: string
+  targetLanguageName?: string,
+  visualSignature?: any,
+  gpsCoords?: { latitude: number; longitude: number }
 ): Promise<LandmarkRecognition> {
   const mimeMatch = imageDataUrl.match(/^data:([^;]+);/);
   const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
@@ -100,6 +102,8 @@ export async function recognizeLandmark(
         hintName,
         targetLanguage,
         targetLanguageName,
+        visualSignature,
+        gpsCoords,
       }),
     },
     "landmark recognition service"
@@ -117,6 +121,8 @@ export async function fetchLandmarkHistory(params: {
   summary?: string;
   photoAnalysis?: any;
   arKeypoints?: any[];
+  coordinatesEstimate?: { lat: number; lng: number };
+  coordinates?: { lat: number; lng: number };
   isLandmark?: boolean;
   detectedCategory?: string;
   notLandmarkReason?: string;
@@ -134,6 +140,25 @@ export async function fetchLandmarkHistory(params: {
   );
 
   return parseJsonResponse<LandmarkHistory>(response, "History retrieval service");
+}
+
+export async function fetchMapsGrounding(params: {
+  landmarkName: string;
+  city?: string;
+  country?: string;
+  coordinates?: { lat: number; lng: number };
+}): Promise<GoogleMapsGroundingInfo> {
+  const response = await fetchWithRetry(
+    "/api/maps-grounding",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    },
+    "Google Maps grounding service"
+  );
+
+  return parseJsonResponse<GoogleMapsGroundingInfo>(response, "Google Maps grounding service");
 }
 
 export async function generateNarration(
@@ -223,5 +248,30 @@ export async function translateUIBatch(
     return keys;
   }
 }
+
+export interface LandmarkSearchResult {
+  name: string;
+  localName?: string;
+  city?: string;
+  country?: string;
+  architecturalStyle?: string;
+  summary?: string;
+  coordinatesEstimate?: { lat: number; lng: number };
+  source?: string;
+}
+
+export async function searchLandmarks(query: string): Promise<LandmarkSearchResult[]> {
+  try {
+    const response = await fetch(`/api/search-landmarks?q=${encodeURIComponent(query)}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.results || [];
+    }
+  } catch (err) {
+    console.warn("Search landmarks error:", err);
+  }
+  return [];
+}
+
 
 

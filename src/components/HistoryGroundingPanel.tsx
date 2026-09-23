@@ -13,7 +13,9 @@ import {
   Sparkles,
   Maximize2,
   X,
-  MapPin
+  MapPin,
+  Navigation,
+  Map as MapIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { LandmarkRecognition, LandmarkHistory } from "../types";
@@ -275,7 +277,7 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
               <h3 className="text-sm font-semibold text-slate-100 flex items-center space-x-1.5">
                 <span>{t("google_grounded_intel", "Google Search Grounded Intelligence")}</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
-                  gemini-3.5-flash
+                  gemini-3.8-flash
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
@@ -332,29 +334,164 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {displayedSources.map((source, index) => (
-                <a
-                  key={index}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/40 hover:bg-slate-950 transition group"
-                >
-                  <div className="truncate pr-2">
-                    <div className="text-xs text-slate-200 group-hover:text-cyan-300 transition-colors font-medium truncate">
-                      {source.title || "Reference Document"}
+              {displayedSources.map((source, index) => {
+                const isMaps = source.isGoogleMaps || source.url.includes("google.com/maps");
+                return (
+                  <a
+                    key={index}
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center justify-between p-2.5 rounded-xl transition group ${
+                      isMaps
+                        ? "bg-emerald-950/40 border border-emerald-700/50 hover:border-emerald-400 hover:bg-emerald-950/60"
+                        : "bg-slate-950/60 border border-slate-800 hover:border-cyan-500/40 hover:bg-slate-950"
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <div className="flex items-center space-x-1.5 truncate">
+                        {isMaps && <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                        <span className={`text-xs font-medium truncate ${
+                          isMaps ? "text-emerald-200 group-hover:text-emerald-100" : "text-slate-200 group-hover:text-cyan-300"
+                        }`}>
+                          {source.title || (isMaps ? "Google Maps Location" : "Reference Document")}
+                        </span>
+                        {isMaps && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 shrink-0">
+                            MAPS
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate font-mono mt-0.5">
+                        {source.url}
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 truncate font-mono mt-0.5">
-                      {source.url}
-                    </div>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 shrink-0" />
-                </a>
-              ))}
+                    <ExternalLink className={`w-3.5 h-3.5 shrink-0 ${
+                      isMaps ? "text-emerald-400 group-hover:text-emerald-300" : "text-slate-500 group-hover:text-cyan-400"
+                    }`} />
+                  </a>
+                );
+              })}
             </div>
           </div>
         )}
       </div>
+
+      {/* Google Maps Geographic Grounding Card */}
+      {Boolean(history.mapsGrounding || recognition.coordinatesEstimate) && (
+        <div
+          id="google-maps-grounding-card"
+          className="bg-slate-900/80 rounded-2xl border border-emerald-900/60 p-4 sm:p-5 shadow-lg relative overflow-hidden"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3.5">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-950/90 border border-emerald-500/40 flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-100 flex items-center space-x-1.5">
+                  <span>{t("google_maps_grounded_title", "Google Maps Geographic Grounding")}</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/40">
+                    gemini-3.8-flash + Google Maps
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {t("google_maps_grounded_desc", "Real-time spatial coordinates, visitor reviews & navigation links")}
+                </p>
+              </div>
+            </div>
+
+            <a
+              href={
+                history.mapsGrounding?.primaryMapsUri ||
+                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  `${recognition.name} ${recognition.city || ""} ${recognition.country || ""}`.trim()
+                )}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-sm cursor-pointer"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              <span>{t("open_in_google_maps", "Open in Google Maps")}</span>
+              <ExternalLink className="w-3 h-3 ml-0.5" />
+            </a>
+          </div>
+
+          <div className="mt-3.5 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                {t("monument_location", "Official Location")}
+              </span>
+              <p className="text-xs font-semibold text-slate-200">
+                {history.mapsGrounding?.placeTitle || recognition.name}
+              </p>
+              <p className="text-[11px] text-slate-400 flex items-center space-x-1">
+                <MapIcon className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>{[recognition.city, recognition.country].filter(Boolean).join(", ")}</span>
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                {t("gps_coordinates", "GPS Coordinates")}
+              </span>
+              <p className="text-xs font-mono font-semibold text-emerald-300">
+                {recognition.coordinatesEstimate?.lat
+                  ? `${recognition.coordinatesEstimate.lat.toFixed(4)}° N, ${recognition.coordinatesEstimate.lng.toFixed(4)}° E`
+                  : "Verified Geographic Pin Available"}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                {t("verified_grounding_pin", "Geocoded to architectural footprint")}
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                {t("maps_status", "Maps Grounding Status")}
+              </span>
+              <div className="flex items-center space-x-1.5 text-xs text-emerald-400 font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{t("live_grounded", "Live Grounded & Navigable")}</span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {t("includes_review_snippets", "Direct Maps URI verified")}
+              </p>
+            </div>
+          </div>
+
+          {/* Place Summary if provided by Maps tool */}
+          {history.mapsGrounding?.placeSummary && (
+            <div className="mt-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-300 leading-relaxed">
+              <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider block mb-1">
+                {t("maps_intel_summary", "Google Maps Grounded Description:")}
+              </span>
+              <p>{history.mapsGrounding.placeSummary}</p>
+            </div>
+          )}
+
+          {/* Review Snippets from Maps Grounding */}
+          {history.mapsGrounding?.reviewSnippets && history.mapsGrounding.reviewSnippets.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-slate-800/80">
+              <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-2">
+                {t("visitor_review_snippets", "Verified Visitor Insights (from Google Maps):")}
+              </span>
+              <div className="space-y-1.5">
+                {history.mapsGrounding.reviewSnippets.map((snippet, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/60 text-xs text-slate-300 italic flex items-start space-x-2"
+                  >
+                    <span className="text-emerald-400 not-italic font-bold">“</span>
+                    <span>{snippet}</span>
+                    <span className="text-emerald-400 not-italic font-bold">”</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Photo-Grounded Architectural & Visual Analysis Deck */}
       {(recognition.photoAnalysis || history.photoGroundedNotes || recognition.arKeypoints?.length > 0) && (

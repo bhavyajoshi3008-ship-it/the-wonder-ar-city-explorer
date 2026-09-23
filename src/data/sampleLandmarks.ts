@@ -9,7 +9,7 @@ export interface SampleLandmark {
   imageUrl: string;
   thumbnailUrl: string;
   badge: string;
-  category?: "unesco" | "wonder" | "monument" | "landmark";
+  category?: "unesco" | "wonder" | "monument" | "landmark" | "college";
   isMonument?: boolean;
   isUnesco?: boolean;
   isCollege?: boolean;

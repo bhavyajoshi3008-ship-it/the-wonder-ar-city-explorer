@@ -220,13 +220,15 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
                 alt="Landmark Target"
                 className="w-full h-full object-cover filter brightness-[0.92] contrast-[1.05]"
               />
-              {/* Active LiDAR Laser Scan Overlay across photo */}
-              <ARScanOverlay
-                variant="active"
-                label="NEURAL VISION // 60FPS"
-                showLabel={true}
-                showReticle={true}
-              />
+              {/* Optical Scan Overlay across photo during initial scanning only - removed once photo is scanned */}
+              {currentStage === "recognizing" && (
+                <ARScanOverlay
+                  variant="active"
+                  label="ANALYZING GEOMETRY"
+                  showLabel={false}
+                  showReticle={false}
+                />
+              )}
               {/* Bottom Real-Time Telemetry Bar */}
               <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between text-[8px] sm:text-[9px] font-mono text-cyan-300 bg-slate-950/85 px-2 py-0.5 rounded-full border border-cyan-500/30 backdrop-blur-sm pointer-events-none">
                 <span className="flex items-center space-x-1">

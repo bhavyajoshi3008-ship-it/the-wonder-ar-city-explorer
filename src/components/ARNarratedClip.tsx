@@ -29,6 +29,9 @@ import {
   Glasses,
   X,
   GraduationCap,
+  History,
+  ScrollText,
+  Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { LandmarkRecognition, LandmarkHistory, NarrationAudio, ARKeypoint, TourChapter } from "../types";
@@ -39,6 +42,7 @@ import { useAccessibility } from "../context/AccessibilityContext";
 import { translateText, generateNarration, translateUIBatch } from "../services/api";
 import { ARScanOverlay } from "./ARScanOverlay";
 import { Globe } from "lucide-react";
+import { LandmarkSearchModal } from "./LandmarkSearchModal";
 
 interface ARNarratedClipProps {
   imageDataUrl: string;
@@ -48,6 +52,7 @@ interface ARNarratedClipProps {
   onRegenerateVoice?: (voiceName: string, customScript?: string) => Promise<void>;
   isRegeneratingVoice?: boolean;
   onSelectPreset?: (preset: any) => void;
+  onSwitchLandmark?: (landmarkName: string) => Promise<void> | void;
 }
 
 export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
@@ -58,6 +63,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   onRegenerateVoice,
   isRegeneratingVoice = false,
   onSelectPreset,
+  onSwitchLandmark,
 }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const viewportContainerRef = useRef<HTMLDivElement | null>(null);
@@ -72,6 +78,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   const [audioPlaybackError, setAudioPlaybackError] = useState<boolean>(false);
   const [completedChapters, setCompletedChapters] = useState<Set<number>>(new Set());
   const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
+  const [showChangeLandmarkModal, setShowChangeLandmarkModal] = useState<boolean>(false);
 
   // Synchronized playback refs to prevent stale closures and concurrency races
   const isPlayingRef = useRef<boolean>(false);
@@ -83,6 +90,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   const autoAdvanceRef = useRef<boolean>(true);
   const isPausedRef = useRef<boolean>(false);
   const speechSessionIdRef = useRef<number>(0);
+  const speechErrorCountRef = useRef<number>(0);
 
   // Speech synthesis queue and playback refs
   const sentencesQueueRef = useRef<string[]>([]);
@@ -136,7 +144,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
   // AR visual HUD toggles
   const [showPins, setShowPins] = useState<boolean>(true);
-  const [showScanline, setShowScanline] = useState<boolean>(true);
+  const [showScanline, setShowScanline] = useState<boolean>(false);
   const [showTelemetry, setShowTelemetry] = useState<boolean>(true);
   const [activePin, setActivePin] = useState<ARKeypoint | null>(null);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
@@ -586,30 +594,52 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       if (speechSessionIdRef.current !== sessionId) return;
 
       if (e.error !== "canceled" && e.error !== "interrupted") {
+        speechErrorCountRef.current += 1;
+        // If synthesis errors occur (e.g. browser voice engine blocked or unsupported voice):
+        // Don't flash-skip all sentences in 70ms!
+        // Instead, pace through sentences with natural reading duration so the teleprompter works smoothly
+        const readingDelayMs = Math.min(5500, Math.max(2200, Math.round((sentenceText.length * 60) / playbackRateRef.current)));
         sentenceIndexRef.current = idx + 1;
         setTimeout(() => {
           if (speechSessionIdRef.current === sessionId && isPlayingRef.current && activePlaybackModeRef.current === "speech") {
             speakNextSentence();
           }
-        }, 70);
+        }, readingDelayMs);
       }
     };
 
     activeUtteranceRef.current = utterance;
     (window as any).__activeTourUtterance = utterance;
-    window.speechSynthesis.speak(utterance);
+    try {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      window.speechSynthesis.speak(utterance);
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    } catch {
+      // Graceful fallback to teleprompter timer
+      const readingDelayMs = Math.min(5500, Math.max(2200, Math.round((sentenceText.length * 60) / playbackRateRef.current)));
+      sentenceIndexRef.current = idx + 1;
+      setTimeout(() => {
+        if (speechSessionIdRef.current === sessionId && isPlayingRef.current && activePlaybackModeRef.current === "speech") {
+          speakNextSentence();
+        }
+      }, readingDelayMs);
+    }
   };
 
   const startSentenceSpeech = (fullText: string, totalEstimatedSec: number, resumeFromIdx = 0, resumeElapsedSec = 0) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setIsPlaying(false);
-      isPlayingRef.current = false;
-      return;
-    }
-
     activePlaybackModeRef.current = "speech";
     speechSessionIdRef.current += 1;
-    window.speechSynthesis.cancel();
+    speechErrorCountRef.current = 0;
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
 
     // Natural sentence splitting preserving punctuation boundaries
     const rawSentences = fullText
@@ -658,15 +688,14 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     setDuration(estSec);
     durationRef.current = estSec;
 
-    // Check if studio audio is available in cache or props
+    // Check if studio audio is available in cache specifically for this chapter and language
     const cacheKey = `${currentLanguage.code}_chap_${chapIdx}_${selectedVoice}`;
     const cachedChapterAudio = languageAudioMapRef.current[cacheKey];
+    const isEnglish = currentLanguage.code === "en";
     const candidateAudio = cachedChapterAudio?.audioBase64
       ? cachedChapterAudio
-      : (chapIdx === 0 && currentLanguage.code === "en" && narration?.audioBase64 && !narration?.useClientFallback)
+      : (chapIdx === 0 && isEnglish && narration?.audioBase64 && !narration?.useClientFallback)
       ? narration
-      : (activeNarration?.audioBase64 && !activeNarration?.useClientFallback && !audioPlaybackError)
-      ? activeNarration
       : null;
 
     const canUseStudioAudio = Boolean(candidateAudio?.audioBase64) && !audioPlaybackError;
@@ -989,15 +1018,12 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         {/* AR Optics Vignette and Holographic Shading */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/60 pointer-events-none" />
 
-        {/* AR Grid Matrix Lines */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#06b6d412_1px,transparent_1px),linear-gradient(to_bottom,#06b6d412_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none" />
-
-        {/* Animated AR Laser Scanline */}
+        {/* Animated AR Laser Scanline (only if user explicitly enables it) */}
         {showScanline && (
           <ARScanOverlay
             variant="active"
-            label={t("ar_lidar_tracking", "LIDAR // AR MESH TRACKING")}
-            showLabel={true}
+            label={t("ar_optic_tracking", "AR // MESH TRACKING")}
+            showLabel={false}
           />
         )}
 
@@ -1018,6 +1044,15 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 <span className="text-[10px] font-mono text-cyan-400/90 truncate font-medium">
                   {getMobileShortBadge()}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setShowChangeLandmarkModal(true)}
+                  className="ml-1 px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/40 text-[9px] font-mono text-cyan-300 hover:bg-cyan-900 transition flex items-center space-x-1 cursor-pointer shrink-0"
+                  title="Change monument"
+                >
+                  <RefreshCw className="w-2.5 h-2.5" />
+                  <span>Fix</span>
+                </button>
               </div>
 
               {activeSticker && (
@@ -1037,14 +1072,25 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
             {/* Desktop Full Landmark HUD Badge */}
             <div className="hidden sm:block bg-slate-950/85 backdrop-blur-md border border-cyan-500/30 px-3.5 py-2 rounded-xl text-left pointer-events-auto shadow-lg max-w-md">
-              <div className="flex items-center space-x-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-                </span>
-                <span className="text-[10px] font-mono tracking-wider text-cyan-300 uppercase font-semibold">
-                  {recognition.isLandmark === false ? t("ar_subject_tracking", "VISUAL SUBJECT TRACKING • LOCKED") : t("ar_optic_tracking", "AR OPTIC TRACKING • LOCKED")}
-                </span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-80" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+                  </span>
+                  <span className="text-[10px] font-mono tracking-wider text-cyan-300 uppercase font-semibold">
+                    {recognition.isLandmark === false ? t("ar_subject_tracking", "VISUAL SUBJECT TRACKING • LOCKED") : t("ar_optic_tracking", "AR OPTIC TRACKING • LOCKED")}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowChangeLandmarkModal(true)}
+                  className="px-2 py-0.5 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 hover:text-white hover:bg-cyan-900 transition flex items-center space-x-1 cursor-pointer shrink-0"
+                  title="Correct or change monument"
+                >
+                  <RefreshCw className="w-2.5 h-2.5" />
+                  <span>Change Monument</span>
+                </button>
               </div>
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight mt-0.5 truncate" title={recognition.name}>
                 {recognition.name}
@@ -1073,6 +1119,41 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                       <span>{recognition.collegeInfo.institutionName || "HISTORIC UNIVERSITY"} {recognition.collegeInfo.foundedYear ? `EST. ${recognition.collegeInfo.foundedYear}` : ""}</span>
                     </span>
                   )}
+                </div>
+              )}
+
+              {/* Quick-Switch Suggested Candidates */}
+              {recognition.candidateMatches && recognition.candidateMatches.length > 1 && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-mono">Suggested:</span>
+                  {recognition.candidateMatches.slice(0, 4).map((cand) => {
+                    const isCurrent = cand.toLowerCase().trim() === recognition.name.toLowerCase().trim();
+                    return (
+                      <button
+                        key={cand}
+                        type="button"
+                        onClick={() => {
+                          if (!isCurrent && onSwitchLandmark) onSwitchLandmark(cand);
+                        }}
+                        disabled={isCurrent}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono transition cursor-pointer ${
+                          isCurrent
+                            ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 font-bold"
+                            : "bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:text-white"
+                        }`}
+                        title={`Switch tour to ${cand}`}
+                      >
+                        {cand.split(",")[0]}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setShowChangeLandmarkModal(true)}
+                    className="text-[10px] text-cyan-400 hover:text-cyan-300 hover:underline font-mono"
+                  >
+                    All...
+                  </button>
                 </div>
               )}
             </div>
@@ -1118,6 +1199,34 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   </div>
                 </motion.div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Needs Identification Banner */}
+        {recognition.needsUserIdentification && (
+          <div className="absolute top-16 sm:top-20 inset-x-3 sm:inset-x-8 z-40 pointer-events-auto">
+            <div className="bg-amber-950/95 backdrop-blur-md border-2 border-amber-400/80 p-3 sm:p-4 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-white">
+              <div className="flex items-center space-x-3 text-left">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm sm:text-base text-amber-200">
+                    Which monument does your photo depict?
+                  </h4>
+                  <p className="text-xs text-amber-100/80">
+                    Tap to select the landmark for 100% authentic UNESCO history, architectural secrets & spoken tour.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowChangeLandmarkModal(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-200 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-lg transition cursor-pointer shrink-0"
+              >
+                Select Monument
+              </button>
             </div>
           </div>
         )}
@@ -1530,15 +1639,25 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                   <div className="absolute -inset-1 rounded-2xl bg-cyan-400/30 animate-pulse pointer-events-none" />
                 )}
                 <motion.button
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   type="button"
                   id="narration-play-pause-btn"
                   onClick={togglePlay}
-                  className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/30 transition cursor-pointer"
-                  title={isPlaying ? "Pause Tour" : "Play Tour"}
+                  className="relative px-4 h-11 sm:h-12 rounded-2xl bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 text-slate-950 flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-500/30 transition cursor-pointer font-bold text-xs sm:text-sm"
+                  title={isPlaying ? "Pause Tour" : "Play Spoken AR Tour"}
                 >
-                  {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                  {isPlaying ? (
+                    <>
+                      <Pause className="w-5 h-5 fill-current" />
+                      <span className="hidden sm:inline">Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                      <span>{t("play_audio_btn", "Play AR Tour")}</span>
+                    </>
+                  )}
                 </motion.button>
               </div>
 
@@ -1881,6 +2000,110 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         </div>
       )}
 
+      {/* MONUMENT HISTORICAL CHRONICLE & ARCHITECTURAL SECRETS DECK */}
+      {(history.culturalSignificance || (history.historicalTimeline && history.historicalTimeline.length > 0) || (history.architecturalSecrets && history.architecturalSecrets.length > 0)) && (
+        <div
+          id="ar-monument-history-deck"
+          className="bg-slate-900/90 rounded-2xl border border-amber-500/30 p-4 sm:p-5 shadow-xl space-y-4 relative overflow-hidden"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-950/80 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-sm">
+                <History className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                  <span>{t("historical_chronicle", "Historical Chronicle & Provenance")}</span>
+                  {history.historicalTimeline && history.historicalTimeline.length > 0 && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/30">
+                      {history.historicalTimeline.length} {t("milestones", "Milestones")}
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {recognition.name} • {recognition.city}, {recognition.country}
+                </p>
+              </div>
+            </div>
+            <div className="text-xs font-mono text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded-lg border border-amber-500/30">
+              {recognition.periodEra || "Historical Heritage"}
+            </div>
+          </div>
+
+          {/* Cultural Narrative & History Summary */}
+          {history.culturalSignificance && (
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
+              <div className="text-[10px] font-mono text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <ScrollText className="w-3.5 h-3.5 text-amber-400" />
+                <span>{t("cultural_heritage_significance", "History & Heritage Significance")}</span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed" dir={currentLanguage.dir || "ltr"}>
+                {translatedDynamic.culturalSignificance || history.culturalSignificance}
+              </p>
+            </div>
+          )}
+
+          {/* Chronological Historical Timeline Milestones */}
+          {history.historicalTimeline && history.historicalTimeline.length > 0 && (
+            <div className="space-y-2.5">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{t("chronological_milestones", "Historical Milestones Across Eras")}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {history.historicalTimeline.map((item, idx) => {
+                  const translatedEvent = translatedDynamic[`timeline_${idx}_event`] || item.event;
+                  const translatedDesc = translatedDynamic[`timeline_${idx}_desc`] || item.description;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-cyan-500/40 transition space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-cyan-300 font-bold px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
+                          {item.yearOrEra}
+                        </span>
+                        <span className="text-slate-500 text-[10px]">#0{idx + 1}</span>
+                      </div>
+                      <h4 className="text-xs font-semibold text-white pt-1" dir={currentLanguage.dir || "ltr"}>
+                        {translatedEvent}
+                      </h4>
+                      <p className="text-xs text-slate-300 leading-snug" dir={currentLanguage.dir || "ltr"}>
+                        {translatedDesc}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Architectural Secrets & Engineering Marvels */}
+          {history.architecturalSecrets && history.architecturalSecrets.length > 0 && (
+            <div className="space-y-2 pt-1 border-t border-slate-800/80">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>{t("architectural_secrets", "Architectural Secrets & Mysteries")}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {history.architecturalSecrets.map((secret, idx) => {
+                  const translatedSecret = translatedDynamic[`secret_${idx}`] || secret;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-amber-950/20 border border-amber-500/20 text-xs text-amber-200/90 leading-relaxed flex items-start space-x-2"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1.5" />
+                      <span dir={currentLanguage.dir || "ltr"}>{translatedSecret}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Spacious, Full-Featured AR Travel Sticker Stamps Modal Dialog */}
       <AnimatePresence>
         {showStickerPicker && (
@@ -2050,6 +2273,16 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      <LandmarkSearchModal
+        isOpen={showChangeLandmarkModal}
+        onClose={() => setShowChangeLandmarkModal(false)}
+        onSelectLandmark={(name) => {
+          onSwitchLandmark?.(name);
+          setShowChangeLandmarkModal(false);
+        }}
+        currentLandmarkName={recognition.name}
+      />
     </div>
   );
 };

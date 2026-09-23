@@ -58,11 +58,23 @@ export interface LandmarkRecognition {
   notLandmarkReason?: string;
   unescoInfo?: UnescoHeritageInfo;
   collegeInfo?: HistoricCollegeInfo;
+  needsUserIdentification?: boolean;
+  creditsDepleted?: boolean;
+  candidateMatches?: string[];
 }
 
 export interface GroundingSource {
   title: string;
   url: string;
+  isGoogleMaps?: boolean;
+}
+
+export interface GoogleMapsGroundingInfo {
+  placeSummary?: string;
+  primaryMapsUri: string;
+  placeTitle: string;
+  reviewSnippets?: string[];
+  mapsLinks?: Array<{ title: string; url: string; isGoogleMaps: boolean }>;
 }
 
 export interface TourChapter {
@@ -86,6 +98,7 @@ export interface LandmarkHistory {
   chapters: TourChapter[];
   groundingQueries: string[];
   groundingSources: GroundingSource[];
+  mapsGrounding?: GoogleMapsGroundingInfo;
   photoGroundedNotes?: string;
   modelUsed?: string;
 }

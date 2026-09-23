@@ -15,9 +15,15 @@ import {
   Image as ImageIcon,
   LayoutGrid,
   CheckCircle2,
+  GraduationCap,
 } from "lucide-react";
 import { SampleLandmark } from "../data/sampleLandmarks";
-import { UNESCO_WORLD_HERITAGE_CATALOG, UnescoSiteEntry } from "../data/unescoWorldHeritage";
+import { UnescoSiteEntry } from "../data/unescoWorldHeritage";
+import {
+  UNESCO_AND_COLLEGES_CATALOG,
+  HISTORICAL_COLLEGES_CATALOG,
+  HistoricalCollegeOrUnescoSite,
+} from "../data/historicalColleges";
 import { useLanguage } from "../context/LanguageContext";
 
 interface UnescoAndCollegesExplorerProps {
@@ -26,7 +32,7 @@ interface UnescoAndCollegesExplorerProps {
   loadingId: string | null;
 }
 
-type FilterCategory = "all" | "unesco_cultural" | "unesco_natural" | "unesco_mixed";
+type FilterCategory = "all" | "colleges" | "indian_colleges" | "unesco_cultural" | "unesco_natural" | "unesco_mixed";
 type WorldRegion =
   | "all"
   | "Europe and North America"
@@ -47,23 +53,24 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
   const [activeCategory, setActiveCategory] = useState<FilterCategory>("all");
   const [selectedRegion, setSelectedRegion] = useState<WorldRegion>("all");
   const [viewStyle, setViewStyle] = useState<ViewStyle>("detailed");
-  const [lightboxSite, setLightboxSite] = useState<UnescoSiteEntry | null>(null);
+  const [lightboxSite, setLightboxSite] = useState<HistoricalCollegeOrUnescoSite | null>(null);
 
-  // Convert a UnescoSiteEntry into the SampleLandmark format needed by AR Tour pipeline
-  const convertToSampleLandmark = (site: UnescoSiteEntry): SampleLandmark => {
+  // Convert a HistoricalCollegeOrUnescoSite into the SampleLandmark format needed by AR Tour pipeline
+  const convertToSampleLandmark = (site: HistoricalCollegeOrUnescoSite): SampleLandmark => {
+    const isCollege = Boolean((site as any).isCollegeOrUniversity);
     return {
       id: site.id,
       name: site.name,
       city: site.city || site.country,
       country: site.country,
-      architecturalStyle: site.architecturalStyle || "Historic World Heritage",
-      periodEra: site.periodEra || `Inscribed ${site.year}`,
+      architecturalStyle: site.architecturalStyle || (isCollege ? "Historic Collegiate Architecture" : "Historic World Heritage"),
+      periodEra: site.periodEra || (isCollege ? `Founded ${(site as any).foundedYear}` : `Inscribed ${site.year}`),
       summary: site.summary,
       imageUrl: site.imageUrl,
       thumbnailUrl: site.thumbnailUrl,
-      badge: site.badge || `UNESCO #${site.unescoId}`,
-      category: "unesco",
-      isUnesco: true,
+      badge: site.badge || (isCollege ? `Founded ${(site as any).foundedYear}` : `UNESCO #${site.unescoId}`),
+      category: isCollege ? "college" : "unesco",
+      isUnesco: !isCollege || Boolean(site.unescoId),
       unescoId: site.unescoId,
       unescoYear: site.year,
       region: site.region,
@@ -71,9 +78,13 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
   };
 
   const filteredSites = useMemo(() => {
-    return UNESCO_WORLD_HERITAGE_CATALOG.filter((site) => {
+    return UNESCO_AND_COLLEGES_CATALOG.filter((site) => {
+      const isCollege = Boolean((site as any).isCollegeOrUniversity);
+
       // Category filter
-      if (activeCategory === "unesco_cultural" && site.category !== "Cultural") return false;
+      if (activeCategory === "colleges" && !isCollege) return false;
+      if (activeCategory === "indian_colleges" && (!isCollege || !site.country.toLowerCase().includes("india"))) return false;
+      if (activeCategory === "unesco_cultural" && (site.category !== "Cultural" || isCollege)) return false;
       if (activeCategory === "unesco_natural" && site.category !== "Natural") return false;
       if (activeCategory === "unesco_mixed" && site.category !== "Mixed") return false;
 
@@ -90,7 +101,13 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
         const matchStyle = site.architecturalStyle?.toLowerCase().includes(query);
         const matchSummary = site.summary.toLowerCase().includes(query);
         const matchYear = site.year.toString().includes(query);
-        const matchUnescoId = site.unescoId.toString().includes(query);
+        const matchUnescoId = site.unescoId?.toString().includes(query);
+        const matchMotto = (site as any).famousMotto?.toLowerCase().includes(query);
+        const matchFounded = (site as any).foundedYear?.toString().toLowerCase().includes(query);
+        const matchBuildings = (site as any).notableHistoricBuildings?.some((b: string) =>
+          b.toLowerCase().includes(query)
+        );
+
         return (
           matchName ||
           matchLocalName ||
@@ -99,7 +116,10 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
           matchStyle ||
           matchSummary ||
           matchYear ||
-          matchUnescoId
+          matchUnescoId ||
+          matchMotto ||
+          matchFounded ||
+          matchBuildings
         );
       }
 
@@ -108,11 +128,13 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
   }, [searchQuery, activeCategory, selectedRegion]);
 
   const stats = useMemo(() => {
-    const total = UNESCO_WORLD_HERITAGE_CATALOG.length;
-    const cultural = UNESCO_WORLD_HERITAGE_CATALOG.filter((s) => s.category === "Cultural").length;
-    const natural = UNESCO_WORLD_HERITAGE_CATALOG.filter((s) => s.category === "Natural").length;
-    const mixed = UNESCO_WORLD_HERITAGE_CATALOG.filter((s) => s.category === "Mixed").length;
-    return { total, cultural, natural, mixed };
+    const total = UNESCO_AND_COLLEGES_CATALOG.length;
+    const colleges = HISTORICAL_COLLEGES_CATALOG.length;
+    const indianColleges = HISTORICAL_COLLEGES_CATALOG.filter((s) => s.country.toLowerCase().includes("india")).length;
+    const cultural = UNESCO_AND_COLLEGES_CATALOG.filter((s) => s.category === "Cultural" && !(s as any).isCollegeOrUniversity).length;
+    const natural = UNESCO_AND_COLLEGES_CATALOG.filter((s) => s.category === "Natural").length;
+    const mixed = UNESCO_AND_COLLEGES_CATALOG.filter((s) => s.category === "Mixed").length;
+    return { total, colleges, indianColleges, cultural, natural, mixed };
   }, []);
 
   return (
@@ -241,7 +263,35 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
                 : "bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800"
             }`}
           >
-            {t("all_unesco_sites", "All UNESCO Sites")} ({stats.total})
+            {t("all_unesco_sites", "All Heritage & Colleges")} ({stats.total})
+          </button>
+
+          <button
+            type="button"
+            id="filter-colleges"
+            onClick={() => setActiveCategory("colleges")}
+            className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer ${
+              activeCategory === "colleges"
+                ? "bg-amber-400 text-slate-950 font-bold shadow-sm"
+                : "bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800"
+            }`}
+          >
+            <GraduationCap className="w-3.5 h-3.5 text-amber-500" />
+            <span>{t("oldest_colleges_label", "All Historic Colleges")} ({stats.colleges})</span>
+          </button>
+
+          <button
+            type="button"
+            id="filter-indian-colleges"
+            onClick={() => setActiveCategory("indian_colleges")}
+            className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer ${
+              activeCategory === "indian_colleges"
+                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold shadow-sm"
+                : "bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800"
+            }`}
+          >
+            <span className="text-sm">🇮🇳</span>
+            <span>{t("indian_colleges_label", "Old Colleges of India")} ({stats.indianColleges})</span>
           </button>
 
           <button
@@ -353,12 +403,19 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity" />
 
-                  {/* Top Bar with UNESCO Badge & Zoom Icon */}
+                  {/* Top Bar with UNESCO / College Badge & Zoom Icon */}
                   <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
-                    <span className="flex items-center space-x-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-700/80 backdrop-blur-md">
-                      <Globe className="w-3 h-3 text-cyan-400" />
-                      <span>UNESCO #{site.unescoId}</span>
-                    </span>
+                    {(site as any).isCollegeOrUniversity ? (
+                      <span className="flex items-center space-x-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/80 backdrop-blur-md">
+                        <GraduationCap className="w-3 h-3 text-amber-400" />
+                        <span>{(site as any).foundedYear ? `Est. ${(site as any).foundedYear}` : "Historic College"}</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center space-x-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-700/80 backdrop-blur-md">
+                        <Globe className="w-3 h-3 text-cyan-400" />
+                        <span>UNESCO #{site.unescoId}</span>
+                      </span>
+                    )}
 
                     <span className="p-1 rounded-lg bg-slate-950/80 text-slate-300 border border-slate-700/80 backdrop-blur-md group-hover:text-cyan-300 group-hover:scale-110 transition-all">
                       <Maximize2 className="w-3 h-3" />
@@ -378,7 +435,9 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
 
                     <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
                       <span className="text-[10px] font-mono text-slate-400">
-                        {t("inscribed_year", "Inscribed")} {site.year}
+                        {(site as any).isCollegeOrUniversity
+                          ? `Founded ${(site as any).foundedYear || site.year}`
+                          : `${t("inscribed_year", "Inscribed")} ${site.year}`}
                       </span>
 
                       <button
@@ -449,21 +508,32 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
 
                     {/* Top Badges */}
                     <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1">
-                      <span className="flex items-center space-x-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-700/80 backdrop-blur-sm">
-                        <Globe className="w-3 h-3 text-cyan-400 shrink-0" />
-                        <span>UNESCO #{site.unescoId}</span>
-                      </span>
+                      {(site as any).isCollegeOrUniversity ? (
+                        <span className="flex items-center space-x-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/80 backdrop-blur-sm">
+                          <GraduationCap className="w-3 h-3 text-amber-400 shrink-0" />
+                          <span>{(site as any).foundedYear ? `Est. ${(site as any).foundedYear}` : "Historic College"}</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center space-x-1 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-700/80 backdrop-blur-sm">
+                          <Globe className="w-3 h-3 text-cyan-400 shrink-0" />
+                          <span>UNESCO #{site.unescoId}</span>
+                        </span>
+                      )}
 
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-950/90 text-slate-300 border border-slate-700/80 backdrop-blur-sm">
-                        {site.category}
+                        {(site as any).isCollegeOrUniversity ? "Historic College" : site.category}
                       </span>
                     </div>
 
-                    {/* Inscription Year Pill & Zoom preview icon */}
+                    {/* Inscription / Founded Year Pill & Zoom preview icon */}
                     <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
                       <div className="flex items-center space-x-1 text-[10px] font-mono text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded-md border border-slate-800/80 backdrop-blur-sm">
                         <Calendar className="w-3 h-3 text-cyan-400 shrink-0" />
-                        <span>{t("inscribed_year", "Inscribed")} {site.year}</span>
+                        <span>
+                          {(site as any).isCollegeOrUniversity
+                            ? `Founded ${(site as any).foundedYear || site.year}`
+                            : `${t("inscribed_year", "Inscribed")} ${site.year}`}
+                        </span>
                       </div>
 
                       <div className="p-1 rounded bg-slate-950/80 text-slate-400 group-hover:text-cyan-300 transition-colors backdrop-blur-sm border border-slate-800">

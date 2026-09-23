@@ -1,27 +1,17 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Camera, RefreshCw, Upload, Sparkles, Image as ImageIcon, MapPin, Compass, AlertCircle, GraduationCap, Globe, BookOpen, Layers, Landmark } from "lucide-react";
+import { Camera, RefreshCw, Upload, Sparkles, Image as ImageIcon, MapPin, Compass, AlertCircle, GraduationCap, Globe, BookOpen, Layers, Landmark, Search, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SAMPLE_LANDMARKS, SampleLandmark } from "../data/sampleLandmarks";
 import { fileToDataUrl, urlToDataUrl, optimizeBase64Image } from "../utils/imageUtils";
 import { useLanguage } from "../context/LanguageContext";
 import { ARScanOverlay } from "./ARScanOverlay";
 import { UnescoAndCollegesExplorer } from "./UnescoAndCollegesExplorer";
+import { LandmarkSearchModal } from "./LandmarkSearchModal";
 
 interface CameraCaptureProps {
-  onPhotoSelected: (imageDataUrl: string, landmarkPreset?: SampleLandmark, fileNameHint?: string) => void;
+  onPhotoSelected: (imageDataUrl: string, landmarkPreset?: SampleLandmark, explicitHint?: string) => void;
   isLoading: boolean;
 }
-
-const cleanFileNameHint = (name: string): string | undefined => {
-  if (!name) return undefined;
-  const base = name.replace(/\.[^/.]+$/, "");
-  const cleaned = base.replace(/[_-]+/g, " ").trim();
-  // Filter out generic camera filenames like IMG_1234, photo, screenshot
-  if (/^(img|dsc|photo|pic|image|screenshot|capture|p)[\s\d_-]*$/i.test(cleaned) || cleaned.length < 3) {
-    return undefined;
-  }
-  return cleaned;
-};
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, isLoading }) => {
   const { t } = useLanguage();
@@ -34,6 +24,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
   const [sampleLoadingId, setSampleLoadingId] = useState<string | null>(null);
   const [presetDeckView, setPresetDeckView] = useState<"quick" | "unesco_catalog">("quick");
   const [quickFilter, setQuickFilter] = useState<"all" | "wonders" | "unesco" | "monuments">("all");
+  const [showSearchModal, setShowSearchModal] = useState<boolean>(false);
+  const [selectedTargetMonument, setSelectedTargetMonument] = useState<{ name: string; city?: string } | null>(null);
 
   // Start/Stop Camera
   const startCamera = async (facing: "environment" | "user" = facingMode) => {
@@ -118,16 +110,21 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
     stopCamera();
-    onPhotoSelected(dataUrl);
+    onPhotoSelected(dataUrl, undefined, selectedTargetMonument?.name);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const hint = cleanFileNameHint(file.name);
       const rawDataUrl = await fileToDataUrl(file);
       const optimized = await optimizeBase64Image(rawDataUrl);
+
+      // Clean base name without extensions or generic camera prefixes (IMG_, DSC_, screenshot, download)
+      const baseName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
+      const isGeneric = /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+)[\s\d_]*$/i.test(baseName);
+      const hint = selectedTargetMonument?.name || (!isGeneric && baseName.length >= 3 && baseName.length <= 60 ? baseName : undefined);
+
       onPhotoSelected(optimized, undefined, hint);
     } catch (err) {
       console.error("Error loading photo file:", err);
@@ -144,9 +141,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
       try {
-        const hint = cleanFileNameHint(file.name);
         const rawDataUrl = await fileToDataUrl(file);
         const optimized = await optimizeBase64Image(rawDataUrl);
+
+        const baseName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
+        const isGeneric = /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+)[\s\d_]*$/i.test(baseName);
+        const hint = selectedTargetMonument?.name || (!isGeneric && baseName.length >= 3 && baseName.length <= 60 ? baseName : undefined);
+
         onPhotoSelected(optimized, undefined, hint);
       } catch (err) {
         console.error("Error loading dropped file:", err);
@@ -154,19 +155,41 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
     }
   };
 
+  const handleSelectMonumentDirectly = (monumentName: string) => {
+    const matchedSample = SAMPLE_LANDMARKS.find(
+      (s) => s.name.toLowerCase() === monumentName.toLowerCase()
+    );
+    if (matchedSample) {
+      handleSelectSample(matchedSample);
+    } else {
+      setSelectedTargetMonument({ name: monumentName });
+      setShowSearchModal(false);
+      onPhotoSelected(
+        "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1200&q=80",
+        undefined,
+        monumentName
+      );
+    }
+  };
+
   const handleSelectSample = async (sample: SampleLandmark) => {
     try {
       setSampleLoadingId(sample.id);
-      let dataUrl: string;
+      let dataUrl: string = sample.imageUrl;
       try {
         dataUrl = await urlToDataUrl(sample.imageUrl);
       } catch (primaryErr) {
-        console.warn("Primary image load failed, trying thumbnail fallback:", primaryErr);
-        dataUrl = await urlToDataUrl(sample.thumbnailUrl);
+        console.warn("Primary image load notice, trying thumbnail fallback:", primaryErr);
+        try {
+          dataUrl = await urlToDataUrl(sample.thumbnailUrl);
+        } catch {
+          dataUrl = sample.imageUrl;
+        }
       }
-      onPhotoSelected(dataUrl, sample);
+      onPhotoSelected(dataUrl || sample.imageUrl, sample);
     } catch (err) {
-      console.error("Failed to load sample landmark:", err);
+      console.warn("Sample selection notice, proceeding with direct sample image:", err);
+      onPhotoSelected(sample.imageUrl, sample);
     } finally {
       setSampleLoadingId(null);
     }
@@ -253,8 +276,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               </div>
             </div>
 
-            {/* Volumetric AR Laser Scanning Beam */}
-            <ARScanOverlay variant="active" label={t("ar_optic_active", "LIDAR // OPTIC ACTIVE")} showLabel={true} />
+            {/* Volumetric AR Optical Viewfinder Beam */}
+            <ARScanOverlay variant="active" label={t("ar_optic_active", "AR // OPTIC ACTIVE")} showLabel={false} />
 
             {/* Target Reticle */}
             <div className="relative w-40 h-40 sm:w-56 sm:h-56 lg:w-72 lg:h-72 mx-auto my-auto border border-cyan-400/40 rounded-2xl lg:rounded-3xl shadow-[0_0_20px_rgba(6,182,212,0.15)]">
@@ -353,6 +376,64 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                 <span>{cameraError}</span>
               </div>
             )}
+
+            {/* Direct Global Monument Search & Lock */}
+            <div className="w-full max-w-md mx-auto mt-3 sm:mt-4 px-2">
+              <div
+                onClick={() => setShowSearchModal(true)}
+                className="relative flex items-center bg-slate-900/90 hover:bg-slate-850 border border-slate-700 hover:border-cyan-400/60 rounded-xl px-3.5 py-2.5 cursor-pointer shadow-lg transition-all group"
+              >
+                <Search className="w-4 h-4 text-cyan-400 mr-2.5 shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="text-xs sm:text-sm text-slate-400 group-hover:text-slate-200 truncate flex-1 text-left">
+                  {selectedTargetMonument ? `Target: ${selectedTargetMonument.name}` : "Search or choose any global monument..."}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 shrink-0">
+                  {selectedTargetMonument ? "CHANGE" : "SEARCH"}
+                </span>
+              </div>
+
+              {/* Target Monument Locked Banner */}
+              {selectedTargetMonument && (
+                <div className="mt-2 flex items-center justify-between bg-cyan-950/70 border border-cyan-500/40 rounded-xl p-2 px-3 text-xs animate-in fade-in">
+                  <div className="flex items-center space-x-2 truncate">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <span className="text-white font-semibold truncate">Target: {selectedTargetMonument.name}</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectMonumentDirectly(selectedTargetMonument.name)}
+                      className="px-2.5 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold text-[11px] hover:bg-cyan-400 transition cursor-pointer"
+                    >
+                      Tour Now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTargetMonument(null)}
+                      className="p-1 text-slate-400 hover:text-white rounded cursor-pointer"
+                      title="Clear target"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Popular Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto mt-2.5 pb-1 scrollbar-none text-[11px]">
+                <span className="text-slate-500 font-mono shrink-0">Quick Tour:</span>
+                {["Taj Mahal", "Colosseum", "Big Ben", "Eiffel Tower", "Petra", "Golden Temple", "Machu Picchu"].map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => handleSelectMonumentDirectly(name)}
+                    className="px-2 py-0.5 rounded-full bg-slate-900/90 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-200 transition shrink-0 cursor-pointer"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Action Buttons: 100% On-Screen with High Tactile Ergonomics & Motion */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3.5 lg:gap-4 w-full max-w-xs sm:max-w-none mt-4 sm:mt-5 lg:mt-7">
@@ -606,6 +687,21 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
           </div>
         )}
       </div>
+
+      <LandmarkSearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onSelectLandmark={(name) => {
+          setSelectedTargetMonument({ name });
+          setShowSearchModal(false);
+          // If in sample landmarks, optionally start right away or keep locked
+          const sample = SAMPLE_LANDMARKS.find((s) => s.name.toLowerCase() === name.toLowerCase());
+          if (sample) {
+            handleSelectSample(sample);
+          }
+        }}
+        currentLandmarkName={selectedTargetMonument?.name}
+      />
     </div>
   );
 };
