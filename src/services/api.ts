@@ -1,4 +1,4 @@
-import { LandmarkRecognition, LandmarkHistory, NarrationAudio, GoogleMapsGroundingInfo } from "../types";
+import { LandmarkRecognition, LandmarkHistory, NarrationAudio, GoogleMapsGroundingInfo, LocationReferencePhoto } from "../types";
 
 /**
  * Resilient helper to parse JSON response with automatic handling of
@@ -86,7 +86,9 @@ export async function recognizeLandmark(
   targetLanguage?: string,
   targetLanguageName?: string,
   visualSignature?: any,
-  gpsCoords?: { latitude: number; longitude: number }
+  gpsCoords?: { latitude: number; longitude: number },
+  isSamplePreset?: boolean,
+  mode: "landmark_tour" | "guess_location" = "landmark_tour"
 ): Promise<LandmarkRecognition> {
   const mimeMatch = imageDataUrl.match(/^data:([^;]+);/);
   const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
@@ -104,6 +106,8 @@ export async function recognizeLandmark(
         targetLanguageName,
         visualSignature,
         gpsCoords,
+        isSamplePreset: Boolean(isSamplePreset),
+        mode,
       }),
     },
     "landmark recognition service"
@@ -195,11 +199,34 @@ export async function generateNarration(
   }
 }
 
+async function clientFastTranslate(text: string, targetLanguage: string): Promise<string> {
+  if (!text || !text.trim() || targetLanguage === "en" || targetLanguage === "English") return text;
+  const langCode = targetLanguage.split("-")[0].toLowerCase();
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(langCode)}&dt=t&q=${encodeURIComponent(text.trim())}`;
+    const res = await fetch(url);
+    if (!res.ok) return text;
+    const json: any = await res.json();
+    if (json && Array.isArray(json[0])) {
+      const translated = json[0].map((part: any) => part[0]).filter(Boolean).join("");
+      if (translated && translated.trim()) {
+        return translated.trim();
+      }
+    }
+  } catch {
+    // Return original on complete offline failure
+  }
+  return text;
+}
+
 export async function translateText(
   text: string,
   targetLanguage: string,
   targetLanguageName?: string
 ): Promise<{ translatedText: string; language: string }> {
+  if (!text || targetLanguage === "en") {
+    return { translatedText: text, language: "en" };
+  }
   try {
     const response = await fetch("/api/translate", {
       method: "POST",
@@ -211,17 +238,17 @@ export async function translateText(
       }),
     });
 
-    if (!response.ok) {
-      return { translatedText: text, language: targetLanguage };
+    if (response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data?.translatedText && data.translatedText !== text) {
+        return data;
+      }
     }
-
-    const data = await response.json().catch(() => null);
-    if (data?.translatedText) {
-      return data;
-    }
-    return { translatedText: text, language: targetLanguage };
+    const fallback = await clientFastTranslate(text, targetLanguage);
+    return { translatedText: fallback || text, language: targetLanguage };
   } catch {
-    return { translatedText: text, language: targetLanguage };
+    const fallback = await clientFastTranslate(text, targetLanguage);
+    return { translatedText: fallback || text, language: targetLanguage };
   }
 }
 
@@ -230,6 +257,7 @@ export async function translateUIBatch(
   targetLanguage: string,
   targetLanguageName?: string
 ): Promise<Record<string, string>> {
+  if (!keys || Object.keys(keys).length === 0 || targetLanguage === "en") return keys;
   try {
     const response = await fetch("/api/translate-ui-batch", {
       method: "POST",
@@ -241,11 +269,38 @@ export async function translateUIBatch(
       }),
     });
 
-    if (!response.ok) return keys;
-    const data = await response.json().catch(() => null);
-    return data?.translations || keys;
+    if (response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data?.translations && Object.keys(data.translations).length > 0) {
+        // If any key was translated differently from the original, return the translations
+        const hasTranslations = Object.entries(data.translations).some(([k, v]) => v && v !== keys[k]);
+        if (hasTranslations) {
+          return data.translations;
+        }
+      }
+    }
+    // Fallback: translate missing or untranslated keys
+    const result: Record<string, string> = {};
+    const entries = Object.entries(keys);
+    await Promise.all(
+      entries.map(async ([k, val]) => {
+        if (!val || typeof val !== "string") {
+          result[k] = val;
+          return;
+        }
+        result[k] = await clientFastTranslate(val, targetLanguage);
+      })
+    );
+    return result;
   } catch {
-    return keys;
+    const result: Record<string, string> = {};
+    const entries = Object.entries(keys);
+    await Promise.all(
+      entries.map(async ([k, val]) => {
+        result[k] = await clientFastTranslate(val, targetLanguage);
+      })
+    );
+    return result;
   }
 }
 
@@ -273,5 +328,52 @@ export async function searchLandmarks(query: string): Promise<LandmarkSearchResu
   return [];
 }
 
+/**
+ * Dedicated AI Geo-Detective helper to deduce/guess the location of any photo
+ * using visual cues (architecture, vegetation, street signage, scripts, driving side)
+ * and cross-referencing with verified photos available on Google & Wikimedia.
+ */
+export async function guessLocationFromPhoto(
+  imageDataUrl: string,
+  hintName?: string,
+  targetLanguage?: string,
+  targetLanguageName?: string,
+  gpsCoords?: { latitude: number; longitude: number }
+): Promise<LandmarkRecognition> {
+  return recognizeLandmark(
+    imageDataUrl,
+    hintName,
+    targetLanguage,
+    targetLanguageName,
+    undefined,
+    gpsCoords,
+    false,
+    "guess_location"
+  );
+}
 
+/**
+ * Fetches verified reference photos of a location or landmark from Wikimedia Commons & Google,
+ * returning high-resolution photos with source attribution and direct Google search URLs.
+ */
+export async function fetchLocationReferencePhotos(
+  locationName: string,
+  city?: string,
+  country?: string
+): Promise<{ photos: LocationReferencePhoto[]; googleImagesUrl: string; googleLensUrl: string }> {
+  const response = await fetchWithRetry(
+    "/api/location-photos",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locationName, city, country }),
+    },
+    "location photos service"
+  );
 
+  return parseJsonResponse<{
+    photos: LocationReferencePhoto[];
+    googleImagesUrl: string;
+    googleLensUrl: string;
+  }>(response, "Location photos service");
+}

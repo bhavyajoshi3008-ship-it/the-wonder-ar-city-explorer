@@ -32,6 +32,9 @@ import {
   History,
   ScrollText,
   Clock,
+  Search,
+  ExternalLink,
+  Image as ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { LandmarkRecognition, LandmarkHistory, NarrationAudio, ARKeypoint, TourChapter } from "../types";
@@ -79,6 +82,8 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   const [completedChapters, setCompletedChapters] = useState<Set<number>>(new Set());
   const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
   const [showChangeLandmarkModal, setShowChangeLandmarkModal] = useState<boolean>(false);
+  const [showPhotosModal, setShowPhotosModal] = useState<boolean>(false);
+  const [selectedPhotoModalIndex, setSelectedPhotoModalIndex] = useState<number>(0);
 
   // Synchronized playback refs to prevent stale closures and concurrency races
   const isPlayingRef = useRef<boolean>(false);
@@ -221,13 +226,28 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       return;
     }
 
-    const cacheKey = `${currentLanguage.code}:${recognition.landmarkName || "landmark"}`;
+    const cacheKey = `${currentLanguage.code}:${recognition.name || "landmark"}`;
     if (dynamicCacheRef.current[cacheKey]) {
       setTranslatedDynamic(dynamicCacheRef.current[cacheKey]);
       return;
     }
 
     const batchKeys: Record<string, string> = {};
+    if (recognition.name) {
+      batchKeys["landmarkName"] = recognition.name;
+    }
+    if (recognition.architecturalStyle) {
+      batchKeys["architecturalStyle"] = recognition.architecturalStyle;
+    }
+    if (recognition.periodEra) {
+      batchKeys["periodEra"] = recognition.periodEra;
+    }
+    if (recognition.summary) {
+      batchKeys["summary"] = recognition.summary;
+    }
+    if (history.culturalSignificance) {
+      batchKeys["culturalSignificance"] = history.culturalSignificance;
+    }
     if (history.photoGroundedNotes) {
       batchKeys["photoGroundedNotes"] = history.photoGroundedNotes;
     }
@@ -243,12 +263,17 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     if (recognition.photoAnalysis?.structuralCondition) {
       batchKeys["structuralCondition"] = recognition.photoAnalysis.structuralCondition;
     }
-    if (recognition.architecturalStyle) {
-      batchKeys["architecturalStyle"] = recognition.architecturalStyle;
-    }
-    if (recognition.periodEra) {
-      batchKeys["periodEra"] = recognition.periodEra;
-    }
+    history.historicalTimeline?.forEach((item, idx) => {
+      if (item.event) batchKeys[`timeline_${idx}_event`] = item.event;
+      if (item.description) batchKeys[`timeline_${idx}_desc`] = item.description;
+      if (item.yearOrEra) batchKeys[`timeline_${idx}_year`] = item.yearOrEra;
+    });
+    history.architecturalSecrets?.forEach((sec, idx) => {
+      batchKeys[`secret_${idx}`] = sec;
+    });
+    history.visitorTips?.forEach((tip, idx) => {
+      batchKeys[`tip_${idx}`] = tip;
+    });
     history.chapters?.forEach((chap, idx) => {
       if (chap.title) {
         batchKeys[`chapter_${idx}_title`] = chap.title;
@@ -266,6 +291,9 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     recognition.arKeypoints?.forEach((kp) => {
       if (kp.label) {
         batchKeys[`kp_${kp.id}`] = kp.label;
+      }
+      if (kp.description) {
+        batchKeys[`kp_desc_${kp.id}`] = kp.description;
       }
     });
 
@@ -289,13 +317,19 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
   }, [
     currentLanguage.code,
     currentLanguage.name,
-    recognition.landmarkName,
+    recognition.name,
     recognition.architecturalStyle,
     recognition.periodEra,
+    recognition.summary,
     recognition.photoAnalysis,
     recognition.arKeypoints,
     history.photoGroundedNotes,
+    history.culturalSignificance,
+    history.historicalTimeline,
+    history.architecturalSecrets,
+    history.visitorTips,
     history.chapters,
+    history.narrationScript,
   ]);
 
   // Synchronize incoming narration prop
@@ -303,20 +337,20 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     if (narration) {
       const voiceKey = narration.voiceName || selectedVoice;
       if (narration.audioBase64) {
-        languageAudioMapRef.current[`${currentLanguage.code}_${voiceKey}`] = narration;
-        languageAudioMapRef.current[`${currentLanguage.code}_chap_0_${voiceKey}`] = narration;
         if (currentLanguage.code === "en") {
           languageAudioMapRef.current[`en_${voiceKey}`] = narration;
           languageAudioMapRef.current[`en_chap_0_${voiceKey}`] = narration;
+          setActiveNarration(narration);
         }
+      } else {
+        setActiveNarration(narration);
       }
-      setActiveNarration(narration);
       if (narration.voiceName) {
         setSelectedVoice(narration.voiceName);
       }
     }
     setAudioPlaybackError(false);
-  }, [narration]);
+  }, [narration, currentLanguage.code]);
 
   // Translate narration subtitles and speech whenever the selected language or chapter changes (with caching)
   useEffect(() => {
@@ -401,7 +435,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
     const scriptToNarrate = currentLanguage.code === "en" ? rawChapterText : (translatedScript || rawChapterText);
 
-    generateNarration(scriptToNarrate, selectedVoice, currentLanguage.name)
+    generateNarration(scriptToNarrate, selectedVoice, currentLanguage.name, currentLanguage.code)
       .then((res) => {
         if (!isMounted) return;
         if (res?.audioBase64) {
@@ -552,11 +586,15 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     utterance.rate = playbackRateRef.current;
     utterance.volume = isMutedRef.current ? 0 : 1;
 
-    // BCP-47 regional pronunciation mapping
+    // BCP-47 regional pronunciation mapping for authentic spoken accents across world languages
     const langMap: Record<string, string> = {
       gu: "gu-IN", hi: "hi-IN", bn: "bn-IN", mr: "mr-IN", ta: "ta-IN", te: "te-IN",
-      ur: "ur-PK", pa: "pa-IN", ar: "ar-SA", ja: "ja-JP", zh: "zh-CN", ko: "ko-KR",
+      ur: "ur-PK", pa: "pa-IN", kn: "kn-IN", ml: "ml-IN", ne: "ne-NP",
+      ar: "ar-SA", ja: "ja-JP", zh: "zh-CN", "zh-CN": "zh-CN", "zh-TW": "zh-TW", ko: "ko-KR",
       ru: "ru-RU", es: "es-ES", fr: "fr-FR", de: "de-DE", it: "it-IT", pt: "pt-PT", en: "en-US",
+      id: "id-ID", th: "th-TH", vi: "vi-VN", tr: "tr-TR", nl: "nl-NL", pl: "pl-PL",
+      uk: "uk-UA", el: "el-GR", he: "he-IL", sv: "sv-SE", no: "nb-NO", da: "da-DK",
+      fi: "fi-FI", cs: "cs-CZ", hu: "hu-HU", ro: "ro-RO", fa: "fa-IR", ms: "ms-MY", sw: "sw-KE",
     };
     const bcp47 = langMap[currentLanguage.code] || currentLanguage.code;
     utterance.lang = bcp47;
@@ -694,7 +732,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     const isEnglish = currentLanguage.code === "en";
     const candidateAudio = cachedChapterAudio?.audioBase64
       ? cachedChapterAudio
-      : (chapIdx === 0 && isEnglish && narration?.audioBase64 && !narration?.useClientFallback)
+      : (isEnglish && chapIdx === 0 && narration?.audioBase64 && !narration?.useClientFallback)
       ? narration
       : null;
 
@@ -1122,18 +1160,58 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 </div>
               )}
 
+              {/* Google Images & Visual Search Deep Links & Photo Gallery */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-slate-800">
+                <a
+                  href={recognition.googleImagesUrl || `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(recognition.name + " " + (recognition.city || ""))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/60 shadow-sm transition cursor-pointer"
+                  title={`Open Google Images for ${recognition.name}`}
+                >
+                  <Search className="w-2.5 h-2.5 text-indigo-400 shrink-0" />
+                  <span>Google Images</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-indigo-400 shrink-0" />
+                </a>
+
+                <a
+                  href={recognition.googleLensSearchUrl || "https://lens.google.com/"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/60 shadow-sm transition cursor-pointer"
+                  title="Reverse visual search on Google Lens"
+                >
+                  <Camera className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                  <span>Google Lens</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                </a>
+
+                {(recognition.referencePhotos?.length || 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotosModal(true)}
+                    className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/60 shadow-sm transition cursor-pointer"
+                    title="View verified reference photos found on Google & Wikimedia"
+                  >
+                    <ImageIcon className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                    <span>{recognition.referencePhotos?.length} Google Photos</span>
+                  </button>
+                )}
+              </div>
+
               {/* Quick-Switch Suggested Candidates */}
               {recognition.candidateMatches && recognition.candidateMatches.length > 1 && (
                 <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-slate-800">
                   <span className="text-[10px] text-slate-400 font-mono">Suggested:</span>
-                  {recognition.candidateMatches.slice(0, 4).map((cand) => {
-                    const isCurrent = cand.toLowerCase().trim() === recognition.name.toLowerCase().trim();
+                  {recognition.candidateMatches.slice(0, 4).map((cand: any, cIdx: number) => {
+                    const candStr = typeof cand === "string" ? cand : (cand?.name || String(cand));
+                    const isCurrent = candStr.toLowerCase().trim() === (recognition.name || "").toLowerCase().trim();
                     return (
                       <button
-                        key={cand}
+                        key={candStr || cIdx}
                         type="button"
                         onClick={() => {
-                          if (!isCurrent && onSwitchLandmark) onSwitchLandmark(cand);
+                          if (!isCurrent && onSwitchLandmark) onSwitchLandmark(candStr);
                         }}
                         disabled={isCurrent}
                         className={`px-2 py-0.5 rounded text-[10px] font-mono transition cursor-pointer ${
@@ -1141,9 +1219,9 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                             ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 font-bold"
                             : "bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:text-white"
                         }`}
-                        title={`Switch tour to ${cand}`}
+                        title={`Switch tour to ${candStr}`}
                       >
-                        {cand.split(",")[0]}
+                        {candStr.split(",")[0]}
                       </button>
                     );
                   })}
@@ -1233,7 +1311,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
 
         {/* SPATIAL AR TARGET RETICLE PINS */}
         {showPins &&
-          recognition.arKeypoints.map((pin) => {
+          (recognition.arKeypoints || []).map((pin) => {
             const isSelected = activePin?.id === pin.id;
             const hasOtherSelected = activePin !== null && !isSelected;
             const safeX = Math.min(Math.max(pin.x, 8), 92);
@@ -1330,9 +1408,11 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div className="text-sm font-bold text-white tracking-tight">{activePin.label}</div>
-                <p className="text-xs text-slate-300 mt-1 leading-relaxed line-clamp-3">
-                  {activePin.description}
+                <div className="text-sm font-bold text-white tracking-tight" dir={currentLanguage.dir || "ltr"}>
+                  {translatedDynamic[`kp_${activePin.id}`] || activePin.label}
+                </div>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed line-clamp-3" dir={currentLanguage.dir || "ltr"}>
+                  {translatedDynamic[`kp_desc_${activePin.id}`] || activePin.description}
                 </p>
                 <div className="mt-2 flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px] font-mono text-slate-400">
                   <span className="text-cyan-400/80">{t("ar_target_coord", "TARGET COORD:")} {activePin.x}%, {activePin.y}%</span>
@@ -1389,9 +1469,11 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     </button>
                   </div>
                 </div>
-                <div className="text-sm font-bold text-white">{activePin.label}</div>
-                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                  {activePin.description}
+                <div className="text-sm font-bold text-white" dir={currentLanguage.dir || "ltr"}>
+                  {translatedDynamic[`kp_${activePin.id}`] || activePin.label}
+                </div>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed" dir={currentLanguage.dir || "ltr"}>
+                  {translatedDynamic[`kp_desc_${activePin.id}`] || activePin.description}
                 </p>
                 <div className="mt-2.5 flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400 border-t border-slate-800/80">
                   <span>{t("coord_label", "COORD")} ({activePin.x}%, {activePin.y}%)</span>
@@ -1584,7 +1666,8 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                 <option value="Kore">Kore (Warm)</option>
                 <option value="Fenrir">Fenrir (Deep)</option>
                 <option value="Puck">Puck (Energetic)</option>
-                <option value="Zephyr">Zephyr (Serene)</option>
+                <option value="Charon">Charon (Calm)</option>
+                <option value="Aoede">Aoede (Serene)</option>
               </select>
             </div>
           </div>
@@ -1930,7 +2013,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
               <div className="flex flex-wrap gap-2">
                 {recognition.photoAnalysis?.prominentVisualFeatures?.map((feature, i) => {
                   const translatedFeat = translatedDynamic[`feat_${i}`] || feature;
-                  const matchPin = recognition.arKeypoints.find(
+                  const matchPin = (recognition.arKeypoints || []).find(
                     (kp) =>
                       kp.label.toLowerCase().includes(feature.toLowerCase()) ||
                       feature.toLowerCase().includes(kp.label.toLowerCase())
@@ -2268,6 +2351,127 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
                     {t("done_btn", "Done")}
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* High-Resolution Google & Verified Photos Modal Gallery */}
+      <AnimatePresence>
+        {showPhotosModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl animate-in fade-in duration-200">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-950 border border-slate-800 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col shadow-2xl relative"
+            >
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/60">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                      <span>{recognition.name}</span>
+                      <span className="text-xs font-normal text-slate-400">
+                        ({(recognition.referencePhotos?.length || 0)} Verified Photos)
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      High-resolution visual documentation indexed on Google Images & Wikimedia
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <a
+                    href={recognition.googleImagesUrl || `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(recognition.name + " " + (recognition.city || ""))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center space-x-1.5 shadow-sm transition"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Google Images</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotosModal(false)}
+                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                {/* Active Photo Spotlight */}
+                {(() => {
+                  const photos = recognition.referencePhotos || [];
+                  const safeIdx = Math.min(selectedPhotoModalIndex, Math.max(0, photos.length - 1));
+                  const activePhoto = photos[safeIdx];
+                  if (!activePhoto) return null;
+                  return (
+                    <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden">
+                      <div className="relative aspect-video max-h-[420px] w-full bg-black/60 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={activePhoto.imageUrl}
+                          alt={activePhoto.title}
+                          className="w-full h-full object-contain"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                      <div className="p-3 sm:p-4 border-t border-slate-800 bg-slate-950/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                        <div>
+                          <div className="font-bold text-white text-sm">
+                            {activePhoto.title}
+                          </div>
+                          <div className="text-slate-400 text-[11px] mt-0.5">
+                            {activePhoto.description || "Verified high-resolution visual documentation"}
+                          </div>
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-400 shrink-0 flex items-center space-x-2">
+                          <span>{activePhoto.author}</span>
+                          <span>•</span>
+                          <span className="text-emerald-400">{activePhoto.license || "CC License"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Thumbnails Strip */}
+                {recognition.referencePhotos && recognition.referencePhotos.length > 1 && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-mono text-slate-400">All Available Photographs:</div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {recognition.referencePhotos.map((photo, pIdx) => (
+                        <button
+                          key={photo.id || pIdx}
+                          type="button"
+                          onClick={() => setSelectedPhotoModalIndex(pIdx)}
+                          className={`relative aspect-video rounded-xl overflow-hidden border-2 transition cursor-pointer ${
+                            selectedPhotoModalIndex === pIdx
+                              ? "border-cyan-400 shadow-md shadow-cyan-900/40 scale-105"
+                              : "border-slate-800 opacity-60 hover:opacity-100"
+                          }`}
+                        >
+                          <img
+                            src={photo.thumbnailUrl || photo.imageUrl}
+                            alt={photo.title}
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                            loading="lazy"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

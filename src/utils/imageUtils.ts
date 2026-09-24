@@ -76,28 +76,40 @@ export async function urlToDataUrl(url: string): Promise<string> {
  */
 export async function optimizeBase64Image(dataUrl: string, maxDimension = 1024): Promise<string> {
   return new Promise((resolve) => {
+    if (!dataUrl) {
+      resolve("");
+      return;
+    }
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       let { width, height } = img;
-      if (width <= maxDimension && height <= maxDimension) {
+      if (!width || !height) {
         resolve(dataUrl);
         return;
       }
-      if (width > height) {
-        height = Math.round((height * maxDimension) / width);
-        width = maxDimension;
-      } else {
-        width = Math.round((width * maxDimension) / height);
-        height = maxDimension;
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
       }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      } else {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // Always export as clean image/jpeg with high 0.85 quality for Gemini Vision
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        } else {
+          resolve(dataUrl);
+        }
+      } catch {
         resolve(dataUrl);
       }
     };
@@ -133,12 +145,7 @@ export async function analyzeImageVisualSignature(dataUrl: string): Promise<Visu
       greeneryRatio: 0.1,
       brightness: 120,
       warmth: 10,
-      topCandidates: [
-        "St. Xavier's College, Mumbai",
-        "Fergusson College, Pune",
-        "Presidency College, Kolkata",
-        "University of Mumbai",
-      ],
+      topCandidates: [],
     };
 
     if (typeof window === "undefined") {
@@ -215,7 +222,7 @@ export async function analyzeImageVisualSignature(dataUrl: string): Promise<Visu
         let dominantTone: VisualSignature["dominantTone"] = "general_heritage";
         let topCandidates: string[] = [];
 
-        // Collegiate Gothic Quadrangle / Red Brick & Basalt
+        // Identify dominant architectural material tone
         if (
           terracottaRatio > 0.05 ||
           (terracottaRatio > 0.025 && darkStoneRatio > 0.12) ||
@@ -223,37 +230,16 @@ export async function analyzeImageVisualSignature(dataUrl: string): Promise<Visu
           (warmth > 15 && darkStoneRatio > 0.15)
         ) {
           dominantTone = "terracotta_brick";
-          topCandidates = [
-            "St. Xavier's College, Mumbai",
-            "Fergusson College, Pune",
-            "Presidency College, Kolkata",
-            "University of Mumbai",
-          ];
         } else if (whiteMarbleRatio > 0.20 && brightness > 145) {
           dominantTone = "white_marble";
-          topCandidates = ["Taj Mahal", "Victoria Memorial", "Lotus Temple"];
         } else if (yellowSandstoneRatio > 0.14) {
           dominantTone = "golden_sandstone";
-          topCandidates = ["Gateway of India", "Jaisalmer Fort", "Hawa Mahal", "Amer Fort"];
         } else if (terracottaRatio > 0.18) {
           dominantTone = "red_sandstone";
-          topCandidates = ["Red Fort", "Humayun's Tomb", "Qutb Minar", "Fatehpur Sikri"];
         } else if (darkStoneRatio > 0.35) {
           dominantTone = "dark_basalt";
-          topCandidates = [
-            "St. Xavier's College, Mumbai",
-            "University of Mumbai",
-            "Chhatrapati Shivaji Maharaj Terminus",
-            "Gateway of India",
-          ];
         } else {
           dominantTone = "general_heritage";
-          topCandidates = [
-            "St. Xavier's College, Mumbai",
-            "Fergusson College, Pune",
-            "Presidency College, Kolkata",
-            "Taj Mahal",
-          ];
         }
 
         resolve({

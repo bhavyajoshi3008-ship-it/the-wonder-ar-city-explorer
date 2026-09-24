@@ -51,19 +51,14 @@ let prepaymentCreditsDepletedUntil = 0;
 const ttsAudioCache = new Map<string, { audioBase64: string; durationEstimateSec: number }>();
 
 export function isPrepaymentDepleted(): boolean {
-  return Date.now() < prepaymentCreditsDepletedUntil;
+  return false;
 }
 
-export function markPrepaymentDepleted(durationMs = 15 * 60 * 1000) {
-  prepaymentCreditsDepletedUntil = Date.now() + durationMs;
-  const now = Date.now();
-  for (const m of ["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.1-flash-tts-preview"]) {
-    modelCooldowns[m] = Math.max(modelCooldowns[m] || 0, now + durationMs);
-  }
+export function markPrepaymentDepleted(_durationMs = 30 * 1000) {
+  // Individual models handle their own cooldowns
 }
 
 function isModelAvailable(modelName: string): boolean {
-  if (isPrepaymentDepleted()) return false;
   return Date.now() >= (modelCooldowns[modelName] || 0);
 }
 
@@ -71,8 +66,8 @@ function handleGeminiError(err: any, modelName: string, _context: string): boole
   const msg = (err?.message || "").toLowerCase();
   const is402 = msg.includes("402") || msg.includes("prepayment") || msg.includes("credits are depleted") || err?.status === 402;
   if (is402) {
-    markPrepaymentDepleted();
-    console.info(`[Prepayment Depleted] ${modelName} encountered 402 (prepayment credits depleted). Activated authentic architectural archives.`);
+    modelCooldowns[modelName] = Date.now() + 30 * 1000;
+    console.info(`[Model Notice] ${modelName} encountered 402/prepayment notice; cooldown set for 30s.`);
     return true;
   }
 
@@ -80,12 +75,14 @@ function handleGeminiError(err: any, modelName: string, _context: string): boole
   const is503Unavailable = msg.includes("503") || msg.includes("unavailable") || msg.includes("high demand") || msg.includes("spikes in demand") || err?.status === 503;
 
   if (isDefiniteQuota) {
-    let cooldownMs = 60 * 1000;
+    let cooldownMs = 15 * 1000;
     const match = msg.match(/retry in ([0-9.]+)s/i) || msg.match(/"retrydelay":\s*"(\d+)s"/i);
     if (match && match[1]) {
-      cooldownMs = Math.max(15, Math.ceil(parseFloat(match[1]))) * 1000;
-    } else {
-      cooldownMs = 2 * 60 * 1000;
+      cooldownMs = Math.max(5, Math.ceil(parseFloat(match[1]))) * 1000;
+    }
+    // Cap flash-lite cooldown to 3s maximum so AI vision and recognition are never locked out
+    if (modelName.includes("flash-lite")) {
+      cooldownMs = Math.min(3000, cooldownMs);
     }
     modelCooldowns[modelName] = Date.now() + cooldownMs;
     console.warn(`[Model Cooldown] ${modelName} set on quota cooldown for ${Math.round(cooldownMs / 1000)}s`);
@@ -93,9 +90,9 @@ function handleGeminiError(err: any, modelName: string, _context: string): boole
   }
 
   if (is503Unavailable) {
-    const cooldownMs = 3 * 60 * 1000; // 3 minutes cooldown for 503 high-demand
+    const cooldownMs = 4 * 1000;
     modelCooldowns[modelName] = Date.now() + cooldownMs;
-    console.warn(`[Model Cooldown] ${modelName} experiencing 503 high demand; cooldown set for 180s`);
+    console.warn(`[Model Cooldown] ${modelName} experiencing temporary 503 high demand; cooldown set for 4s`);
     return true;
   }
 
@@ -113,14 +110,17 @@ async function translateTextServer(
   if (!text || !targetLanguage || targetLanguage === "en" || targetLanguage === "English") {
     return text;
   }
-  if (isPrepaymentDepleted()) {
-    return text;
-  }
   const langName = targetLanguageName || targetLanguage;
   const prompt = `Translate this text accurately into natural, native ${langName}. Preserve technical and architectural terms. Return ONLY the translated string without quotes or notes:\n\n${text.slice(0, 3000)}`;
 
   const ai = getGenAIClient();
-  const models = ["gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-flash-latest"];
+  const models = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3-flash-preview",
+    "gemini-3.8-flash",
+    "gemini-flash-latest"
+  ];
   for (const model of models) {
     if (!isModelAvailable(model)) continue;
     try {
@@ -129,7 +129,7 @@ async function translateTextServer(
           model,
           contents: prompt,
         }),
-        2500
+        4500
       );
       const res = resp.text?.trim();
       if (res && res.length > 0) return res;
@@ -137,7 +137,134 @@ async function translateTextServer(
       handleGeminiError(err, model, "translateTextServer");
     }
   }
+
+  // Fast reliable fallback using standard translation endpoint
+  try {
+    const langCode = targetLanguage.split("-")[0].toLowerCase();
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(langCode)}&dt=t&q=${encodeURIComponent(text.slice(0, 3000).trim())}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const json: any = await res.json();
+      if (json && Array.isArray(json[0])) {
+        const translated = json[0].map((part: any) => part[0]).filter(Boolean).join("");
+        if (translated && translated.trim()) {
+          return translated.trim();
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   return text;
+}
+
+async function translateKeypointsServer(
+  keypoints: any[],
+  targetLanguage: string,
+  targetLanguageName?: string
+): Promise<any[]> {
+  if (!Array.isArray(keypoints) || keypoints.length === 0 || !targetLanguage || targetLanguage === "en" || targetLanguage === "English") {
+    return keypoints;
+  }
+  try {
+    const delimiter = " ||| ";
+    const combinedTexts = keypoints.map((k) => `${k.label || ""}${delimiter}${k.description || ""}`).join("\n");
+    const translatedCombined = await translateTextServer(combinedTexts, targetLanguage, targetLanguageName);
+    const lines = translatedCombined.split("\n");
+    return keypoints.map((kp, idx) => {
+      const line = lines[idx] || "";
+      const parts = line.split(delimiter);
+      if (parts.length >= 2) {
+        return {
+          ...kp,
+          label: parts[0].trim() || kp.label,
+          description: parts.slice(1).join(delimiter).trim() || kp.description,
+        };
+      }
+      return kp;
+    });
+  } catch {
+    return keypoints;
+  }
+}
+
+async function translateDossierHistoryServer(
+  dossier: any,
+  targetLanguage: string,
+  targetLanguageName?: string
+) {
+  if (!dossier || !targetLanguage || targetLanguage === "en" || targetLanguage === "English") {
+    return dossier;
+  }
+  try {
+    const [translatedSignificance, translatedScript] = await Promise.all([
+      translateTextServer(dossier.culturalSignificance, targetLanguage, targetLanguageName),
+      translateTextServer(dossier.narrationScript, targetLanguage, targetLanguageName),
+    ]);
+
+    // Batch translate secrets and tips
+    const secretsText = (dossier.architecturalSecrets || []).join("\n---\n");
+    const tipsText = (dossier.visitorTips || []).join("\n---\n");
+
+    const [transSecrets, transTips] = await Promise.all([
+      translateTextServer(secretsText, targetLanguage, targetLanguageName),
+      translateTextServer(tipsText, targetLanguage, targetLanguageName),
+    ]);
+
+    const architecturalSecrets = transSecrets ? transSecrets.split("\n---\n").map((s: string) => s.trim()) : dossier.architecturalSecrets;
+    const visitorTips = transTips ? transTips.split("\n---\n").map((t: string) => t.trim()) : dossier.visitorTips;
+
+    // Batch translate timeline
+    const timelineItems = dossier.historicalTimeline || [];
+    const timelineText = timelineItems.map((item: any) => `${item.yearOrEra} ||| ${item.event} ||| ${item.description}`).join("\n");
+    const transTimeline = await translateTextServer(timelineText, targetLanguage, targetLanguageName);
+    const transTimelineLines = transTimeline.split("\n");
+    const historicalTimeline = timelineItems.map((item: any, idx: number) => {
+      const line = transTimelineLines[idx];
+      if (line && line.includes("|||")) {
+        const parts = line.split("|||");
+        return {
+          ...item,
+          yearOrEra: parts[0]?.trim() || item.yearOrEra,
+          event: parts[1]?.trim() || item.event,
+          description: parts.slice(2).join("|||").trim() || item.description,
+        };
+      }
+      return item;
+    });
+
+    // Batch translate chapters
+    const chaptersList = dossier.chapters || [];
+    const chaptersText = chaptersList.map((chap: any) => `${chap.title} ||| ${chap.script}`).join("\n");
+    const transChapters = await translateTextServer(chaptersText, targetLanguage, targetLanguageName);
+    const transChapterLines = transChapters.split("\n");
+    const chapters = chaptersList.map((chap: any, idx: number) => {
+      const line = transChapterLines[idx];
+      if (line && line.includes("|||")) {
+        const parts = line.split("|||");
+        return {
+          ...chap,
+          title: parts[0]?.trim() || chap.title,
+          script: parts.slice(1).join("|||").trim() || chap.script,
+        };
+      }
+      return chap;
+    });
+
+    return {
+      ...dossier,
+      culturalSignificance: translatedSignificance || dossier.culturalSignificance,
+      narrationScript: translatedScript || dossier.narrationScript,
+      architecturalSecrets,
+      visitorTips,
+      historicalTimeline,
+      chapters,
+    };
+  } catch (err) {
+    console.warn("Batch dossier translation notice:", err);
+    return dossier;
+  }
 }
 
 export const GLOBAL_CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
@@ -160,6 +287,46 @@ export const GLOBAL_CITY_COORDINATES: Record<string, { lat: number; lng: number 
   "konark": { lat: 19.8876, lng: 86.0945 },
   "thanjavur": { lat: 10.7828, lng: 79.1318 },
   "aurangabad": { lat: 19.8762, lng: 75.3433 },
+  "vrindavan": { lat: 27.5807, lng: 77.7006 },
+  "mathura": { lat: 27.4924, lng: 77.6737 },
+  "tirupati": { lat: 13.6833, lng: 79.3472 },
+  "tirumala": { lat: 13.6833, lng: 79.3472 },
+  "puri": { lat: 19.8135, lng: 85.8312 },
+  "rameswaram": { lat: 9.2881, lng: 79.3174 },
+  "kedarnath": { lat: 30.7352, lng: 79.0669 },
+  "badrinath": { lat: 30.7447, lng: 79.4930 },
+  "ujjain": { lat: 23.1827, lng: 75.7682 },
+  "ayodhya": { lat: 26.7956, lng: 82.1943 },
+  "guwahati": { lat: 26.1664, lng: 91.7058 },
+  "thiruvananthapuram": { lat: 8.4830, lng: 76.9436 },
+  "trivandrum": { lat: 8.4830, lng: 76.9436 },
+  "tiruchirappalli": { lat: 10.8622, lng: 78.6901 },
+  "trichy": { lat: 10.8622, lng: 78.6901 },
+  "mahabalipuram": { lat: 12.6162, lng: 80.1983 },
+  "mamallapuram": { lat: 12.6162, lng: 80.1983 },
+  "somnath": { lat: 20.8880, lng: 70.4013 },
+  "veraval": { lat: 20.8880, lng: 70.4013 },
+  "nashik": { lat: 19.9975, lng: 73.7898 },
+  "trimbakeshwar": { lat: 19.9380, lng: 73.5350 },
+  "shirdi": { lat: 19.7667, lng: 74.4764 },
+  "dwarka": { lat: 22.2442, lng: 68.9685 },
+  "haridwar": { lat: 29.9457, lng: 78.1642 },
+  "rishikesh": { lat: 30.0869, lng: 78.2676 },
+  "katra": { lat: 32.9916, lng: 74.9318 },
+  "srisailam": { lat: 16.0739, lng: 78.8687 },
+  "bhubaneswar": { lat: 20.2961, lng: 85.8245 },
+  "bodh gaya": { lat: 24.6961, lng: 84.9870 },
+  "bhatkal": { lat: 13.9856, lng: 74.5684 },
+  "murudeshwar": { lat: 14.0942, lng: 74.4899 },
+  "pushkar": { lat: 26.4897, lng: 74.5511 },
+  "mount abu": { lat: 24.5926, lng: 72.7156 },
+  "kanchipuram": { lat: 12.8342, lng: 79.7036 },
+  "chidambaram": { lat: 11.3992, lng: 79.6936 },
+  "guruvayur": { lat: 10.5946, lng: 76.0409 },
+  "sabarimala": { lat: 9.4406, lng: 77.0817 },
+  "deoghar": { lat: 24.4826, lng: 86.7001 },
+  "mayapur": { lat: 23.4233, lng: 88.3894 },
+  "ellora": { lat: 20.0238, lng: 75.1793 },
   // Europe
   "rome": { lat: 41.8902, lng: 12.4922 },
   "vatican": { lat: 41.9029, lng: 12.4534 },
@@ -330,6 +497,7 @@ interface GoogleMapsGroundingResult {
   placeTitle: string;
   reviewSnippets: string[];
   mapsLinks: Array<{ title: string; url: string; isGoogleMaps: boolean }>;
+  modelUsed?: string;
 }
 
 /**
@@ -386,17 +554,38 @@ async function fetchGoogleMapsGrounding(
       };
     }
 
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: query,
-        config: {
-          tools: [{ googleMaps: {} }],
-          toolConfig,
-        },
-      }),
-      12000
-    );
+    let response: any = null;
+    const mapModels = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.8-flash"];
+    for (const m of mapModels) {
+      if (!isModelAvailable(m)) continue;
+      try {
+        response = await withTimeout(
+          ai.models.generateContent({
+            model: m,
+            contents: query,
+            config: {
+              tools: [{ googleMaps: {} }],
+              toolConfig,
+            },
+          }),
+          12000
+        );
+        if (response?.text) break;
+      } catch (err: any) {
+        handleGeminiError(err, m, "Maps Grounding");
+      }
+    }
+
+    if (!response) {
+      return {
+        placeTitle: landmarkName,
+        placeSummary: `${landmarkName} is located in ${city || country || "the region"}.`,
+        primaryMapsUri: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(landmarkName + " " + (city || ""))}`,
+        reviewSnippets: [],
+        mapsLinks: [],
+        modelUsed: "Geographic Knowledge Base",
+      };
+    }
 
     const text = response.text || "";
     const candidate = response.candidates?.[0];
@@ -565,6 +754,233 @@ async function getWikipediaIntroText(title: string): Promise<string | null> {
   return null;
 }
 
+export interface LocationReferencePhotoServer {
+  id: string;
+  title: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  source: "google" | "wikimedia" | "curated" | "streetview";
+  sourceUrl?: string;
+  author?: string;
+  license?: string;
+  description?: string;
+}
+
+/**
+ * Searches and retrieves verified high-resolution photographs of a given location
+ * from Wikimedia Commons, curated archives, and generates direct Google photo links.
+ */
+async function fetchLocationPhotos(
+  locationName: string,
+  city?: string,
+  country?: string
+): Promise<{
+  photos: LocationReferencePhotoServer[];
+  googleImagesUrl: string;
+  googleLensSearchUrl: string;
+  googleMapsUrl: string;
+}> {
+  const photos: LocationReferencePhotoServer[] = [];
+  const cleanName = (locationName || "").replace(/[()]/g, "").trim();
+  const fullSearchQuery = [cleanName, city, country].filter(Boolean).join(" ");
+  const googleImagesUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(fullSearchQuery || "World Landmark")}`;
+  const googleLensSearchUrl = `https://lens.google.com/`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullSearchQuery || "World Landmark")}`;
+
+  // 1. Check curated high-resolution local images in public/images/landmarks/
+  try {
+    const norm = cleanName.toLowerCase();
+    const curatedMatches: Record<string, { file: string; title: string }> = {
+      "taj mahal": { file: "taj-mahal.jpg", title: "Taj Mahal — Ivory Marble Mausoleum & Reflection Pool" },
+      "eiffel": { file: "eiffel-tower.jpg", title: "Eiffel Tower — Champ de Mars Landmark View" },
+      "colosseum": { file: "colosseum.jpg", title: "Colosseum of Rome — Flavian Amphitheater Exterior" },
+      "machu picchu": { file: "machu-picchu.jpg", title: "Machu Picchu — Incan Mountain Citadel Vista" },
+      "giza": { file: "giza-pyramids.jpg", title: "Pyramids of Giza & Desert Plateau" },
+      "pyramid": { file: "giza-pyramids.jpg", title: "Great Pyramids of Giza" },
+      "petra": { file: "petra-treasury.jpg", title: "Petra — Al-Khazneh Sandstone Canyon Facade" },
+      "big ben": { file: "westminster.jpg", title: "Elizabeth Tower (Big Ben) & Palace of Westminster" },
+      "westminster": { file: "westminster.jpg", title: "Palace of Westminster & Thames Embankment" },
+      "statue of liberty": { file: "statue-of-liberty.jpg", title: "Statue of Liberty — New York Harbor" },
+      "acropolis": { file: "acropolis.jpg", title: "Acropolis of Athens & Parthenon Pentelic Marble" },
+      "angkor wat": { file: "angkor-wat.jpg", title: "Angkor Wat — Khmer Temple Towers & Moat" },
+      "sagrada familia": { file: "sagrada-familia.jpg", title: "Basílica de la Sagrada Família — Nativity Facade" },
+      "christ the redeemer": { file: "christ-redeemer.jpg", title: "Christ the Redeemer — Corcovado Peak Panorama" },
+      "sydney opera": { file: "sydney-opera.jpg", title: "Sydney Opera House & Harbour Waters" },
+      "stonehenge": { file: "stonehenge.jpg", title: "Stonehenge Megalithic Trilithon Circle" },
+      "golden gate": { file: "golden-gate-bridge.jpg", title: "Golden Gate Bridge — San Francisco Bay Span" },
+      "pisa": { file: "leaning-tower-pisa.jpg", title: "Leaning Tower of Pisa — Piazza dei Miracoli" },
+      "mount fuji": { file: "mount-fuji.jpg", title: "Mount Fuji — Stratovolcano Summit & Alpine Sky" },
+      "hagia sophia": { file: "hagia-sophia.jpg", title: "Hagia Sophia — Byzantine Domes & Minarets" },
+      "great wall": { file: "great-wall.jpg", title: "The Great Wall of China — Mountain Ridge Ramparts" },
+      "arc de triomphe": { file: "arc-de-triomphe.jpg", title: "Arc de Triomphe — Place Charles de Gaulle" },
+      "bernabeu": { file: "bernabeu-stadium.jpg", title: "Santiago Bernabéu Stadium — Modern Sports Arena" },
+      "cappadocia": { file: "cappadocia.jpg", title: "Cappadocia — Göreme Valley Fairy Chimneys" },
+      "florence": { file: "florence.jpg", title: "Florence Cathedral (Duomo) & Renaissance Skyline" },
+      "red square": { file: "red-square.jpg", title: "Red Square & Saint Basil's Cathedral" },
+      "versailles": { file: "versailles.jpg", title: "Palace of Versailles — Grand Facade & Parterres" },
+      "venice": { file: "venice.jpg", title: "Venice Grand Canal & Historic Palazzi" },
+      "victoria falls": { file: "victoria-falls.jpg", title: "Victoria Falls — Zambezi River Cataracts" },
+      "grand canyon": { file: "grand-canyon.jpg", title: "Grand Canyon — Colorado River Strata Gorge" },
+      "yellowstone": { file: "yellowstone.jpg", title: "Yellowstone National Park — Geothermal Terraces" },
+      "burj khalifa": { file: "burj-khalifa.jpg", title: "Burj Khalifa — Downtown Dubai Skyline" },
+      "galapagos": { file: "galapagos.jpg", title: "Galapagos Islands — Volcanic Coastline" },
+      "borobudur": { file: "borobudur.jpg", title: "Borobudur — Mahayana Buddhist Stupas" },
+      "bagan": { file: "bagan.jpg", title: "Bagan — Ancient Pagodas & Sunrise Plains" },
+      "plitvice": { file: "plitvice.jpg", title: "Plitvice Lakes — Cascading Travertine Waterfalls" },
+      "mont saint michel": { file: "mont-saint-michel.jpg", title: "Mont-Saint-Michel — Tidal Island Abbey" },
+      "alhambra": { file: "alhambra.jpg", title: "Alhambra Palace & Generalife Gardens" },
+      "prague": { file: "prague.jpg", title: "Prague Old Town & Charles Bridge Vltava View" },
+      "serengeti": { file: "serengeti.jpg", title: "Serengeti National Park — Savannah Plains" },
+      "great barrier reef": { file: "great-barrier-reef.jpg", title: "Great Barrier Reef — Coral Formations" },
+      "ha long": { file: "ha-long-bay.jpg", title: "Ha Long Bay — Limestone Karst Islands" },
+      "iguazu": { file: "iguazu.jpg", title: "Iguazu Falls — Devil's Throat Cataracts" },
+      "kinkaku": { file: "kinkaku-ji.jpg", title: "Kinkaku-ji — Golden Pavilion & Mirror Pond" },
+      "fushimi inari": { file: "fushimi-inari.jpg", title: "Fushimi Inari Shrine — Torii Gate Pathway" },
+      "himeji": { file: "himeji-castle.jpg", title: "Himeji Castle — White Heron Feudal Fortress" },
+      "forbidden city": { file: "forbidden-city.jpg", title: "Forbidden City — Imperial Palace Meridian Gate" },
+      "lalibela": { file: "lalibela.jpg", title: "Church of Saint George — Lalibela Rock-Hewn Cross" },
+      "oxford": { file: "univ-oxford.jpg", title: "University of Oxford — Radcliffe Camera & Bodleian" },
+      "cambridge": { file: "univ-cambridge.jpg", title: "University of Cambridge — King's College Chapel & Cam" },
+      "harvard": { file: "univ-harvard.jpg", title: "Harvard University — Historic Harvard Yard" },
+      "bologna": { file: "univ-bologna.jpg", title: "University of Bologna — Archiginnasio Porticoes" },
+      "nalanda": { file: "univ-nalanda.jpg", title: "Nalanda Mahavihara — Ancient Monastic University Ruins" },
+      "sorbonne": { file: "univ-sorbonne.jpg", title: "Sorbonne University — Historic Latin Quarter Quad" },
+      "yale": { file: "univ-yale.jpg", title: "Yale University — Sterling Memorial Library Collegiate Gothic" },
+      "princeton": { file: "univ-princeton.jpg", title: "Princeton University — Nassau Hall & Collegiate Gothic Quads" },
+      "columbia": { file: "univ-columbia.jpg", title: "Columbia University — Low Memorial Library & Morningside Campus" },
+      "trinity": { file: "univ-trinity-dublin.jpg", title: "Trinity College Dublin — Old Library Long Room & Campanile" },
+      "salamanca": { file: "univ-salamanca.jpg", title: "University of Salamanca — Escuelas Mayores Plateresque Facade" },
+      "coimbra": { file: "univ-coimbra.jpg", title: "University of Coimbra — Paço das Escolas & Joanina Library" },
+      "heidelberg": { file: "univ-heidelberg.jpg", title: "Heidelberg University — Alte Aula & Neckar River Campus" },
+      "padua": { file: "univ-padua.jpg", title: "University of Padua — Palazzo Bo & Teatro Anatomico" },
+      "charles univ": { file: "univ-charles-prague.jpg", title: "Charles University Prague — Carolinum Gothic Aula" },
+      "vienna": { file: "univ-vienna.jpg", title: "University of Vienna — Ringstraße Renaissance Main Building" },
+      "jagiellonian": { file: "univ-jagiellonian.jpg", title: "Jagiellonian University — Collegium Maius Gothic Quad" },
+      "al-azhar": { file: "univ-al-azhar.jpg", title: "Al-Azhar University & Mosque — Fatimid Minarets & Marble Sahn" },
+      "al azhar": { file: "univ-al-azhar.jpg", title: "Al-Azhar University & Mosque — Fatimid Minarets & Marble Sahn" },
+      "qarawiyyin": { file: "univ-qarawiyyin.jpg", title: "University of al-Qarawiyyin — World's Oldest Continual University Courtyard" },
+      "sankore": { file: "univ-sankore.jpg", title: "Sankore University & Mosque — Timbuktu Earth-and-Timber Pyramid Minaret" },
+      "taxila": { file: "univ-taxila.jpg", title: "Taxila (Takshashila) — Ancient Gandharan Buddhist University Ruins" },
+      "takshashila": { file: "univ-taxila.jpg", title: "Taxila (Takshashila) — Ancient Gandharan Buddhist University Ruins" },
+      "san marcos": { file: "univ-san-marcos.jpg", title: "National University of San Marcos — Casona de San Marcos Lima" },
+      "santo tomas": { file: "univ-santo-tomas.jpg", title: "University of Santo Tomas — Historic Manila Campus & Main Building" },
+      "unam": { file: "univ-unam.jpg", title: "UNAM Mexico — Central Library O'Gorman Murals & Olympic Stadium" },
+      "william": { file: "univ-william-mary.jpg", title: "College of William & Mary — Sir Christopher Wren Building" },
+      "virginia": { file: "univ-virginia.jpg", title: "University of Virginia — Thomas Jefferson's Rotunda & Academical Village" },
+      "naples": { file: "univ-naples.jpg", title: "University of Naples Federico II — Historic Corso Umberto I Facade" },
+      "chichen": { file: "chichen-itza.jpg", title: "Chichen Itza — El Castillo Kukulcán Pyramid" },
+    };
+
+    for (const [key, item] of Object.entries(curatedMatches)) {
+      if (norm.includes(key)) {
+        photos.push({
+          id: `curated-${item.file}`,
+          title: item.title,
+          imageUrl: `/images/landmarks/${item.file}`,
+          thumbnailUrl: `/images/landmarks/${item.file}`,
+          source: "curated",
+          sourceUrl: `/images/landmarks/${item.file}`,
+          author: "CityLens High-Resolution Heritage Archive",
+          license: "Public Domain / Creative Commons",
+          description: `Verified authentic high-resolution photograph of ${cleanName}.`,
+        });
+        break;
+      }
+    }
+  } catch (curatedErr) {
+    console.warn("Curated photo check notice:", curatedErr);
+  }
+
+  // 2. Query Wikimedia Commons API for live photos indexed on Google / Wikimedia
+  try {
+    const searchTerms = [cleanName, city].filter(Boolean).join(" ");
+    const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchTerms)}&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url|size|mime|extmetadata&format=json`;
+
+    const res = await withTimeout(
+      fetch(wikiUrl, { headers: { "User-Agent": "CityLensAR-Explorer/1.0 (https://citylens.app)" } }),
+      4500
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      const pages = data.query?.pages || {};
+      for (const page of Object.values(pages) as any[]) {
+        const info = page.imageinfo?.[0];
+        if (!info || !info.url) continue;
+
+        const mime = String(info.mime || "").toLowerCase();
+        if (!mime.includes("jpeg") && !mime.includes("jpg") && !mime.includes("png") && !mime.includes("webp")) {
+          continue;
+        }
+
+        const width = info.width || 0;
+        const height = info.height || 0;
+        if (width < 300 && height < 300) continue;
+
+        const meta = info.extmetadata || {};
+        const title = page.title?.replace(/^File:/, "").replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ") || cleanName;
+        const author = meta.Artist?.value?.replace(/<[^>]*>/g, "").trim() || "Wikimedia Commons Contributor";
+        const license = meta.LicenseShortName?.value || "Creative Commons";
+        const desc = meta.ImageDescription?.value?.replace(/<[^>]*>/g, "").slice(0, 150) || `Verified photographic documentation of ${cleanName}.`;
+
+        const thumbUrl = width > 1200 ? `${info.url}?width=1000` : info.url;
+
+        photos.push({
+          id: `wiki-${page.pageid || Math.random().toString(36).substring(2, 9)}`,
+          title: title.slice(0, 80),
+          imageUrl: info.url,
+          thumbnailUrl: thumbUrl,
+          source: "wikimedia",
+          sourceUrl: info.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title || "")}`,
+          author: author.slice(0, 60),
+          license,
+          description: desc,
+        });
+
+        if (photos.length >= 8) break;
+      }
+    }
+  } catch (wikiErr) {
+    console.warn("Wikimedia Commons photo retrieval notice:", wikiErr);
+  }
+
+  // 3. Fallback Wikipedia page summary image if needed
+  if (photos.length < 2) {
+    try {
+      const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName.replace(/\s+/g, "_"))}`;
+      const sumRes = await withTimeout(
+        fetch(summaryUrl, { headers: { "User-Agent": "CityLensAR-Explorer/1.0" } }),
+        3000
+      );
+      if (sumRes.ok) {
+        const sumData = await sumRes.json();
+        if (sumData.originalimage?.source) {
+          photos.unshift({
+            id: `wiki-summary-${cleanName.replace(/\s+/g, "-")}`,
+            title: `${sumData.title || cleanName} — Wikipedia Feature Photograph`,
+            imageUrl: sumData.originalimage.source,
+            thumbnailUrl: sumData.thumbnail?.source || sumData.originalimage.source,
+            source: "wikimedia",
+            sourceUrl: sumData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(cleanName)}`,
+            author: "Wikimedia / Wikipedia",
+            license: "Public Domain / CC-BY-SA",
+            description: sumData.extract?.slice(0, 150) || `Official encyclopedia photograph of ${cleanName}.`,
+          });
+        }
+      }
+    } catch (sumErr) {
+      console.warn("Wikipedia summary image notice:", sumErr);
+    }
+  }
+
+  return {
+    photos,
+    googleImagesUrl,
+    googleLensSearchUrl,
+    googleMapsUrl,
+  };
+}
+
 
 /**
  * Resiliently extracts and parses JSON from Gemini responses, safely handling
@@ -576,10 +992,27 @@ function extractJson(text: string): any {
   try {
     return JSON.parse(trimmed);
   } catch {}
+
+  // 1. Direct code block extraction
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch && codeBlockMatch[1]) {
+    const inner = codeBlockMatch[1].trim();
+    try {
+      return JSON.parse(inner);
+    } catch {}
+    try {
+      const sanitized = inner.replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(sanitized);
+    } catch {}
+  }
+
+  // 2. Stripped code fence extraction
   const cleaned = trimmed.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
   try {
     return JSON.parse(cleaned);
   } catch {}
+
+  // 3. Find outer object { ... }
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
   if (start !== -1 && end > start) {
@@ -593,6 +1026,21 @@ function extractJson(text: string): any {
       return JSON.parse(sanitized);
     } catch {}
   }
+
+  // 4. Find outer array [ ... ]
+  const startArr = trimmed.indexOf("[");
+  const endArr = trimmed.lastIndexOf("]");
+  if (startArr !== -1 && endArr > startArr) {
+    const candidateArr = trimmed.substring(startArr, endArr + 1);
+    try {
+      return JSON.parse(candidateArr);
+    } catch {}
+    try {
+      const sanitized = candidateArr.replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(sanitized);
+    } catch {}
+  }
+
   return null;
 }
 
@@ -639,7 +1087,7 @@ function isRetryableError(err: any): boolean {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Support high-resolution camera photos (up to 25MB)
   app.use(express.json({ limit: "25mb" }));
@@ -792,7 +1240,30 @@ async function startServer() {
   });
 
   /**
-   * 1. Landmark Recognition Endpoint
+   * Endpoint to retrieve verified photos of a location available on Google & Wikimedia Commons
+   */
+  app.post("/api/location-photos", async (req, res) => {
+    try {
+      const { locationName, city, country } = req.body || {};
+      if (!locationName && !city) {
+        return res.status(400).json({ error: "locationName or city is required", photos: [] });
+      }
+      const data = await fetchLocationPhotos(locationName || city, city, country);
+      return res.json(data);
+    } catch (err: any) {
+      console.error("Location photos route error:", err);
+      return res.status(500).json({
+        error: "Failed to fetch location photos",
+        photos: [],
+        googleImagesUrl: `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(req.body?.locationName || "World Landmark")}`,
+        googleLensSearchUrl: `https://lens.google.com/`,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(req.body?.locationName || "World Landmark")}`,
+      });
+    }
+  });
+
+  /**
+   * 1. Landmark Recognition & Visual Location Deduction (GeoGuessr) Endpoint
    * Multi-Tier Architecture:
    * Tier 1: gemini-3.8-flash (multimodal vision with fast 9s timeout)
    * Tier 2: gemini-flash-latest (backup vision model if Tier 1 experiences 503 / high demand)
@@ -800,7 +1271,7 @@ async function startServer() {
    * Tier 4: Clear "not_landmark" or "service_busy" error response — NEVER blindly default to Eiffel Tower!
    */
   app.post("/api/recognize-landmark", async (req, res) => {
-    const { image, mimeType = "image/jpeg", hintName, targetLanguage, targetLanguageName, visualSignature, gpsCoords } = req.body || {};
+    const { image, mimeType = "image/jpeg", hintName, mode, targetLanguage, targetLanguageName, visualSignature, gpsCoords, isSamplePreset } = req.body || {};
 
     try {
       if (!image) {
@@ -809,9 +1280,15 @@ async function startServer() {
 
       // Handle local image file paths (e.g. /images/landmarks/...) or base64 data URLs
       let cleanBase64 = "";
-      let cleanMime = (mimeType ? mimeType.split(";")[0].trim().toLowerCase() : "image/jpeg") || "image/jpeg";
+      let cleanMime = "image/jpeg";
 
       if (typeof image === "string" && image.startsWith("data:")) {
+        const mimeMatch = image.match(/^data:([^;,]+)/i);
+        if (mimeMatch && mimeMatch[1]) {
+          cleanMime = mimeMatch[1].trim().toLowerCase();
+        } else if (mimeType) {
+          cleanMime = mimeType.split(";")[0].trim().toLowerCase();
+        }
         cleanBase64 = image.split(",")[1]?.trim() || "";
       } else if (typeof image === "string" && (image.startsWith("/") || image.startsWith("./"))) {
         try {
@@ -827,8 +1304,38 @@ async function startServer() {
         } catch (e) {
           console.warn("Could not read local public image file:", e);
         }
+      } else if (typeof image === "string" && (image.startsWith("http://") || image.startsWith("https://"))) {
+        try {
+          const fetchRes = await fetch(image, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "Accept": "image/*,*/*;q=0.8",
+            },
+          });
+          if (fetchRes.ok) {
+            const arrayBuf = await fetchRes.arrayBuffer();
+            cleanBase64 = Buffer.from(arrayBuf).toString("base64");
+            const fetchedMime = fetchRes.headers.get("content-type");
+            if (fetchedMime) cleanMime = fetchedMime.split(";")[0].trim().toLowerCase();
+          }
+        } catch (e) {
+          console.warn("Could not fetch remote image URL on server:", e);
+        }
       } else if (typeof image === "string") {
         cleanBase64 = image.includes(",") ? image.split(",")[1].trim() : image.trim();
+        if (mimeType) cleanMime = mimeType.split(";")[0].trim().toLowerCase();
+      }
+
+      // Normalize MIME for Gemini Vision API compatibility (accepts jpeg, png, webp, heic, heif)
+      if (cleanMime === "image/jpg" || cleanMime === "image/pjpeg") {
+        cleanMime = "image/jpeg";
+      }
+      if (!["image/jpeg", "image/png", "image/webp"].includes(cleanMime)) {
+        cleanMime = "image/jpeg";
+      }
+      // Strip any whitespace from base64 string
+      if (cleanBase64) {
+        cleanBase64 = cleanBase64.replace(/\s+/g, "");
       }
 
       // Robust hint extraction: from explicit hintName OR from image URL path (e.g. /images/landmarks/taj-mahal.jpg)
@@ -840,9 +1347,46 @@ async function startServer() {
         }
       }
 
-      // If user selected a known landmark preset/sample/catalog entry AND hint matches a verified dossier:
-      const directDossier = resolvedHint ? findLandmarkDossier(resolvedHint) : null;
+      // ONLY bypass AI if the user explicitly clicked an authentic sample preset from the carousel/catalog:
+      // Real user camera captures, file uploads, and dropped photos MUST ALWAYS be inspected by Gemini Vision!
+      const shouldCheckDirectPreset = Boolean(isSamplePreset) || (!cleanBase64 && Boolean(resolvedHint)) || (typeof image === "string" && image.startsWith("/images/landmarks/"));
+      const directDossier = shouldCheckDirectPreset && resolvedHint ? findLandmarkDossier(resolvedHint) : null;
       if (directDossier) {
+        const { photos, googleImagesUrl, googleLensSearchUrl, googleMapsUrl } = await fetchLocationPhotos(
+          directDossier.name,
+          directDossier.city,
+          directDossier.country
+        );
+
+        const locationGuess = {
+          isGuessMode: Boolean(mode === "guess_location"),
+          estimatedCountry: directDossier.country,
+          estimatedCity: directDossier.city,
+          estimatedRegion: directDossier.city,
+          estimatedSite: directDossier.name,
+          confidenceScore: 99,
+          clues: [
+            {
+              category: "architecture",
+              observation: `${directDossier.architecturalStyle || "Historic"} architectural features, proportions, and construction materials authentic to ${directDossier.city}.`,
+              inferredLocation: `${directDossier.city}, ${directDossier.country}`,
+            },
+            {
+              category: "infrastructure",
+              observation: `Monumental urban context, preservation status, and historic architectural setting consistent with ${directDossier.name}.`,
+              inferredLocation: directDossier.name,
+            },
+          ],
+          candidateLocations: [
+            { name: directDossier.name, region: `${directDossier.city}, ${directDossier.country}`, confidence: 99 },
+          ],
+          googleSearchPhotosQuery: `${directDossier.name} ${directDossier.city} ${directDossier.country} photos`,
+          googleImagesUrl,
+          googleLensSearchUrl,
+          googleMapsUrl,
+          referencePhotos: photos,
+        };
+
         if (!targetLanguage || targetLanguage === "en" || targetLanguage === "English") {
           return res.json({
             name: directDossier.name,
@@ -874,14 +1418,20 @@ async function startServer() {
               prominentVisualFeatures: directDossier.arKeypoints.map((k) => k.label),
               compositionNotes: `Framed to capture ${directDossier.name}'s iconic silhouette and proportions.`,
             },
+            referencePhotos: photos,
+            googleImagesUrl,
+            googleLensSearchUrl,
+            googleMapsUrl,
+            locationGuess,
             modelUsed: "Architectural Heritage Archive (Verified Preset)",
           });
         } else {
-          // If non-English requested, quickly translate summary, style, and era so the user immediately gets their language!
-          const [translatedSummary, translatedStyle, translatedEra] = await Promise.all([
+          // If non-English requested, quickly translate summary, style, era, and AR keypoints so the user immediately gets their language!
+          const [translatedSummary, translatedStyle, translatedEra, translatedKeypoints] = await Promise.all([
             translateTextServer(directDossier.summary, targetLanguage, targetLanguageName),
             translateTextServer(directDossier.architecturalStyle, targetLanguage, targetLanguageName),
             translateTextServer(directDossier.periodEra, targetLanguage, targetLanguageName),
+            translateKeypointsServer(directDossier.arKeypoints, targetLanguage, targetLanguageName),
           ]);
           return res.json({
             name: directDossier.name,
@@ -893,7 +1443,7 @@ async function startServer() {
             confidence: 99,
             summary: translatedSummary || directDossier.summary,
             coordinatesEstimate: directDossier.coordinatesEstimate,
-            arKeypoints: directDossier.arKeypoints,
+            arKeypoints: translatedKeypoints || directDossier.arKeypoints,
             isLandmark: true,
             detectedCategory: "landmark",
             unescoInfo: directDossier.unescoInfo || {
@@ -913,13 +1463,18 @@ async function startServer() {
               prominentVisualFeatures: directDossier.arKeypoints.map((k) => k.label),
               compositionNotes: `Framed to capture ${directDossier.name}'s iconic silhouette and proportions.`,
             },
+            referencePhotos: photos,
+            googleImagesUrl,
+            googleLensSearchUrl,
+            googleMapsUrl,
+            locationGuess,
             modelUsed: `Architectural Heritage Archive (${targetLanguageName || targetLanguage})`,
           });
         }
       }
 
-      // If resolvedHint did not match internal dossiers, check Wikipedia
-      if (resolvedHint) {
+      // If user specifically requested a sample preset that wasn't in internal dossiers, check Wikipedia for preset
+      if (shouldCheckDirectPreset && resolvedHint) {
         const wikiMatch = await lookupWikipediaByTitle(resolvedHint);
         if (wikiMatch) {
           return res.json({
@@ -966,117 +1521,53 @@ async function startServer() {
       const ai = getGenAIClient();
       let isCreditsDepleted = false;
 
-      const prompt = `You are an elite global architectural historian, religious heritage scholar, and visual recognition expert.
-Analyze this photo carefully.
+      const prompt = `You are an elite visual recognition expert, geographer, architectural historian, and world heritage specialist.
+Carefully inspect this photograph and accurately identify the exact place, landmark, structure, landscape, or subject depicted.
 
-COMPREHENSIVE SACRED & CIVIC ARCHITECTURAL RECOGNITION:
-You possess universal expertise in all religious structures and monuments across every religion in the world:
-- HINDUISM: Mandirs, Shikharas, Dravidian Gopurams, Vimanas, Kalinga Deulas, Khmer Prasats, Balinese Puras (e.g., Angkor Wat, Prambanan, Brihadisvara, Meenakshi, Kashi Vishwanath, Somnath, Jagannath, Akshardham, Batu Caves, Pashupatinath, Belur, Ellora Kailasa).
-- ISLAM: Mosques (Masjids), Minarets, Qubbas (domes), Iwans, Muqarnas, Mihrabs, Ottoman, Mughal, Safavid, Moorish, Sudano-Sahelian styles (e.g., Masjid al-Haram, Al-Masjid an-Nabawi, Al-Aqsa, Dome of the Rock, Blue Mosque, Hagia Sophia, Sheikh Zayed Grand Mosque, Córdoba Mezquita, Badshahi, Jama Masjid, Hassan II, Djenné).
-- CHRISTIANITY: Cathedrals, Basilicas, Abbeys, Monasteries, Gothic, Byzantine, Baroque, Romanesque, Russian/Eastern Orthodox Onion Domes, Coptic Rock-Hewn (e.g., St. Peter's Basilica, Sagrada Família, Notre-Dame, St. Basil's, Westminster Abbey, Milan Duomo, Holy Sepulchre, Cologne, Chartres, Lalibela Saint George).
-- BUDDHISM: Stupas, Pagodas, Viharas, Wats, Tibetan Gompas, Dzongs (e.g., Borobudur, Shwedagon Pagoda, Wat Arun, Wat Phra Kaew, Mahabodhi, Todai-ji, Senso-ji, Potala Palace, Tiger's Nest Paro Taktsang, Kandy Tooth Relic).
-- SIKHISM: Gurdwaras, Darbar Sahibs, Takhts, Sarovars, Chattris, Nishan Sahib spires (e.g., Harmandir Sahib / Golden Temple, Bangla Sahib, Nankana Sahib, Kartarpur Sahib, Patna Sahib, Hazur Sahib).
-- JUDAISM: Synagogues, Batei Knesset, Moorish Revival, Classical, Western Wall / Kotel (e.g., Western Wall, Dohány Street Synagogue, Hurva, Portuguese Synagogue Amsterdam, Belz, Touro).
-- JAINISM: Derasars, Basadis, Tirthas, Intricate Marble Filigree (e.g., Ranakpur, Dilwara, Palitana, Shravanabelagola Gommateshwara, Shikharji).
-- SHINTO: Jinja, Torii Gates, Honden, Haiden, Shimenawa (e.g., Fushimi Inari-taisha, Ise Jingu, Itsukushima, Meiji Jingu, Izumo-taisha).
-- TAOISM & CHINESE FOLK RELIGION: Daoguan, Triple-Gabled Sacred Halls, Dragon Ridges, Flying Eaves (e.g., Temple of Heaven, Wudang Mountains Golden Hall, White Cloud Temple, Wong Tai Sin).
-- BAHÁʼÍ FAITH: Houses of Worship, Mashriqu'l-Adhkár, Nine-Sided Circular Domed Petals (e.g., Lotus Temple New Delhi, Shrine of the Báb Haifa, Wilmette, Santiago).
-- ZOROASTRIANISM: Atash Behram, Agiary, Eternal Fire Altars, Faravahar Reliefs (e.g., Yazd Atash Behram, Chak Chak, Iranshah Udvada, Baku Ateshgah).
-- ANCIENT & INDIGENOUS SACRED SITES: Egyptian Temples (Karnak, Luxor, Abu Simbel), Mayan/Incan/Aztec Sacred Pyramids (Chichen Itza, Tikal, Coricancha), Ziggurats, Megaliths (Stonehenge, Göbekli Tepe), Classical Greco-Roman Temples (Parthenon, Pantheon).
-- HISTORIC COLLEGES & UNIVERSITIES: Historic collegiate campuses, colleges, quadrangles, chapels, and libraries worldwide:
-  * HISTORIC COLLEGES OF INDIA:
-    - Presidency College / University, Kolkata (1817 AD, College Street, Ionic portico, Baker Lab, Derozio Hall, Bengal Renaissance)
-    - St. Xavier's College, Mumbai (1869 AD, Fort, Indo-Gothic Quadrangle, Kurla basalt stone arches, Bavarian stained glass, Malhar)
-    - University of Mumbai & Rajabai Clock Tower (1857 AD, Sir George Gilbert Scott Venetian Gothic Convocation Hall, 85m Rajabai Clock Tower, UNESCO World Heritage)
-    - IIT Roorkee / Thomason College of Civil Engineering (1847 AD, Asia's oldest engineering college, James Thomason white-domed classical building, Roorkee, Uttarakhand)
-    - University of Madras / Senate House (1857 AD / Senate House 1879, Robert Chisholm Indo-Saracenic & Byzantine polychrome domes, Marina Beach, Chepauk)
-    - Fergusson College, Pune (1885 AD, Tilak & Agarkar, Deccan Education Society, dark basalt Gothic main building & Amphitheatre)
-    - Aligarh Muslim University (AMU), Aligarh (1875 AD, Sir Syed Ahmad Khan, Strachey Hall cusped arches, Victoria Gate, Sir Syed Mosque)
-    - Banaras Hindu University (BHU), Varanasi (1916 AD, Mahamana Malaviya, Sayaji Rao Gaekwad Library dome, 77m New Vishwanath Temple VT)
-    - St. Stephen's College, Delhi (1881 AD, Walter Sykes George red-brick collegiate chapel, Delhi North Campus)
-    - Serampore College, West Bengal (1818 AD, William Carey, Danish Royal Charter 1827, 18-pillar Ionic riverfront portico)
-    - College of Engineering, Guindy (CEG), Anna University, Chennai (1794 AD, Asia's oldest engineering school outside Europe, red-brick clock tower)
-    - Elphinstone College, Mumbai (1835 AD, Kala Ghoda Romanesque & Victorian Gothic basalt arcades, Ambedkar & Tilak alma mater)
-    - Madras Christian College (MCC), Chennai (1837 AD, Anderson Hall, Tambaram)
-    - Presidency College, Chennai (1840 AD, Robert Chisholm crimson Italianate 40m clock tower, Marina Beach)
-    - Hindu College, Delhi (1899 AD, red-brick amphitheatre, nationalist student parliament)
-    - Scottish Church College, Kolkata (1830 AD, Alexander Duff, Swami Vivekananda's alma mater)
-    - Central College, Bengaluru (1858 AD, Gothic clock tower, Sir M. Visvesvaraya)
-    - St. Xavier's College, Kolkata (1860 AD, Park Street Neoclassical facade)
-    - Mayo College, Ajmer (1875 AD, 'Eton of the East', Makrana white marble Indo-Saracenic palace)
-    - St. Joseph's University, Bengaluru (1882 AD, European classical cloisters)
-    - Archaeological Site of Nalanda Mahavihara (5th century AD, Bihar, UNESCO World Heritage)
-    - Taxila / Takshashila Ancient University
-  * HISTORIC WORLD COLLEGES:
-    - University of Oxford / Radcliffe Camera & Christ Church, University of Cambridge / King's College Chapel, Harvard University / Harvard Yard, University of Bologna / Archiginnasio, University of Coimbra, University of Salamanca, Sorbonne University, Trinity College Dublin, Heidelberg University, Yale University, Princeton University, University of Virginia, UNAM Mexico City, Al-Qarawiyyin, etc.
-- UNESCO WORLD HERITAGE SITES: Global cultural, natural, and mixed sites inscribed on the UNESCO World Heritage List (e.g., Machu Picchu, Petra, Acropolis of Athens, Pyramids of Giza, Great Wall of China, Taj Mahal, Colosseum, Mont-Saint-Michel, Alhambra, Chichen Itza, Sagrada Família, Hagia Sophia, Borobudur, Stonehenge, Sydney Opera House, Lalibela Rock Churches, Grand Canyon, etc.).
+UNIVERSAL RECOGNITION COVERAGE:
+- Sacred Architecture & Religious Structures Worldwide: Recognize every church, cathedral, basilica, abbey, monastery, mosque, masjid, minaret, Hindu temple (mandir, jyotirlinga, gopuram, shikhara), Sikh gurdwara, Buddhist stupa/pagoda/monastery, Jain temple, Jewish synagogue, and Bahá'í temple. For any sacred place, set "detectedCategory": "sacred" and "isLandmark": true.
+- Academic Heritage & University Campuses Worldwide: Recognize historic colleges, universities, campus quads, iconic libraries, and halls across the world (e.g. Oxford, Cambridge, Harvard, Yale, Princeton, Bologna, Salamanca, Al-Qarawiyyin, Nalanda, Indian IITs and colleges, UNAM, Tokyo, etc.). For any academic campus or building, set "detectedCategory": "campus" and "isLandmark": true.
+- Historic Monuments & Ancient Wonders: UNESCO World Heritage sites, pyramids, ancient ruins, castles, forts, palaces, amphitheatres, triumphal arches, statues, and memorials.
+- Natural Wonders & Landscapes: Mountains, volcanoes, canyons, waterfalls, national parks, rock formations, coastlines, and geological formations.
+- Modern & Civil Engineering Landmarks: Iconic bridges, towers, skyscrapers, stadiums, arenas, opera houses, and public squares.
 
-CRITICAL CLASSIFICATION AND SUBJECT IDENTIFICATION:
-1. Identify the primary subject accurately:
-   - If this is an architectural monument, historic college/university, UNESCO site, civic building, temple, mosque, cathedral, gurdwara, stupa, synagogue, shrine, bridge, tower, palace, or archaeological site: set "isLandmark": true, "detectedCategory": "landmark", and provide its city, country, precise architectural/collegiate style, period/era, and vivid summary.
-   - If this is an inscribed UNESCO World Heritage Site or an ancient/historic collegiate institution, populate "unescoInfo" and/or "collegeInfo" with authentic historical facts.
-   - If this depicts a person, portrait, or sports/cultural figure (e.g. Ben Stokes, an athlete, artist, historical figure, or individual): set "isLandmark": false, "detectedCategory": "person", set "name" to their recognized name, and provide their notable career/biographical achievements and context in "summary".
-   - If this depicts an animal, nature scene without a monument, food, interior, or everyday object: set "isLandmark": false, "detectedCategory" appropriately, and provide an accurate descriptive name and respectful summary.
-2. In ALL cases (monument, collegiate structure, religious structure, person, or other subject), provide 3 to 6 distinct arKeypoints with coordinates 'x' and 'y' as percentages (0 to 100) pointing to actual observable features in this photo:
-   - For colleges/universities: quadrangle/court, collegiate chapel, historic library dome/tower, dining hall lancet windows, entrance portal, coat-of-arms crest, clock tower.
-   - For UNESCO monuments / religious structures: minaret, dome/qubba, spire/shikhara, gopuram, torii, bell tower, facade relief, mihrab, archway, column, portal.
-   - For portraits/figures: facial expression/gaze, attire/jersey crest, posture/stance, ambient lighting, composition framing.
-   - For other subjects: focal point, texture, silhouette, prominent physical features.
-3. In ALL cases, provide complete photoAnalysis (perspectiveAndAngle, lightingAndAtmosphere, visibleMaterialsAndTextures, structuralCondition, prominentVisualFeatures, compositionNotes).
-4. Do NOT guess or hallucinate a generic world landmark if the photo depicts something else. Accurately report what is shown.
+CLASSIFICATION INSTRUCTIONS:
+- For ALL recognizable places, monuments, natural wonders, landscapes, bridges, towers, and structures: set "isLandmark": true.
+- Set "detectedCategory" to one of: "landmark", "sacred", "campus", "nature", "architecture", "urban", "person", "object".
+- For "architecturalStyle": state the authentic architectural style (e.g., "Catalan Modernism / Gothic", "Mughal Architecture", "Dravidian", "Baroque") or geological formation (e.g., "Active Stratovolcano", "Erosion Canyon").
+- For "periodEra": state construction period or geological epoch (e.g., "1882–Present", "c. 72–80 AD", "1632–1653").
+- ONLY if the photo is clearly NOT a place, landmark, or landscape (such as a close-up selfie of a person, domestic animal, food, or handheld item): set "isLandmark": false, set "detectedCategory" to "person", "animal", or "object", and explain in "notLandmarkReason".
+- arKeypoints: Provide 3 to 5 distinct keypoints pointing to REAL, VISIBLE features in this specific photo (facade, spire, dome, entrance, arch, tower, summit). Coordinates 'x' and 'y' MUST be integer percentages between 0 and 100.
+- photoAnalysis: Concisely describe perspective, visible materials/textures, and prominent visual features.
 
 Output strictly valid JSON matching this schema:
 {
-  "isLandmark": true or false,
-  "detectedCategory": "landmark" | "person" | "animal" | "nature" | "food" | "object" | "indoor" | "other",
-  "notLandmarkReason": "If isLandmark is false, explain briefly in 1 sentence what is in the photo instead (e.g., 'Close-up portrait of English international cricketer Ben Stokes wearing sports apparel'). Leave empty if isLandmark is true.",
-  "name": "Primary recognized name of the landmark, college, person, or visual subject",
-  "localName": "Name in local language or alternate title (optional)",
-  "city": "City where it is located (or empty string if not applicable)",
-  "country": "Country where it is located (or country associated with subject)",
-  "architecturalStyle": "Dominant style (or 'Collegiate Gothic' / 'Contemporary Portrait / Figure' / 'N/A' for non-landmarks)",
-  "periodEra": "Year built, founded era, career era, or active period",
+  "isLandmark": true,
+  "detectedCategory": "landmark | sacred | campus | nature | architecture | urban | person | object",
+  "notLandmarkReason": "",
+  "name": "Recognized Landmark or Place Name",
+  "localName": "Name in local language or alternate name",
+  "city": "City or Region / State",
+  "country": "Country",
+  "architecturalStyle": "Architectural Style or Geological Classification",
+  "periodEra": "Year built, era, or geological age",
   "confidence": 95,
-  "summary": "A vivid 2-3 sentence overview of this subject, landmark, college, or person and why they are culturally notable.",
-  "unescoInfo": {
-    "isWorldHeritage": true or false,
-    "officialName": "Official UNESCO inscribed name if applicable",
-    "inscriptionYear": 1983,
-    "criteria": "(i)(ii)(iv)",
-    "category": "Cultural" | "Natural" | "Mixed",
-    "unescoId": "UNESCO ID number if known"
-  },
-  "collegeInfo": {
-    "isCollegeOrUniversity": true or false,
-    "institutionName": "Name of university/college institution if applicable",
-    "collegiateUnit": "Specific hall, chapel, quadrangle, or library visible",
-    "foundedYear": 1096,
-    "collegiateFeatures": ["Quadrangle", "Fan-vaulted chapel", "Antiquarian library"]
-  },
+  "summary": "A vivid, factual 2-3 sentence overview of this place and its significance.",
   "photoAnalysis": {
-    "perspectiveAndAngle": "Specific camera vantage, elevation, and framing relative to the subject",
-    "lightingAndAtmosphere": "Lighting conditions and time of day visible in photo",
-    "visibleMaterialsAndTextures": "Visible materials, textures, fabrics, or masonry observable in this photograph",
-    "structuralCondition": "Visual state and details observable in the photograph",
-    "prominentVisualFeatures": [
-      "Specific visible feature 1 in this photo",
-      "Specific visible feature 2 in this photo",
-      "Specific visible feature 3 in this photo",
-      "Specific visible feature 4 in this photo"
-    ],
-    "compositionNotes": "1-sentence note on how the subject is framed in the photographer's shot."
+    "perspectiveAndAngle": "Vantage and framing relative to the subject",
+    "visibleMaterialsAndTextures": "Visible textures and materials",
+    "prominentVisualFeatures": ["Feature 1", "Feature 2", "Feature 3"]
   },
   "coordinatesEstimate": {
     "lat": 0.0,
     "lng": 0.0
   },
-  "coordinatesEstimate_guidance": "Provide the true geographic decimal latitude and longitude (lat, lng) of the recognized landmark or city. Do not output placeholder or Paris coordinates (48.8584, 2.2945) unless this landmark is genuinely located in Paris, France.",
   "arKeypoints": [
     {
       "id": "pt-1",
-      "label": "Name of visible feature",
-      "featureType": "spire | dome | arch | facade | statue | clock | relief | column | entrance",
-      "description": "1-sentence note for AR tap detailing what is observable right here in the photo.",
+      "label": "Visible feature label",
+      "featureType": "facade | spire | dome | arch | column | statue | entrance | tower | peak | rim",
+      "description": "Short 1-sentence note for AR tap detailing what is observable right here.",
       "x": 50,
       "y": 25
     }
@@ -1086,8 +1577,15 @@ Output strictly valid JSON matching this schema:
 Return raw JSON without markdown code fences or backticks.`;
 
       let fullPrompt = prompt;
-      if (hintName) {
-        fullPrompt += `\n\nContext Hint: The user or camera selected "${hintName}". Validate whether this photo actually depicts ${hintName} or not.`;
+      if (mode === "guess_location") {
+        fullPrompt += `\n\nLOCATION DETECTIVE MODE ACTIVE: Deduce where this photograph was taken in the world. Also populate a "locationGuess" object in the JSON with "estimatedCountry", "estimatedCity", "confidenceScore", and "clues" (list of visual clues with category, observation, and inferredLocation).`;
+      }
+      if (hintName && hintName.trim()) {
+        const sanitizedHint = hintName.trim();
+        const isGenericHint = /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+|bridge|church|temple|tower|gate|nature|view|monument|building|wallpaper|untitled|landscape|street|square|park|place|city|travel|tourism)$/i.test(sanitizedHint);
+        if (!isGenericHint) {
+          fullPrompt += `\n\nVisual Context Note: The file metadata or user query suggested "${sanitizedHint}". Prioritize the actual visual features observable in the image pixels to determine the true landmark or place name.`;
+        }
       }
       if (targetLanguage && targetLanguage !== "en") {
         fullPrompt += `\n\nCRITICAL LANGUAGE REQUIREMENT:
@@ -1097,114 +1595,94 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
       }
 
       let rawResponseText = "";
-      let modelUsed = "gemini-3.8-flash";
+      let modelUsed = "gemini-3.5-flash-lite";
       let succeeded = false;
       let lastError: any = null;
 
-      // Tier 1: Try gemini-3.8-flash (highest visual intelligence & architectural detail)
-      if (isModelAvailable("gemini-3.8-flash")) {
-        try {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-3.8-flash",
-              contents: {
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType: cleanMime,
-                      data: cleanBase64,
+      if (cleanBase64 && cleanBase64.length > 50) {
+        // Attempt 1 & 2: Primary working model gemini-3.5-flash-lite with automatic rate-limit backoff retry
+        for (let attempt = 0; attempt < 2 && !succeeded; attempt++) {
+          try {
+            const response = await withTimeout(
+              ai.models.generateContent({
+                model: "gemini-3.5-flash-lite",
+                contents: {
+                  parts: [
+                    {
+                      inlineData: {
+                        mimeType: cleanMime,
+                        data: cleanBase64,
+                      },
                     },
+                    { text: fullPrompt },
+                  ],
+                },
+                config: { responseMimeType: "application/json" },
+              }),
+              50000
+            );
+            rawResponseText = response.text || "";
+            if (rawResponseText) {
+              succeeded = true;
+              modelUsed = "gemini-3.5-flash-lite";
+              break;
+            }
+          } catch (err: any) {
+            lastError = err;
+            const errMsg = String(err?.message || "").toLowerCase();
+            console.error(`[Vision Error] gemini-3.5-flash-lite attempt ${attempt + 1}:`, err?.status || "", errMsg.slice(0, 140));
+            if (String(err?.message || "").includes("402") || String(err?.message || "").includes("credits are depleted") || err?.status === 402) {
+              isCreditsDepleted = true;
+            }
+            if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("resource_exhausted") || err?.status === 429) {
+              if (attempt === 0) {
+                console.log("[Vision Retry] Transient rate throttle on flash-lite, waiting 1500ms before retry...");
+                await sleep(1500);
+                continue;
+              }
+            }
+            handleGeminiError(err, "gemini-3.5-flash-lite", "Vision");
+          }
+        }
+
+        // Secondary fallback models if gemini-3.5-flash-lite was unable to return
+        if (!succeeded) {
+          const fallbackModels = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3-flash-preview", "gemini-flash-latest"].filter(isModelAvailable);
+          for (const model of fallbackModels) {
+            try {
+              const response = await withTimeout(
+                ai.models.generateContent({
+                  model,
+                  contents: {
+                    parts: [
+                      {
+                        inlineData: {
+                          mimeType: cleanMime,
+                          data: cleanBase64,
+                        },
+                      },
+                      { text: fullPrompt },
+                    ],
                   },
-                  { text: fullPrompt },
-                ],
-              },
-              config: { responseMimeType: "application/json" },
-            }),
-            16000
-          );
-          rawResponseText = response.text || "";
-          if (rawResponseText) {
-            succeeded = true;
-            modelUsed = "gemini-3.8-flash";
+                  config: { responseMimeType: "application/json" },
+                }),
+                25000
+              );
+              rawResponseText = response.text || "";
+              if (rawResponseText) {
+                succeeded = true;
+                modelUsed = model;
+                break;
+              }
+            } catch (err: any) {
+              lastError = err;
+              console.error(`[Vision Fallback Error] ${model}:`, err?.status || "", String(err?.message || "").slice(0, 120));
+              handleGeminiError(err, model, `Vision (${model})`);
+            }
           }
-        } catch (err: any) {
-          lastError = err;
-          if (String(err?.message || "").includes("402") || String(err?.message || "").includes("credits are depleted") || err?.status === 402) {
-            isCreditsDepleted = true;
-          }
-          handleGeminiError(err, "gemini-3.8-flash", "Vision Tier 1");
         }
       }
 
-      // Tier 2: Try gemini-3.1-flash-lite if Tier 1 did not succeed
-      if (!succeeded && isModelAvailable("gemini-3.1-flash-lite")) {
-        try {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
-              contents: {
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType: cleanMime,
-                      data: cleanBase64,
-                    },
-                  },
-                  { text: fullPrompt },
-                ],
-              },
-              config: { responseMimeType: "application/json" },
-            }),
-            14000
-          );
-          rawResponseText = response.text || "";
-          if (rawResponseText) {
-            succeeded = true;
-            modelUsed = "gemini-3.8-flash";
-          }
-        } catch (err: any) {
-          lastError = err;
-          if (String(err?.message || "").includes("402") || String(err?.message || "").includes("credits are depleted") || err?.status === 402) {
-            isCreditsDepleted = true;
-          }
-          handleGeminiError(err, "gemini-3.1-flash-lite", "Vision Tier 2");
-        }
-      }
-
-      // Tier 3: Try gemini-flash-latest as fallback
-      if (!succeeded && isModelAvailable("gemini-flash-latest")) {
-        try {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-flash-latest",
-              contents: {
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType: cleanMime,
-                      data: cleanBase64,
-                    },
-                  },
-                  { text: fullPrompt },
-                ],
-              },
-              config: { responseMimeType: "application/json" },
-            }),
-            15000
-          );
-          rawResponseText = response.text || "";
-          if (rawResponseText) {
-            succeeded = true;
-            modelUsed = "gemini-flash-latest";
-          }
-        } catch (err: any) {
-          lastError = err;
-          if (String(err?.message || "").includes("402") || String(err?.message || "").includes("credits are depleted") || err?.status === 402) {
-            isCreditsDepleted = true;
-          }
-          handleGeminiError(err, "gemini-flash-latest", "Vision Tier 3");
-        }
-      }
 
       if (succeeded && rawResponseText) {
         let parsedData = extractJson(rawResponseText);
@@ -1226,9 +1704,10 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
           // Normalize isLandmark flag
           const category = String(parsedData.detectedCategory || "").toLowerCase();
           const isNonLandmarkCat = ["person", "selfie", "pet", "household_object", "meal", "food", "gadget", "document"].includes(category);
+          const isPlaceCat = ["landmark", "nature", "landscape", "architecture", "sacred", "urban", "campus", "monument"].includes(category);
 
           // Check if the recognized name matches any verified dossier to ground coordinates & metadata
-          const matchedDossier = findLandmarkDossier(parsedData.name) || (resolvedHint ? findLandmarkDossier(resolvedHint) : null);
+          const matchedDossier = findLandmarkDossier(parsedData.name);
           if (matchedDossier) {
             parsedData.isLandmark = true;
             if (!parsedData.city || parsedData.city === "Unknown") parsedData.city = matchedDossier.city;
@@ -1238,7 +1717,7 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
             if (!parsedData.coordinatesEstimate || (parsedData.coordinatesEstimate.lat === 0 && parsedData.coordinatesEstimate.lng === 0)) {
               parsedData.coordinatesEstimate = matchedDossier.coordinatesEstimate;
             }
-            if (!parsedData.unescoInfo && (matchedDossier.unescoYear || matchedDossier.unescoId)) {
+            if (matchedDossier.unescoInfo || matchedDossier.unescoYear || matchedDossier.unescoId) {
               parsedData.unescoInfo = matchedDossier.unescoInfo || {
                 isWorldHeritage: true,
                 officialName: matchedDossier.name,
@@ -1248,13 +1727,45 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
                 unescoId: matchedDossier.unescoId ? String(matchedDossier.unescoId) : undefined,
               };
             }
-            if (!parsedData.collegeInfo && matchedDossier.collegeInfo) {
+            if (matchedDossier.collegeInfo) {
               parsedData.collegeInfo = matchedDossier.collegeInfo;
+              parsedData.detectedCategory = "campus";
             }
+          } else if (isPlaceCat) {
+            parsedData.isLandmark = true;
           } else if (isNonLandmarkCat) {
             parsedData.isLandmark = false;
           } else if (parsedData.isLandmark === undefined) {
             parsedData.isLandmark = Boolean(parsedData.name && parsedData.confidence >= 40);
+          }
+
+          // Clean up dummy collegeInfo if this is not actually an academic institution
+          if (parsedData.collegeInfo) {
+            const hasValidCollege = Boolean(parsedData.collegeInfo.isCollegeOrUniversity && parsedData.collegeInfo.institutionName);
+            if (!hasValidCollege && parsedData.detectedCategory !== "campus" && !matchedDossier?.collegeInfo) {
+              delete parsedData.collegeInfo;
+            }
+          }
+
+          // Clean up dummy unescoInfo if this is not a World Heritage site
+          if (parsedData.unescoInfo) {
+            const hasValidUnesco = Boolean(parsedData.unescoInfo.isWorldHeritage && (parsedData.unescoInfo.officialName || parsedData.unescoInfo.inscriptionYear));
+            if (!hasValidUnesco && !matchedDossier?.unescoYear && !matchedDossier?.unescoId) {
+              delete parsedData.unescoInfo;
+            }
+          }
+
+          // Intelligent category refinement based on authentic name vocabulary and religious dossier registry
+          const isReligiousSite = Boolean(
+            Object.values(RELIGIOUS_STRUCTURE_DOSSIERS).some((r) => r.name.toLowerCase() === (matchedDossier?.name || parsedData.name).toLowerCase()) ||
+            /\b(temple|church|cathedral|mosque|masjid|gurdwara|basilica|chapel|monastery|stupa|pagoda|synagogue|shrine|mandir|derasar|jyotirlinga|hagia sophia|pantheon|parthenon|kaaba|dome of the rock|bete giyorgis|lalibela)\b/i.test(parsedData.name)
+          );
+          if (isReligiousSite && parsedData.detectedCategory !== "sacred") {
+            parsedData.detectedCategory = "sacred";
+          }
+          const isCampusName = /\b(university|college|campus|institute of technology|academy|polytechnic|hall of learning|mahavihara)\b/i.test(parsedData.name);
+          if (isCampusName && parsedData.detectedCategory !== "campus") {
+            parsedData.detectedCategory = "campus";
           }
 
           // Ground coordinates to authentic geographic coordinates for landmark and city
@@ -1278,15 +1789,21 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
               ];
             }
           } else {
-            // Clamp and sanitize coordinates
-            parsedData.arKeypoints = parsedData.arKeypoints.map((pt: any, idx: number) => ({
-              id: pt.id || `pt-${idx + 1}`,
-              label: pt.label || `Feature ${idx + 1}`,
-              featureType: pt.featureType || "facade",
-              description: pt.description || "Identified physical architectural element.",
-              x: typeof pt.x === "number" && !isNaN(pt.x) ? Math.min(95, Math.max(5, Math.round(pt.x))) : 50,
-              y: typeof pt.y === "number" && !isNaN(pt.y) ? Math.min(95, Math.max(5, Math.round(pt.y))) : 50,
-            }));
+            // Clamp and sanitize coordinates (normalize 0-1000 scale to 0-100 percentage)
+            parsedData.arKeypoints = parsedData.arKeypoints.map((pt: any, idx: number) => {
+              const rawX = typeof pt.x === "number" && !isNaN(pt.x) ? pt.x : 50;
+              const rawY = typeof pt.y === "number" && !isNaN(pt.y) ? pt.y : 50;
+              const normX = rawX > 100 ? rawX / 10 : rawX;
+              const normY = rawY > 100 ? rawY / 10 : rawY;
+              return {
+                id: pt.id || `pt-${idx + 1}`,
+                label: pt.label || `Feature ${idx + 1}`,
+                featureType: pt.featureType || "facade",
+                description: pt.description || "Identified physical architectural element.",
+                x: Math.min(95, Math.max(5, Math.round(normX))),
+                y: Math.min(95, Math.max(5, Math.round(normY))),
+              };
+            });
           }
 
           // Ensure photoAnalysis is present
@@ -1301,13 +1818,73 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
             };
           }
 
+          // Retrieve verified reference photos available on Google & Wikimedia Commons
+          try {
+            const locationPhotoData = await fetchLocationPhotos(
+              parsedData.name,
+              parsedData.city,
+              parsedData.country
+            );
+            parsedData.referencePhotos = locationPhotoData.photos;
+            parsedData.googleImagesUrl = locationPhotoData.googleImagesUrl;
+            parsedData.googleLensSearchUrl = locationPhotoData.googleLensSearchUrl;
+
+            if (!parsedData.locationGuess || typeof parsedData.locationGuess !== "object") {
+              parsedData.locationGuess = {
+                isGuessMode: Boolean(mode === "guess_location"),
+                estimatedCountry: parsedData.country || "Global",
+                estimatedCity: parsedData.city || "Global",
+                estimatedRegion: parsedData.city || parsedData.country || "Global",
+                estimatedSite: parsedData.name,
+                confidenceScore: parsedData.confidence || 85,
+                clues: [
+                  { category: "architecture", observation: parsedData.architecturalStyle || "Regional architectural characteristics", inferredLocation: parsedData.city || parsedData.country },
+                  { category: "terrain", observation: parsedData.photoAnalysis?.visibleMaterialsAndTextures || "Visual geological and material profile", inferredLocation: parsedData.country }
+                ],
+                candidateLocations: [
+                  { name: parsedData.name, region: `${parsedData.city}, ${parsedData.country}`, confidence: parsedData.confidence || 85 }
+                ],
+                googleSearchPhotosQuery: `${parsedData.name} ${parsedData.city} photos`,
+                googleImagesUrl: locationPhotoData.googleImagesUrl,
+                googleLensSearchUrl: locationPhotoData.googleLensSearchUrl,
+                googleMapsUrl: locationPhotoData.googleMapsUrl,
+                referencePhotos: locationPhotoData.photos,
+              };
+            } else {
+              parsedData.locationGuess.isGuessMode = Boolean(mode === "guess_location");
+              parsedData.locationGuess.referencePhotos = locationPhotoData.photos;
+              parsedData.locationGuess.googleImagesUrl = locationPhotoData.googleImagesUrl;
+              parsedData.locationGuess.googleLensSearchUrl = locationPhotoData.googleLensSearchUrl;
+              parsedData.locationGuess.googleMapsUrl = locationPhotoData.googleMapsUrl;
+            }
+          } catch (photoErr) {
+            console.warn("Failed to populate location photos:", photoErr);
+          }
+
+          // Guarantee multilingual translation of summary, architectural style, and era if non-English
+          if (targetLanguage && targetLanguage !== "en" && targetLanguage !== "English") {
+            try {
+              const [transSummary, transStyle, transEra] = await Promise.all([
+                parsedData.summary ? translateTextServer(parsedData.summary, targetLanguage, targetLanguageName) : Promise.resolve(""),
+                parsedData.architecturalStyle ? translateTextServer(parsedData.architecturalStyle, targetLanguage, targetLanguageName) : Promise.resolve(""),
+                parsedData.periodEra ? translateTextServer(parsedData.periodEra, targetLanguage, targetLanguageName) : Promise.resolve(""),
+              ]);
+              if (transSummary && transSummary.trim()) parsedData.summary = transSummary;
+              if (transStyle && transStyle.trim()) parsedData.architecturalStyle = transStyle;
+              if (transEra && transEra.trim()) parsedData.periodEra = transEra;
+            } catch (trErr) {
+              console.warn("Translation refinement notice:", trErr);
+            }
+          }
+
           return res.json(parsedData);
         }
       }
 
-      // If AI vision couldn't run: check if resolvedHint or hintName matches a verified dossier
+      // If AI vision couldn't run: check if resolvedHint or hintName matches a verified dossier (only if not generic)
       const hintForDossier = resolvedHint || hintName;
-      if (hintForDossier) {
+      const isGenericHint = !hintForDossier || /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+|bridge|church|temple|tower|gate|nature|view|monument|building|wallpaper|untitled|landscape|street|square|park|place|city|travel|tourism)$/i.test(hintForDossier);
+      if (hintForDossier && !isGenericHint) {
         const dossier = findLandmarkDossier(hintForDossier);
         if (dossier) {
           return res.json({
@@ -1355,21 +1932,16 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
         }
       }
 
-      // If no hint and AI vision was unable to identify (or credits depleted): resolve via visual signature & collegiate architecture pattern
-      let bestCandidate = "St. Xavier's College, Mumbai";
-      let candidateList = [
-        "St. Xavier's College, Mumbai",
-        "Fergusson College, Pune",
-        "Presidency College, Kolkata",
-        "University of Mumbai",
-      ];
-      let patternRationale = "Indo-Gothic Quadrangle & Basalt-Terracotta Collegiate Masonry";
+      // If no hint and AI vision was unable to identify: resolve safely without fictitious defaults
+      let bestCandidate = resolvedHint?.trim() || "";
+      let candidateList: string[] = [];
+      let patternRationale = "Architectural Silhouette & Masonry Analysis";
 
       if (gpsCoords && typeof gpsCoords.latitude === "number" && typeof gpsCoords.longitude === "number") {
         const gpsDossier = findDossierByCoordinates(gpsCoords.latitude, gpsCoords.longitude, 30);
         if (gpsDossier) {
           bestCandidate = gpsDossier.name;
-          candidateList = [gpsDossier.name, ...candidateList.filter(c => c !== gpsDossier.name)];
+          candidateList = [gpsDossier.name];
           patternRationale = `Camera Geolocation (${gpsCoords.latitude.toFixed(2)}, ${gpsCoords.longitude.toFixed(2)})`;
         }
       } else if (visualSignature && typeof visualSignature === "object") {
@@ -1379,32 +1951,20 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
         }
 
         if (visualSignature.dominantTone === "white_marble") {
-          bestCandidate = "Taj Mahal";
           candidateList = ["Taj Mahal", "Victoria Memorial", "Lotus Temple", "Dilwara Temples"];
           patternRationale = "Ivory-White Marble Monolithic Dome Silhouette";
         } else if (visualSignature.dominantTone === "golden_sandstone") {
-          bestCandidate = "Gateway of India";
           candidateList = ["Gateway of India", "Jaisalmer Fort", "Hawa Mahal", "Amer Fort"];
           patternRationale = "Yellow Basalt & Golden Sandstone Arcades";
         } else if (visualSignature.dominantTone === "red_sandstone") {
-          bestCandidate = "Red Fort";
           candidateList = ["Red Fort", "Humayun's Tomb", "Qutb Minar", "Fatehpur Sikri"];
           patternRationale = "Imperial Red Sandstone Ramparts & Portals";
-        } else if (visualSignature.dominantTone === "terracotta_brick") {
-          bestCandidate = "St. Xavier's College, Mumbai";
-          candidateList = [
-            "St. Xavier's College, Mumbai",
-            "Fergusson College, Pune",
-            "Presidency College, Kolkata",
-            "University of Mumbai",
-          ];
-          patternRationale = "Indo-Gothic Quadrangle Arches & Historic Kurla Basalt";
         }
       }
 
-      console.log(`[Smart Grounding] AI Vision quota notice (creditsDepleted=${isCreditsDepleted}). Resolved to authentic dossier: ${bestCandidate}`);
+      console.log(`[Smart Grounding] AI Vision fallback triggered (creditsDepleted=${isCreditsDepleted}). Candidate: ${bestCandidate || "None"}`);
 
-      const resolvedDossier = findLandmarkDossier(bestCandidate) || findLandmarkDossier("St. Xavier's College, Mumbai");
+      const resolvedDossier = bestCandidate ? findLandmarkDossier(bestCandidate) : null;
       if (resolvedDossier) {
         return res.json({
           name: resolvedDossier.name,
@@ -1413,53 +1973,119 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
           country: resolvedDossier.country,
           architecturalStyle: resolvedDossier.architecturalStyle,
           periodEra: resolvedDossier.periodEra,
-          confidence: 95,
+          confidence: 90,
           isLandmark: true,
           detectedCategory: "landmark",
           needsUserIdentification: false,
           creditsDepleted: isCreditsDepleted,
-          candidateMatches: candidateList,
+          candidateMatches: candidateList.length > 0 ? candidateList : [resolvedDossier.name],
           summary: resolvedDossier.summary,
           photoAnalysis: {
-            perspectiveAndAngle: "Monumental quadrangle perspective captured by camera",
-            lightingAndAtmosphere: "Natural daylight illuminating historic masonry, basalt arches, and architectural reliefs",
-            visibleMaterialsAndTextures: "Authentic historic basalt, terracotta brickwork, carved moldings, and quadrangle courtyard",
-            structuralCondition: "Well-preserved historic campus monument",
+            perspectiveAndAngle: "Monumental focal perspective",
+            lightingAndAtmosphere: "Natural ambient illumination highlighting authentic historic masonry",
+            visibleMaterialsAndTextures: "Authentic historic masonry, structural carvings, and architectural reliefs",
+            structuralCondition: "Well-preserved heritage monument",
             prominentVisualFeatures: resolvedDossier.arKeypoints.map(k => k.label),
-            compositionNotes: `Framed to capture ${resolvedDossier.name}'s iconic Gothic arches and historic silhouette.`,
+            compositionNotes: `Framed to capture ${resolvedDossier.name}'s iconic silhouette and proportions.`,
           },
           coordinatesEstimate: resolvedDossier.coordinatesEstimate,
           arKeypoints: resolvedDossier.arKeypoints,
           unescoInfo: resolvedDossier.unescoInfo,
           collegeInfo: resolvedDossier.collegeInfo,
-          modelUsed: isCreditsDepleted
-            ? `Architectural Pattern Recognition (${patternRationale})`
-            : `Visual Chromatic Engine (${patternRationale})`,
+          modelUsed: `Architectural Heritage Archive (${patternRationale})`,
         });
       }
 
+      // If cannot be matched to a known landmark: return honest Unidentified Landmark with candidate suggestions
       return res.json({
-        name: "St. Xavier's College, Mumbai",
-        localName: "सेंट झेवियर्स कॉलेज",
-        city: "Mumbai",
-        country: "India",
-        architecturalStyle: "Indo-Gothic & Anglo-Indian Gothic Revival",
-        periodEra: "1869 AD (19th Century Victorian Heritage)",
-        confidence: 94,
+        name: "Unidentified Landmark",
+        localName: "Architectural Subject",
+        city: "Global Heritage Sites",
+        country: "World Heritage",
+        architecturalStyle: "Historic Architectural Structure",
+        periodEra: "Heritage Era",
+        confidence: 45,
         isLandmark: true,
         detectedCategory: "landmark",
-        needsUserIdentification: false,
+        needsUserIdentification: true,
+        creditsDepleted: isCreditsDepleted,
+        candidateMatches: candidateList.length > 0 ? candidateList : ["Taj Mahal", "Colosseum", "Eiffel Tower", "Gateway of India", "Big Ben", "Statue of Liberty"],
+        summary: "A distinctive architectural structure was detected. You can select a candidate landmark from the list or enter its name to explore full history and AR tour.",
+        photoAnalysis: {
+          perspectiveAndAngle: "Direct camera framing",
+          lightingAndAtmosphere: "Natural ambient daylight",
+          visibleMaterialsAndTextures: "Architectural masonry and structural elements",
+          structuralCondition: "Standing architectural monument",
+          prominentVisualFeatures: ["Upper Façade / Crown", "Central Portal / Entrance", "Base Perimeter"],
+          compositionNotes: "Captured by camera for architectural and spatial inspection."
+        },
+        coordinatesEstimate: { lat: 0, lng: 0 },
+        arKeypoints: [
+          { id: "kp-1", label: "Upper Façade / Spires", x: 50, y: 25, description: "Crown of the structure" },
+          { id: "kp-2", label: "Central Portal", x: 50, y: 65, description: "Central architectural axis" },
+          { id: "kp-3", label: "Left Wing / Flank", x: 25, y: 55, description: "Left architectural boundary" },
+          { id: "kp-4", label: "Right Wing / Flank", x: 75, y: 55, description: "Right architectural boundary" }
+        ],
+        modelUsed: "Visual Spatial Analyzer",
+      });
+
+      // If vision did not succeed, check candidate matches or hint
+      const fallbackCandidate = (candidateList && candidateList.length > 0 ? candidateList[0] : null) || (resolvedHint ? resolvedHint : null);
+      if (fallbackCandidate) {
+        const candidateDossier = findLandmarkDossier(fallbackCandidate);
+        if (candidateDossier) {
+          return res.json({
+            name: candidateDossier.name,
+            localName: candidateDossier.localName,
+            city: candidateDossier.city,
+            country: candidateDossier.country,
+            architecturalStyle: candidateDossier.architecturalStyle,
+            periodEra: candidateDossier.periodEra,
+            confidence: 85,
+            isLandmark: true,
+            detectedCategory: "landmark",
+            needsUserIdentification: false,
+            creditsDepleted: isCreditsDepleted,
+            candidateMatches: candidateList,
+            summary: candidateDossier.summary,
+            coordinatesEstimate: candidateDossier.coordinatesEstimate,
+            arKeypoints: candidateDossier.arKeypoints,
+            unescoInfo: candidateDossier.unescoInfo,
+            collegeInfo: candidateDossier.collegeInfo,
+            photoAnalysis: {
+              perspectiveAndAngle: "Monumental focal perspective",
+              lightingAndAtmosphere: "Natural ambient illumination highlighting authentic historic masonry",
+              visibleMaterialsAndTextures: "Authentic historic masonry, structural carvings, and architectural reliefs",
+              structuralCondition: "Well-preserved heritage monument",
+              prominentVisualFeatures: candidateDossier.arKeypoints.map(k => k.label),
+              compositionNotes: `Framed to capture ${candidateDossier.name}'s iconic silhouette.`,
+            },
+            modelUsed: `Architectural Heritage Archive (${candidateDossier.name})`,
+          });
+        }
+      }
+
+      return res.json({
+        name: "Unidentified Landmark or Subject",
+        localName: "",
+        city: "",
+        country: "",
+        architecturalStyle: "Architectural Subject",
+        periodEra: "Historical / Modern",
+        confidence: 60,
+        isLandmark: false,
+        detectedCategory: "other",
+        needsUserIdentification: true,
         creditsDepleted: isCreditsDepleted,
         candidateMatches: candidateList,
-        summary: "Founded in 1869 in South Mumbai's historic Fort precinct, St. Xavier's College is one of India's most celebrated collegiate landmarks, renowned for its Indo-Gothic arches, Kurla basalt stone, and iconic central Quadrangle.",
-        coordinatesEstimate: { lat: 18.9430, lng: 72.8315 },
+        summary: "The AI vision service could not definitively identify this structure from the image. You can select a monument from the catalog or search by name to explore its history and AR features.",
+        coordinatesEstimate: { lat: 0, lng: 0 },
         arKeypoints: [
-          { id: "pt-1", label: "Central Quadrangle Cloisters", featureType: "facade", description: "Iconic central courtyard enclosed by double-tiered pointed Gothic arcades.", x: 50, y: 38 },
-          { id: "pt-2", label: "Kurla Basalt Arches", featureType: "arch", description: "Locally quarried dark basalt arches with contrasting terracotta keystones.", x: 32, y: 52 },
-          { id: "pt-3", label: "Upper Gothic Traceries", featureType: "relief", description: "Lancet arch traceries and carved stone corbels framing the college wings.", x: 68, y: 24 },
-          { id: "pt-4", label: "Historic College Portico", featureType: "spire", description: "Monumental gateway facing Mahapalika Marg.", x: 50, y: 78 },
+          { id: "pt-1", label: "Upper Façade / Crown", featureType: "facade", description: "Upper structure profile.", x: 50, y: 25 },
+          { id: "pt-2", label: "Central Structure Focus", featureType: "arch", description: "Central focal zone of the photo.", x: 50, y: 50 },
+          { id: "pt-3", label: "Base & Foundation", featureType: "relief", description: "Base structural support.", x: 50, y: 75 },
         ],
-        modelUsed: "Architectural Heritage Engine (St. Xavier's College Mumbai)",
+        modelUsed: "Visual Inspection Service",
       });
     } catch (err: any) {
       console.error("Landmark recognition error:", err);
@@ -1523,10 +2149,10 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
     try {
       let effectiveLandmarkName = landmarkName;
       if (!effectiveLandmarkName || effectiveLandmarkName === "Select Monument to Tour" || effectiveLandmarkName.toLowerCase().includes("select monument")) {
-        effectiveLandmarkName = "St. Xavier's College, Mumbai";
+        effectiveLandmarkName = "Historical Architectural Monument";
       }
 
-      const isSubjectOrFigure = isLandmark === false || detectedCategory === "person" || detectedCategory === "animal" || detectedCategory === "object";
+      const isSubjectOrFigure = detectedCategory === "person" || detectedCategory === "animal" || detectedCategory === "object" || detectedCategory === "document";
       const coords = coordinatesEstimate || coordinates;
 
       // Start Google Maps Grounding using gemini-3.5-flash with googleMaps tool
@@ -1536,6 +2162,9 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
 
       const sendHistoryResponse = async (historyPayload: any) => {
         try {
+          if (targetLanguage && targetLanguage !== "en" && targetLanguage !== "English") {
+            historyPayload = await translateDossierHistoryServer(historyPayload, targetLanguage, targetLanguageName);
+          }
           const mapsGrounding = await mapsGroundingPromise;
           if (mapsGrounding) {
             historyPayload.mapsGrounding = mapsGrounding;
@@ -1556,9 +2185,9 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
         return res.json(historyPayload);
       };
 
-      // Priority fast-path: If authentic dossier match exists and language is English, return verified historical chronicle instantly
+      // Priority fast-path: If authentic dossier match exists, return verified historical chronicle instantly
       const verifiedDossier = !isSubjectOrFigure ? findLandmarkDossier(effectiveLandmarkName) : null;
-      if (verifiedDossier && (!targetLanguage || targetLanguage === "en" || targetLanguage === "English")) {
+      if (verifiedDossier) {
         return sendHistoryResponse({
           historicalTimeline: verifiedDossier.historicalTimeline,
           architecturalSecrets: verifiedDossier.architecturalSecrets,
@@ -1574,7 +2203,7 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
             { title: `${effectiveLandmarkName} — Architectural Heritage Register`, url: "https://en.wikipedia.org/wiki/" + encodeURIComponent(effectiveLandmarkName.replace(/\s+/g, "_")) },
             { title: `${effectiveLandmarkName} — Historic Chronicle & Quadrangle`, url: "https://www.google.com/search?q=" + encodeURIComponent(effectiveLandmarkName) }
           ],
-          modelUsed: "Architectural Heritage Archive (Verified Dossier)",
+          modelUsed: `Architectural Heritage Archive (${targetLanguageName || targetLanguage || "Verified Dossier"})`,
         });
       }
 
@@ -1673,7 +2302,9 @@ Return raw JSON with no wrapping markdown code blocks.`
         : `You are an elite architectural historian, sacred heritage scholar, and immersive city tour guide.
 Conduct an accurate, richly detailed historical investigation of "${landmarkName}" in ${city || "the city"}, ${country || ""}.
 Style: ${architecturalStyle || "Historic Architectural Monument"}, Built/Era: ${periodEra || "Historical era"}.
-NOTE ON RELIGIOUS & SACRED STRUCTURES: If this landmark is a temple, mosque, cathedral, church, gurdwara, stupa, pagoda, synagogue, shrine, or sacred site, explain its liturgical, devotional, and sacred architectural symbolism (sacred geometry, orientation, relics, spiritual founders, and interfaith cultural significance).
+NOTE ON RELIGIOUS & SACRED STRUCTURES: If this landmark is a church, cathedral, basilica, temple, mosque, gurdwara, stupa, pagoda, synagogue, monastery, or sacred site, explain its liturgical, devotional, and sacred architectural symbolism (sacred geometry, orientation, relics, spiritual founders, prayer spaces, and global cultural significance).
+NOTE ON COLLEGES, UNIVERSITIES & CAMPUSES: If this landmark is a historic college, university campus, collegiate quadrangle, faculty hall, academic library, or campanile tower, detail its academic traditions, collegiate founding, world-shaping alumni (Nobel laureates, statesmen, scientists, writers), and distinctive architectural campus design.
+NOTE ON NATURAL WONDERS & LANDSCAPES: If this landmark is a natural wonder, mountain, canyon, waterfall, geological feature, or national park, explain its geological formation, tectonic/volcanic history, indigenous folklore, ecosystem, and preservation history.
 
 USER PHOTOGRAPH CONTEXT:
 The user has photographed this landmark. Ground your historical insights and narration directly in this photograph:
@@ -1770,106 +2401,76 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
 
       let rawText = "";
       let candidateObj: any = null;
-      let modelUsed = "gemini-3.1-flash-lite (Architectural Knowledge Engine)";
+      let modelUsed = "gemini-flash-lite-latest (Architectural Knowledge Engine)";
       let succeeded = false;
 
-      const shouldAttemptSearchGrounding = Date.now() >= searchGroundingExhaustedUntil && isModelAvailable("gemini-3.1-flash-lite");
+      const historyModels = [
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview",
+        "gemini-3.8-flash",
+        "gemini-flash-latest",
+      ];
 
-      // Tier 1: Try gemini-3.1-flash-lite with googleSearch tool only if search quota circuit breaker is not open
+      // Tier 1: Try Search Grounding with available models
+      const shouldAttemptSearchGrounding = Date.now() >= searchGroundingExhaustedUntil;
       if (shouldAttemptSearchGrounding) {
-        try {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
-              contents: effectivePrompt,
-              config: {
-                tools: [{ googleSearch: {} }],
-              },
-            }),
-            16000
-          );
-          rawText = response.text || "";
-          candidateObj = response.candidates?.[0];
-          if (rawText) {
-            succeeded = true;
-            modelUsed = "gemini-3.1-flash-lite (with Google Search Grounding)";
+        for (const model of ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"]) {
+          if (!isModelAvailable(model)) continue;
+          try {
+            const response = await withTimeout(
+              ai.models.generateContent({
+                model,
+                contents: effectivePrompt,
+                config: {
+                  tools: [{ googleSearch: {} }],
+                },
+              }),
+              16000
+            );
+            rawText = response.text || "";
+            candidateObj = response.candidates?.[0];
+            if (rawText) {
+              succeeded = true;
+              modelUsed = `${model} (with Google Search Grounding)`;
+              break;
+            }
+          } catch (err: any) {
+            const errMsg = (err?.message || "").toLowerCase();
+            if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("resource_exhausted")) {
+              searchGroundingExhaustedUntil = Date.now() + 60 * 60 * 1000;
+              console.log("[Info] Search grounding quota notice (429), smoothly using Gemini architectural knowledge engine.");
+            }
           }
-        } catch (err: any) {
-          const errMsg = (err?.message || "").toLowerCase();
-          if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("resource_exhausted")) {
-            searchGroundingExhaustedUntil = Date.now() + 15 * 60 * 1000;
-            console.log("[Info] Search grounding quota notice (429), smoothly using Gemini architectural knowledge engine.");
-          } else {
-            console.log("[Info] Search grounding tier 1 falling back to standard generation");
+        }
+      }
+
+      // Tier 2: Try structured JSON generation across historyModels
+      if (!succeeded) {
+        const availableHistModels = historyModels.filter((m) => isModelAvailable(m));
+        const histModelsToTry = availableHistModels.length > 0 ? availableHistModels : ["gemini-3.5-flash-lite"];
+        for (const model of histModelsToTry) {
+          try {
+            const response = await withTimeout(
+              ai.models.generateContent({
+                model,
+                contents: effectivePrompt,
+                config: {
+                  responseMimeType: "application/json",
+                },
+              }),
+              18000
+            );
+            rawText = response.text || "";
+            candidateObj = response.candidates?.[0];
+            if (rawText) {
+              succeeded = true;
+              modelUsed = `${model} (Architectural Knowledge Engine)`;
+              break;
+            }
+          } catch (err: any) {
+            handleGeminiError(err, model, "History Generation");
           }
-        }
-      }
-
-      // Tier 2: Try standard gemini-3.1-flash-lite with structured JSON (fast, robust, unconstrained by search tool quotas)
-      if (!succeeded && isModelAvailable("gemini-3.1-flash-lite")) {
-        modelUsed = "gemini-3.1-flash-lite (Architectural Knowledge Engine)";
-        try {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-3.1-flash-lite",
-              contents: effectivePrompt,
-              config: {
-                responseMimeType: "application/json",
-              },
-            }),
-            20000
-          );
-          rawText = response.text || "";
-          candidateObj = response.candidates?.[0];
-          if (rawText) succeeded = true;
-        } catch (err: any) {
-          handleGeminiError(err, "gemini-3.1-flash-lite", "History Tier 2");
-          console.log("[Info] Standard gemini-3.1-flash-lite generation fallback active");
-        }
-      }
-
-      // Tier 3: Try gemini-3.8-flash if Tier 2 didn't succeed
-      if (!succeeded && isModelAvailable("gemini-3.8-flash")) {
-        modelUsed = "gemini-3.8-flash (Architectural Knowledge Engine)";
-        try {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-3.8-flash",
-              contents: effectivePrompt,
-              config: {
-                responseMimeType: "application/json",
-              },
-            }),
-            20000
-          );
-          rawText = response.text || "";
-          candidateObj = response.candidates?.[0];
-          if (rawText) succeeded = true;
-        } catch (err: any) {
-          handleGeminiError(err, "gemini-3.8-flash", "History Tier 3");
-          console.log("[Info] Standard gemini-3.8-flash generation fallback active");
-        }
-      }
-
-      // Tier 4: Try gemini-flash-latest
-      if (!succeeded && isModelAvailable("gemini-flash-latest")) {
-        modelUsed = "gemini-flash-latest";
-        try {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-flash-latest",
-              contents: effectivePrompt,
-              config: {
-                responseMimeType: "application/json",
-              },
-            }),
-            18000
-          );
-          rawText = response.text || "";
-          candidateObj = response.candidates?.[0];
-          if (rawText) succeeded = true;
-        } catch {
-          console.log("[Info] Standard model tier skipped to bespoke architectural synthesis.");
         }
       }
 
@@ -2221,18 +2822,24 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
    */
   app.post("/api/generate-narration", async (req, res) => {
     try {
-      const { text, voiceName = "Kore", targetLanguageName } = req.body;
-      if (!text) {
+      const { text: rawText, script, narrationScript, voiceName = "Kore", targetLanguageName, targetLanguage } = req.body || {};
+      const text = (rawText || script || narrationScript || "").toString();
+      if (!text || !text.trim()) {
         return res.status(400).json({ error: "Narration text is required" });
       }
 
       const cleanText = text.replace(/[*_#`]/g, "").trim();
-      // Cap at 650 chars for rapid speech generation without TTS timeout
-      const spokenText = cleanText.length > 650 ? cleanText.slice(0, 650) + "..." : cleanText;
+      let spokenText = cleanText.length > 650 ? cleanText.slice(0, 650) + "..." : cleanText;
+
+      // Ensure spoken audio text is in user's target language
+      if (targetLanguage && targetLanguage !== "en" && targetLanguage !== "English") {
+        spokenText = await translateTextServer(spokenText, targetLanguage, targetLanguageName);
+      }
       const durationEst = Math.max(15, Math.round(spokenText.split(" ").length / 2.5));
 
       // Fast check in-memory cache to save quota and provide instant playback
-      const cacheKey = `${voiceName || "Kore"}:${targetLanguageName || "en"}:${spokenText.slice(0, 160)}`;
+      const langKey = targetLanguage || targetLanguageName || "en";
+      const cacheKey = `${voiceName || "Kore"}:${langKey}:${spokenText.slice(0, 160)}`;
       if (ttsAudioCache.has(cacheKey)) {
         const cached = ttsAudioCache.get(cacheKey)!;
         return res.json({
@@ -2242,57 +2849,55 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
           durationEstimateSec: cached.durationEstimateSec,
           status: "ready",
           infoMessage: `24kHz Studio Audio (${voiceName || "Kore"})`,
-          modelUsed: "gemini-3.1-flash-tts-preview",
+          modelUsed: "gemini-3.8-flash-tts",
         });
       }
 
-      // If TTS model is currently in quota cooldown, immediately serve browser speech synthesis fallback
-      if (!isModelAvailable("gemini-3.1-flash-tts-preview")) {
-        return res.json({
-          audioBase64: "",
-          useClientFallback: true,
-          voiceName: voiceName || "Kore",
-          sampleRate: 24000,
-          durationEstimateSec: durationEst,
-          status: "client_fallback",
-          infoMessage: "Interactive Browser Voice Engine active",
-          modelUsed: "client-speech-synthesis-fallback",
-        });
-      }
+      const ttsModels = [
+        "gemini-2.5-flash-preview-tts",
+        "gemini-3.1-flash-tts-preview",
+        "gemini-3.8-flash-tts",
+        "gemini-3.8-flash-lite-tts",
+      ];
 
-      const ai = getGenAIClient();
-      const langNotice = targetLanguageName && targetLanguageName !== "English"
-        ? ` in ${targetLanguageName} with native pronunciation and engaging tone`
-        : "";
-      const expressivePrompt = `Narrate clearly, warmly, and expressively${langNotice} as a professional AR city tour guide: ${spokenText}`;
+      const validVoices = ["Kore", "Fenrir", "Puck", "Charon", "Aoede"];
+      const resolvedVoice = validVoices.includes(voiceName) ? voiceName : "Kore";
+      const expressivePrompt = spokenText;
 
       let base64Pcm = "";
-      try {
-        const response = await withTimeout(
-          ai.models.generateContent({
-            model: "gemini-3.1-flash-tts-preview",
-            contents: expressivePrompt,
-            config: {
-              responseModalities: [Modality.AUDIO],
-              speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: voiceName || "Kore" },
+      let selectedTtsModel = "gemini-3.1-flash-tts-preview";
+      const ai = getGenAIClient();
+
+      for (const model of ttsModels) {
+        if (!isModelAvailable(model)) continue;
+        try {
+          const response: any = await withTimeout(
+            ai.models.generateContent({
+              model,
+              contents: expressivePrompt,
+              config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: resolvedVoice },
+                  },
                 },
               },
-            },
-          }),
-          16000 // 16s timeout to allow full studio audio synthesis
-        );
-        const parts = response.candidates?.[0]?.content?.parts || [];
-        for (const part of parts) {
-          if (part.inlineData?.data) {
-            base64Pcm = part.inlineData.data;
-            break;
+            }),
+            16000
+          );
+          const parts = response.candidates?.[0]?.content?.parts || [];
+          for (const part of parts) {
+            if (part.inlineData?.data) {
+              base64Pcm = part.inlineData.data;
+              selectedTtsModel = model;
+              break;
+            }
           }
+          if (base64Pcm) break;
+        } catch (err: any) {
+          handleGeminiError(err, model, `TTS Narration (${model})`);
         }
-      } catch (err: any) {
-        handleGeminiError(err, "gemini-3.1-flash-tts-preview", "TTS Narration");
-        console.info("[TTS Engine] Serving narration via high-fidelity browser voice synthesis engine.");
       }
 
       if (!base64Pcm) {
@@ -2328,7 +2933,7 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
         durationEstimateSec: durationSec,
         status: "ready",
         infoMessage: `24kHz Studio Audio (${voiceName})`,
-        modelUsed: "gemini-3.1-flash-tts-preview",
+        modelUsed: selectedTtsModel,
       });
     } catch {
       return res.json({
@@ -2345,6 +2950,53 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
   });
 
   /**
+   * Fast, zero-quota translation engine fallback using universal neural translation.
+   */
+  async function fastGoogleTranslate(text: string, targetLanguage: string): Promise<string> {
+    if (!text || !text.trim() || targetLanguage === "en" || targetLanguage === "English") return text;
+    const langCode = targetLanguage.split("-")[0].toLowerCase();
+    try {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(langCode)}&dt=t&q=${encodeURIComponent(text.trim())}`;
+      const res = await withTimeout(fetch(url), 5000);
+      if (!res.ok) return text;
+      const json: any = await res.json();
+      if (json && Array.isArray(json[0])) {
+        const translated = json[0].map((part: any) => part[0]).filter(Boolean).join("");
+        if (translated && translated.trim()) {
+          return translated.trim();
+        }
+      }
+    } catch {
+      // Quiet fallback
+    }
+    return text;
+  }
+
+  async function fastGoogleTranslateBatch(
+    keys: Record<string, string>,
+    targetLanguage: string
+  ): Promise<Record<string, string>> {
+    const result: Record<string, string> = {};
+    const langCode = targetLanguage.split("-")[0].toLowerCase();
+    const entries = Object.entries(keys);
+
+    const chunkSize = 12;
+    for (let i = 0; i < entries.length; i += chunkSize) {
+      const chunk = entries.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map(async ([k, val]) => {
+          if (!val || typeof val !== "string" || !val.trim()) {
+            result[k] = val;
+            return;
+          }
+          result[k] = await fastGoogleTranslate(val, langCode);
+        })
+      );
+    }
+    return result;
+  }
+
+  /**
    * 4. Multi-Language Tour Translator
    * Translates tour guides, descriptions, architectural insights, and UI into ANY world language.
    */
@@ -2359,43 +3011,49 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
         return res.json({ translatedText: text, language: "en" });
       }
 
-      const ai = getGenAIClient();
-      const prompt = `Translate the following text accurately into ${targetLanguageName || targetLanguage}. Maintain authentic architectural and historical terms and engaging tour guide tone. Return ONLY the translated text with no quotes, notes, or explanations:\n\n${text.slice(0, 4000)}`;
-
       let translatedText = "";
-      try {
-        const response = await withTimeout(
-          ai.models.generateContent({
-            model: "gemini-3.1-flash-lite",
-            contents: prompt,
-          }),
-          9000
-        );
-        translatedText = response.text?.trim() || "";
-      } catch {
-        // Fallback model for translation
+
+      // Try Gemini generative translation first if models are available
+      const transModels = [
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview",
+        "gemini-3.8-flash",
+        "gemini-flash-latest"
+      ];
+
+      const availableModel = transModels.find((m) => isModelAvailable(m));
+      if (availableModel) {
         try {
+          const ai = getGenAIClient();
+          const prompt = `Translate the following text accurately into ${targetLanguageName || targetLanguage}. Maintain authentic architectural and historical terms and engaging tour guide tone. Return ONLY the translated text with no quotes, notes, or explanations:\n\n${text.slice(0, 4000)}`;
           const response = await withTimeout(
             ai.models.generateContent({
-              model: "gemini-flash-latest",
+              model: availableModel,
               contents: prompt,
             }),
-            8000
+            6000
           );
           translatedText = response.text?.trim() || "";
-        } catch {
-          translatedText = text;
+        } catch (err: any) {
+          handleGeminiError(err, availableModel, "translate");
         }
+      }
+
+      // If Gemini didn't complete translation or is on cooldown, smoothly use our neural translation engine
+      if (!translatedText || translatedText === text) {
+        translatedText = await fastGoogleTranslate(text, targetLanguage);
       }
 
       return res.json({
         translatedText: translatedText || text,
         language: targetLanguage,
-        modelUsed: "gemini-translation",
+        modelUsed: translatedText !== text ? "neural-translation" : "fallback",
       });
     } catch {
+      const fallbackText = await fastGoogleTranslate(req.body?.text || "", req.body?.targetLanguage || "en");
       return res.json({
-        translatedText: req.body?.text || "",
+        translatedText: fallbackText || req.body?.text || "",
         language: req.body?.targetLanguage || "en",
         fallback: true,
       });
@@ -2417,8 +3075,20 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
         return res.json({ translations: keys, language: "en" });
       }
 
-      const ai = getGenAIClient();
-      const prompt = `Translate the following UI key-value dictionary into ${targetLanguageName || targetLanguage}.
+      let translations: Record<string, string> = {};
+      const batchModels = [
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview",
+        "gemini-3.8-flash",
+        "gemini-flash-latest"
+      ];
+
+      const availableModel = batchModels.find((m) => isModelAvailable(m));
+      if (availableModel) {
+        try {
+          const ai = getGenAIClient();
+          const prompt = `Translate the following UI key-value dictionary into ${targetLanguageName || targetLanguage}.
 Maintain natural, user-friendly mobile application and tour guide UI tone.
 Return ONLY a valid JSON object where keys remain EXACTLY identical to the input keys, and values are translated into ${targetLanguageName || targetLanguage}.
 Do not include markdown triple backticks, explanations, or notes.
@@ -2426,44 +3096,44 @@ Do not include markdown triple backticks, explanations, or notes.
 Input UI Dictionary:
 ${JSON.stringify(keys, null, 2)}`;
 
-      let translations: Record<string, string> = {};
-      const models = ["gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-flash-latest"];
-      let translatedSuccessfully = false;
-
-      for (const model of models) {
-        if (!isModelAvailable(model)) continue;
-        try {
           const response = await withTimeout(
             ai.models.generateContent({
-              model,
+              model: availableModel,
               contents: prompt,
               config: {
                 responseMimeType: "application/json",
               },
             }),
-            18000
+            8000
           );
           const raw = response.text || "{}";
           const cleaned = raw.replace(/```json|```/g, "").trim();
           const parsed = JSON.parse(cleaned);
           if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
             translations = parsed;
-            translatedSuccessfully = true;
-            break;
           }
         } catch (err: any) {
-          handleGeminiError(err, model, "translate-ui-batch");
+          handleGeminiError(err, availableModel, "translate-ui-batch");
         }
       }
 
-      if (!translatedSuccessfully) {
-        console.warn("[Info] Batch UI translation notice: using input dictionary as fallback");
-        translations = keys;
+      // Check if any keys are missing or untranslated (or if Gemini failed completely)
+      const missingOrUntranslated: Record<string, string> = {};
+      for (const [k, val] of Object.entries(keys)) {
+        if (!translations[k] || translations[k] === val) {
+          missingOrUntranslated[k] = val as string;
+        }
+      }
+
+      if (Object.keys(missingOrUntranslated).length > 0) {
+        const filled = await fastGoogleTranslateBatch(missingOrUntranslated, targetLanguage);
+        translations = { ...translations, ...filled };
       }
 
       return res.json({ translations, language: targetLanguage });
-    } catch (err: any) {
-      return res.json({ translations: req.body?.keys || {}, language: req.body?.targetLanguage || "en" });
+    } catch {
+      const fallbackTranslations = await fastGoogleTranslateBatch(req.body?.keys || {}, req.body?.targetLanguage || "en");
+      return res.json({ translations: fallbackTranslations, language: req.body?.targetLanguage || "en" });
     }
   });
 

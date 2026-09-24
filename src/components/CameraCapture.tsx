@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { Camera, RefreshCw, Upload, Sparkles, Image as ImageIcon, MapPin, Compass, AlertCircle, GraduationCap, Globe, BookOpen, Layers, Landmark, Search, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SAMPLE_LANDMARKS, SampleLandmark } from "../data/sampleLandmarks";
+import { UNESCO_AND_COLLEGES_CATALOG } from "../data/historicalColleges";
 import { fileToDataUrl, urlToDataUrl, optimizeBase64Image } from "../utils/imageUtils";
 import { useLanguage } from "../context/LanguageContext";
 import { ARScanOverlay } from "./ARScanOverlay";
@@ -9,7 +10,12 @@ import { UnescoAndCollegesExplorer } from "./UnescoAndCollegesExplorer";
 import { LandmarkSearchModal } from "./LandmarkSearchModal";
 
 interface CameraCaptureProps {
-  onPhotoSelected: (imageDataUrl: string, landmarkPreset?: SampleLandmark, explicitHint?: string) => void;
+  onPhotoSelected: (
+    imageDataUrl: string,
+    landmarkPreset?: SampleLandmark,
+    explicitHint?: string,
+    mode?: "landmark_tour" | "guess_location"
+  ) => void;
   isLoading: boolean;
 }
 
@@ -17,6 +23,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
   const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [scanMode, setScanMode] = useState<"landmark_tour" | "guess_location">("landmark_tour");
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -27,13 +34,20 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
   const [showSearchModal, setShowSearchModal] = useState<boolean>(false);
   const [selectedTargetMonument, setSelectedTargetMonument] = useState<{ name: string; city?: string } | null>(null);
 
+  const streamRef = useRef<MediaStream | null>(null);
+
   // Start/Stop Camera
   const startCamera = async (facing: "environment" | "user" = facingMode) => {
     setCameraError(null);
     try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -45,10 +59,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
         audio: false,
       });
 
+      streamRef.current = stream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch((playErr) => {
+          console.warn("Video play interrupted or disallowed:", playErr);
+        });
         setCameraActive(true);
+      } else {
+        // If unmounted before stream arrived
+        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
     } catch (err: any) {
       console.warn("Camera access failed or unavailable:", err);
@@ -58,6 +80,10 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
   };
 
   const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach((track) => track.stop());
@@ -84,9 +110,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
   const takeSnapshot = async () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
+    if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+      console.warn("Camera stream not yet active or decoding frames.");
+      return;
+    }
     const canvas = document.createElement("canvas");
-    let vw = video.videoWidth || 1280;
-    let vh = video.videoHeight || 720;
+    let vw = video.videoWidth;
+    let vh = video.videoHeight;
     const maxDim = 1024;
     if (vw > maxDim || vh > maxDim) {
       if (vw > vh) {
@@ -108,9 +138,10 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
       ctx.scale(-1, 1);
     }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     stopCamera();
-    onPhotoSelected(dataUrl, undefined, selectedTargetMonument?.name);
+    // Fresh live camera capture: AI vision inspects the photograph pixels directly
+    onPhotoSelected(dataUrl, undefined, selectedTargetMonument?.name || undefined, scanMode);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,12 +151,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
       const rawDataUrl = await fileToDataUrl(file);
       const optimized = await optimizeBase64Image(rawDataUrl);
 
-      // Clean base name without extensions or generic camera prefixes (IMG_, DSC_, screenshot, download)
-      const baseName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
-      const isGeneric = /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+)[\s\d_]*$/i.test(baseName);
-      const hint = selectedTargetMonument?.name || (!isGeneric && baseName.length >= 3 && baseName.length <= 60 ? baseName : undefined);
+      // Clean base name without extensions or generic camera prefixes / generic nouns
+      const rawName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
+      const baseName = rawName.replace(/\b\d{3,5}\s*[xX*×]\s*\d{3,5}\b/g, "").replace(/\b\d{10,}\b/g, "").replace(/\s+/g, " ").trim();
+      const isGeneric = /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+|bridge|church|temple|tower|gate|nature|view|monument|building|wallpaper|untitled|landscape|street|square|park|place|city|travel|tourism)[\s\d_]*$/i.test(baseName);
+      const hint = !isGeneric && baseName.length >= 3 && baseName.length <= 60 ? baseName : undefined;
 
-      onPhotoSelected(optimized, undefined, hint);
+      onPhotoSelected(optimized, undefined, hint, scanMode);
     } catch (err) {
       console.error("Error loading photo file:", err);
     } finally {
@@ -144,31 +176,225 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
         const rawDataUrl = await fileToDataUrl(file);
         const optimized = await optimizeBase64Image(rawDataUrl);
 
-        const baseName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
-        const isGeneric = /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+)[\s\d_]*$/i.test(baseName);
-        const hint = selectedTargetMonument?.name || (!isGeneric && baseName.length >= 3 && baseName.length <= 60 ? baseName : undefined);
+        const rawName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
+        const baseName = rawName.replace(/\b\d{3,5}\s*[xX*×]\s*\d{3,5}\b/g, "").replace(/\b\d{10,}\b/g, "").replace(/\s+/g, " ").trim();
+        const isGeneric = /^(img|image|photo|screenshot|camera|download|file|picture|dsc|pic|p_|\d+|bridge|church|temple|tower|gate|nature|view|monument|building|wallpaper|untitled|landscape|street|square|park|place|city|travel|tourism)[\s\d_]*$/i.test(baseName);
+        const hint = !isGeneric && baseName.length >= 3 && baseName.length <= 60 ? baseName : undefined;
 
-        onPhotoSelected(optimized, undefined, hint);
+        onPhotoSelected(optimized, undefined, hint, scanMode);
       } catch (err) {
         console.error("Error loading dropped file:", err);
       }
     }
   };
 
-  const handleSelectMonumentDirectly = (monumentName: string) => {
-    const matchedSample = SAMPLE_LANDMARKS.find(
-      (s) => s.name.toLowerCase() === monumentName.toLowerCase()
+  const findMatchingPreset = (monumentName: string): SampleLandmark | null => {
+    if (!monumentName || !monumentName.trim()) return null;
+    const target = monumentName.toLowerCase().trim();
+    const cleanTarget = target.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+
+    // 1. Exact or substring match in SAMPLE_LANDMARKS
+    const exactSample = SAMPLE_LANDMARKS.find(
+      (s) => s.name.toLowerCase() === target || s.id.toLowerCase() === target
     );
+    if (exactSample) return exactSample;
+
+    const subSample = SAMPLE_LANDMARKS.find((s) => {
+      const sName = s.name.toLowerCase();
+      return (
+        sName.includes(target) ||
+        target.includes(sName) ||
+        (cleanTarget.length >= 4 && sName.includes(cleanTarget))
+      );
+    });
+    if (subSample) return subSample;
+
+    // Common shorthand monument nicknames
+    if (target.includes("colosseum")) {
+      const match = SAMPLE_LANDMARKS.find((s) => s.id === "colosseum");
+      if (match) return match;
+    }
+    if (target.includes("big ben") || target.includes("westminster")) {
+      const match = SAMPLE_LANDMARKS.find((s) => s.id === "big-ben");
+      if (match) return match;
+    }
+    if (target.includes("petra")) {
+      const match = SAMPLE_LANDMARKS.find((s) => s.id === "petra-treasury");
+      if (match) return match;
+    }
+    if (target.includes("machu picchu")) {
+      const match = SAMPLE_LANDMARKS.find((s) => s.id === "machu-picchu");
+      if (match) return match;
+    }
+    if (target.includes("pyramid") || target.includes("giza") || target.includes("sphinx")) {
+      const match = SAMPLE_LANDMARKS.find((s) => s.id === "giza-pyramids");
+      if (match) return match;
+    }
+    if (target.includes("statue of liberty") || target.includes("liberty")) {
+      const match = SAMPLE_LANDMARKS.find((s) => s.id === "statue-of-liberty");
+      if (match) return match;
+    }
+    if (target.includes("eiffel")) {
+      const match = SAMPLE_LANDMARKS.find((s) => s.id === "eiffel-tower");
+      if (match) return match;
+    }
+
+    // 2. Search UNESCO_AND_COLLEGES_CATALOG
+    const matchedSite = UNESCO_AND_COLLEGES_CATALOG.find((site) => {
+      const siteName = site.name.toLowerCase();
+      const localName = site.localName?.toLowerCase() || "";
+      return (
+        siteName === target ||
+        site.id === target ||
+        localName === target ||
+        siteName.includes(target) ||
+        target.includes(siteName) ||
+        (cleanTarget.length >= 4 && siteName.includes(cleanTarget))
+      );
+    });
+
+    if (matchedSite) {
+      return {
+        id: matchedSite.id,
+        name: matchedSite.name,
+        city: matchedSite.city,
+        country: matchedSite.country,
+        architecturalStyle: matchedSite.architecturalStyle || "Historic Architectural Structure",
+        periodEra: matchedSite.periodEra || (matchedSite.year ? `${matchedSite.year} AD` : "Historical Era"),
+        summary: matchedSite.summary,
+        imageUrl: matchedSite.imageUrl,
+        thumbnailUrl: matchedSite.thumbnailUrl || matchedSite.imageUrl,
+        badge: matchedSite.badge || "World Heritage Site",
+        category: (matchedSite as any).isCollegeOrUniversity ? "college" : "unesco",
+        isUnesco: true,
+        unescoId: matchedSite.unescoId,
+      };
+    }
+
+    // 3. Match authentic local image filenames in /images/landmarks/
+    const localImageMap: Record<string, string> = {
+      "golden gate": "/images/landmarks/golden-gate-bridge.jpg",
+      "stonehenge": "/images/landmarks/stonehenge.jpg",
+      "pisa": "/images/landmarks/leaning-tower-pisa.jpg",
+      "leaning tower": "/images/landmarks/leaning-tower-pisa.jpg",
+      "fuji": "/images/landmarks/mount-fuji.jpg",
+      "hagia sophia": "/images/landmarks/hagia-sophia.jpg",
+      "arc de triomphe": "/images/landmarks/arc-de-triomphe.jpg",
+      "bernabeu": "/images/landmarks/bernabeu-stadium.jpg",
+      "cappadocia": "/images/landmarks/cappadocia.jpg",
+      "florence": "/images/landmarks/florence.jpg",
+      "red square": "/images/landmarks/red-square.jpg",
+      "versailles": "/images/landmarks/versailles.jpg",
+      "venice": "/images/landmarks/venice.jpg",
+      "victoria falls": "/images/landmarks/victoria-falls.jpg",
+      "grand canyon": "/images/landmarks/grand-canyon.jpg",
+      "yellowstone": "/images/landmarks/yellowstone.jpg",
+      "burj khalifa": "/images/landmarks/burj-khalifa.jpg",
+      "galapagos": "/images/landmarks/galapagos.jpg",
+      "borobudur": "/images/landmarks/borobudur.jpg",
+      "bagan": "/images/landmarks/bagan.jpg",
+      "plitvice": "/images/landmarks/plitvice.jpg",
+      "mont saint michel": "/images/landmarks/mont-saint-michel.jpg",
+      "alhambra": "/images/landmarks/alhambra.jpg",
+      "prague": "/images/landmarks/prague.jpg",
+      "serengeti": "/images/landmarks/serengeti.jpg",
+      "great barrier reef": "/images/landmarks/great-barrier-reef.jpg",
+      "ha long": "/images/landmarks/ha-long-bay.jpg",
+      "iguazu": "/images/landmarks/iguazu.jpg",
+      "kinkaku": "/images/landmarks/kinkaku-ji.jpg",
+      "golden pavilion": "/images/landmarks/kinkaku-ji.jpg",
+      "fushimi": "/images/landmarks/fushimi-inari.jpg",
+      "himeji": "/images/landmarks/himeji-castle.jpg",
+      "forbidden city": "/images/landmarks/forbidden-city.jpg",
+      "lalibela": "/images/landmarks/lalibela.jpg",
+    };
+
+    for (const [key, imgPath] of Object.entries(localImageMap)) {
+      if (target.includes(key)) {
+        return {
+          id: `local-${key.replace(/\s+/g, "-")}`,
+          name: monumentName,
+          city: "Global Landmark",
+          country: "World Heritage",
+          architecturalStyle: "Historic Architecture",
+          periodEra: "Historic Era",
+          summary: `${monumentName} architectural landmark exploration.`,
+          imageUrl: imgPath,
+          thumbnailUrl: imgPath,
+          badge: "Curated Landmark Photo",
+          category: "monument",
+        };
+      }
+    }
+
+    return null;
+  };
+
+  const handleSelectMonumentDirectly = (monumentName: string) => {
+    const matchedSample = findMatchingPreset(monumentName);
     if (matchedSample) {
       handleSelectSample(matchedSample);
     } else {
       setSelectedTargetMonument({ name: monumentName });
       setShowSearchModal(false);
-      onPhotoSelected(
-        "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1200&q=80",
-        undefined,
-        monumentName
-      );
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1200;
+        canvas.height = 800;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const grad = ctx.createLinearGradient(0, 0, 1200, 800);
+          grad.addColorStop(0, "#020617");
+          grad.addColorStop(0.5, "#0f172a");
+          grad.addColorStop(1, "#1e1b4b");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 1200, 800);
+
+          ctx.beginPath();
+          ctx.arc(600, 360, 180, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(6, 182, 212, 0.08)";
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(450, 560);
+          ctx.lineTo(520, 320);
+          ctx.lineTo(600, 240);
+          ctx.lineTo(680, 320);
+          ctx.lineTo(750, 560);
+          ctx.closePath();
+          ctx.strokeStyle = "rgba(6, 182, 212, 0.8)";
+          ctx.lineWidth = 4;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(400, 560);
+          ctx.lineTo(800, 560);
+          ctx.strokeStyle = "#06b6d4";
+          ctx.lineWidth = 4;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(600, 235, 12, 0, Math.PI * 2);
+          ctx.fillStyle = "#06b6d4";
+          ctx.fill();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 36px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(monumentName, 600, 630);
+
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
+          ctx.fillText("ARCHITECTURAL GROUNDING TOUR", 600, 675);
+
+          const cardJpeg = canvas.toDataURL("image/jpeg", 0.85);
+          onPhotoSelected(cardJpeg, undefined, monumentName, scanMode);
+          return;
+        }
+      } catch (e) {
+        console.warn("Could not generate canvas card:", e);
+      }
+      onPhotoSelected("", undefined, monumentName, scanMode);
     }
   };
 
@@ -186,10 +412,10 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
           dataUrl = sample.imageUrl;
         }
       }
-      onPhotoSelected(dataUrl || sample.imageUrl, sample);
+      onPhotoSelected(dataUrl || sample.imageUrl, sample, undefined, scanMode);
     } catch (err) {
       console.warn("Sample selection notice, proceeding with direct sample image:", err);
-      onPhotoSelected(sample.imageUrl, sample);
+      onPhotoSelected(sample.imageUrl, sample, undefined, scanMode);
     } finally {
       setSampleLoadingId(null);
     }
@@ -197,6 +423,48 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
 
   return (
     <div className="w-full max-w-5xl lg:max-w-6xl mx-auto space-y-5 sm:space-y-6 lg:space-y-8">
+      {/* Visual Mode Selector: 🏛️ Landmark Tour vs 🌍 Guess Location with Google Photos */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2.5 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl">
+        <div className="flex items-center space-x-2 px-2">
+          <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span className="text-xs font-semibold text-slate-300">
+            {scanMode === "guess_location"
+              ? t("mode_guess_location_label", "AI Geo-Detective & Photo Verification Mode")
+              : t("mode_landmark_tour_label", "CityLens AR Exploration Mode")}
+          </span>
+        </div>
+
+        <div className="flex items-center p-1 bg-slate-950/90 rounded-xl border border-slate-800 w-full sm:w-auto">
+          <button
+            type="button"
+            id="mode-landmark-tour-btn"
+            onClick={() => setScanMode("landmark_tour")}
+            className={`flex-1 sm:flex-initial py-1.5 px-3.5 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer ${
+              scanMode === "landmark_tour"
+                ? "bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Landmark className="w-3.5 h-3.5 text-cyan-400" />
+            <span>🏛️ {t("mode_landmark_tour", "Landmark AR Tour")}</span>
+          </button>
+
+          <button
+            type="button"
+            id="mode-guess-location-btn"
+            onClick={() => setScanMode("guess_location")}
+            className={`flex-1 sm:flex-initial py-1.5 px-3.5 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer ${
+              scanMode === "guess_location"
+                ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-indigo-300 border border-indigo-500/40 shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-indigo-400" />
+            <span>🌍 {t("mode_guess_location", "Guess Location (Google Photos)")}</span>
+          </button>
+        </div>
+      </div>
+
       {/* Viewfinder / Capture Deck */}
       <div
         id="camera-viewport-card"
@@ -360,13 +628,26 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
             </div>
 
             <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">
-              {t("capture_landmark_title", "Capture a City Landmark")}
+              {scanMode === "guess_location"
+                ? t("guess_location_title", "AI Geo-Detective: Guess Location with Google Photos")
+                : t("capture_landmark_title", "Capture a City Landmark")}
             </h3>
 
             <div className="mt-2 sm:mt-2.5 flex items-center justify-center px-4 w-full">
               <p className="text-xs sm:text-sm text-slate-400 text-center flex items-center justify-center gap-1.5 leading-none">
-                <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0 translate-y-[0.5px]" />
-                <span className="leading-none">{t("landmark_types_hint", "Monuments, cathedrals, temples & historic sites")}</span>
+                {scanMode === "guess_location" ? (
+                  <>
+                    <Globe className="w-3.5 h-3.5 text-indigo-400 shrink-0 translate-y-[0.5px]" />
+                    <span className="leading-none">
+                      {t("guess_location_hint", "Upload any street, building, or landscape — AI deduces location & matches photos on Google")}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0 translate-y-[0.5px]" />
+                    <span className="leading-none">{t("landmark_types_hint", "Monuments, cathedrals, temples & historic sites")}</span>
+                  </>
+                )}
               </p>
             </div>
 
@@ -385,10 +666,10 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               >
                 <Search className="w-4 h-4 text-cyan-400 mr-2.5 shrink-0 group-hover:scale-110 transition-transform" />
                 <span className="text-xs sm:text-sm text-slate-400 group-hover:text-slate-200 truncate flex-1 text-left">
-                  {selectedTargetMonument ? `Target: ${selectedTargetMonument.name}` : "Search or choose any global monument..."}
+                  {selectedTargetMonument ? `Target: ${selectedTargetMonument.name}` : t("search_choose_monument", "Search or choose any global monument...")}
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 shrink-0">
-                  {selectedTargetMonument ? "CHANGE" : "SEARCH"}
+                  {selectedTargetMonument ? t("change_btn", "CHANGE") : t("search_btn", "SEARCH")}
                 </span>
               </div>
 
@@ -405,7 +686,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
                       onClick={() => handleSelectMonumentDirectly(selectedTargetMonument.name)}
                       className="px-2.5 py-1 rounded-lg bg-cyan-500 text-slate-950 font-bold text-[11px] hover:bg-cyan-400 transition cursor-pointer"
                     >
-                      Tour Now
+                      {t("tour_now", "Tour Now")}
                     </button>
                     <button
                       type="button"
@@ -422,7 +703,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
               {/* Quick Popular Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto mt-2.5 pb-1 scrollbar-none text-[11px]">
                 <span className="text-slate-500 font-mono shrink-0">Quick Tour:</span>
-                {["Taj Mahal", "Colosseum", "Big Ben", "Eiffel Tower", "Petra", "Golden Temple", "Machu Picchu"].map((name) => (
+                {["Taj Mahal", "Eiffel Tower", "Colosseum", "Pyramids of Giza", "Machu Picchu", "Big Ben", "Petra"].map((name) => (
                   <button
                     key={name}
                     type="button"
@@ -694,11 +975,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onPhotoSelected, i
         onSelectLandmark={(name) => {
           setSelectedTargetMonument({ name });
           setShowSearchModal(false);
-          // If in sample landmarks, optionally start right away or keep locked
-          const sample = SAMPLE_LANDMARKS.find((s) => s.name.toLowerCase() === name.toLowerCase());
-          if (sample) {
-            handleSelectSample(sample);
-          }
+          handleSelectMonumentDirectly(name);
         }}
         currentLandmarkName={selectedTargetMonument?.name}
       />

@@ -198,6 +198,13 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         it: "it-IT",
         pt: "pt-PT",
         hi: "hi-IN",
+        gu: "gu-IN",
+        bn: "bn-IN",
+        mr: "mr-IN",
+        ta: "ta-IN",
+        te: "te-IN",
+        ur: "ur-PK",
+        pa: "pa-IN",
         "zh-CN": "zh-CN",
         "zh-TW": "zh-TW",
         ja: "ja-JP",
@@ -205,7 +212,21 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         ar: "ar-SA",
         ru: "ru-RU",
       };
-      utterance.lang = bcp47Map[langCode] || langCode;
+      const bcp47 = bcp47Map[langCode] || langCode;
+      utterance.lang = bcp47;
+
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices && voices.length > 0) {
+          const match =
+            voices.find((v) => v.lang === bcp47) ||
+            voices.find((v) => v.lang.startsWith(langCode)) ||
+            voices.find((v) => v.lang.startsWith(bcp47.split("-")[0]));
+          if (match) {
+            utterance.voice = match;
+          }
+        }
+      }
 
       utterance.onstart = () => {
         setIsSpeaking(true);
@@ -223,7 +244,13 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
       };
 
       activeUtteranceRef.current = utterance;
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
       window.speechSynthesis.speak(utterance);
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
     },
     [isSeniorMode, speechRate]
   );

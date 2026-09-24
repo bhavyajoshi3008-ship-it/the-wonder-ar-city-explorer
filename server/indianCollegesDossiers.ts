@@ -1019,6 +1019,59 @@ export const INDIAN_COLLEGES_DOSSIERS: Record<string, FallbackLandmarkData> = {
       tradition: "Jesuit Educational Rigor & Cosmopolitan Service",
       notableAlumni: ["Sri Sri Ravi Shankar", "Rahul Dravid (attended school/PUC)", "Veerendra Heggade", "Girish Karnad (frequent visitor)", "Ashish Ballal"]
     }
+  },
+
+  // ==========================================
+  // 25. GUJARAT ARTS AND SCIENCE COLLEGE, AHMEDABAD
+  // ==========================================
+  "gujarat arts and science college": {
+    name: "Gujarat Arts and Science College (Gujarat College), Ahmedabad",
+    localName: "ગુજરાત આર્ટ્સ એન્ડ સાયન્સ કોલેજ, અમદાવાદ",
+    city: "Ahmedabad, Gujarat",
+    country: "India",
+    architecturalStyle: "Victorian Indo-Gothic & Tudor Revival Hybrid",
+    periodEra: "Founded 1860 / Main Heritage Red-Brick Building 1897",
+    confidence: 100,
+    summary: "Established in 1860, Gujarat Arts and Science College (popularly known as Gujarat College) is one of the oldest and most historic educational institutions in Gujarat and Western India. Located near Ellisbridge in Ahmedabad, its iconic red-brick main building—designed by engineer Rai Bahadur Himmatlal Dhirajram Bhachech—features picturesque Tudor half-timbered gables, castle-like corner turrets, arched ground-floor arcades, and a central spire. The campus played a monumental role in India's independence movement, immortalized by the martyr memorial of student Veer Vinod Kinariwala during the Quit India Movement of 1942.",
+    coordinatesEstimate: { lat: 23.0232, lng: 72.5694 },
+    arKeypoints: [
+      { id: "pt-1", label: "Corner Castle Turret", featureType: "tower", description: "Iconic cylindrical and octagonal red-brick corner turret with conical roof, dormer windows, and white plaster trim.", x: 13, y: 35 },
+      { id: "pt-2", label: "Arched Ground-Floor Arcade", featureType: "arch", description: "Rhythm of Gothic and Romanesque ground-floor arches with white lime-plastered keystones and capitals.", x: 45, y: 64 },
+      { id: "pt-3", label: "Central Spire & Bell Tower", featureType: "spire", description: "Slender wooden and iron bell cupola crowned with a spire rising above the central gabled roofline.", x: 62, y: 19 },
+      { id: "pt-4", label: "Tudor Half-Timbered Gables", featureType: "facade", description: "Distinctive European Tudor-style half-timbered gables with dark framing over high-pitched terracotta roofs.", x: 81, y: 32 },
+      { id: "pt-5", label: "Balconied Upper Verandah", featureType: "column", description: "Continuous upper-story verandah with decorative wooden railings providing shaded circulation against the Ahmedabad heat.", x: 55, y: 44 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1860", event: "Establishment of Gujarat College", description: "Founded through public initiative led by the local intelligentsia and British administrators as Ahmedabad's first institution of higher education." },
+      { yearOrEra: "1879", event: "Ranchhodlal Chhotalal Patronage", description: "Pioneering textile industrialist Rai Bahadur Sheth Ranchhodlal Chhotalal and Ahmedabad philanthropists funded permanent academic expansion." },
+      { yearOrEra: "1897", event: "Iconic Red-Brick Heritage Building", description: "Eminent civic engineer Rai Bahadur Himmatlal Dhirajram Bhachech designed and built the majestic Victorian Tudor-Gothic Arts College building." },
+      { yearOrEra: "1942", event: "Veer Vinod Kinariwala Martyrdom", description: "During the Quit India Movement on August 10, 1942, student Vinod Kinariwala was shot while hoisting the Indian tricolor on campus; Mahatma Gandhi later unveiled his memorial." },
+      { yearOrEra: "Present", event: "Living Heritage Campus", description: "Recognized as a premier state heritage college that educated chief ministers, scientists, and stalwarts of Gujarati literature." }
+    ],
+    architecturalSecrets: [
+      "The building's hybrid Tudor half-timbering with red brick and deep verandahs was specially engineered by Himmatlal Bhachech to induce natural convection breezes during scorching Gujarati summers.",
+      "The college grounds house the Veer Vinod Kinariwala Memorial, where Mahatma Gandhi and Sardar Vallabhbhai Patel personally paid homage to student sacrifice in the freedom struggle.",
+      "The same visionary engineer, Himmatlal Bhachech, also constructed Ahmedabad's historic steel Ellis Bridge across the Sabarmati River in 1892."
+    ],
+    culturalSignificance: "Gujarat College is the intellectual cradle of modern Gujarat, having educated freedom fighters, literary giants of the Gujarati language (such as Anandshankar Dhruv and Kavi Nanalal), and national leaders.",
+    visitorTips: [
+      "Take in the stunning red-brick facade and timbered gables from the central paved courtyard in soft morning light.",
+      "Visit the historic Veer Vinod Kinariwala memorial near the central quadrangle.",
+      "Walk the deep arched cloisters connecting the Arts and Science wings near Ellisbridge."
+    ],
+    narrationScript: "You stand before the historic Gujarat Arts and Science College in Ahmedabad—one of the earliest and most revered institutions of higher education in Western India. Established in 1860 and housed in this magnificent 1897 Victorian Tudor-Gothic masterpiece designed by civic engineer Rai Bahadur Himmatlal Bhachech, notice its picturesque red-brick turrets, half-timbered gables, and deep arched verandahs. This campus was a boiling center of India's freedom struggle; right here on August 10, 1942, during the Quit India agitation, young student Veer Vinod Kinariwala gave his life while boldly defending the Indian national flag. Today, this living heritage landmark remains an enduring emblem of Ahmedabad's scholastic and patriotic soul.",
+    chapters: [
+      { id: "ch-1", title: "Pioneer of Gujarat's Higher Education (1860)", timestampHint: "0:00", script: "Founded in 1860, Gujarat College became Ahmedabad's premier academic beacon.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "Victorian Tudor-Gothic Masterpiece (1897)", timestampHint: "0:30", script: "Engineered by Himmatlal Bhachech with half-timbered gables and castle turrets.", focusPointId: "pt-4" },
+      { id: "ch-3", title: "Veer Vinod Kinariwala & Quit India (1942)", timestampHint: "1:00", script: "On this quadrangle, student martyr Vinod Kinariwala hoisted the tricolor for freedom.", focusPointId: "pt-2" }
+    ],
+    collegeInfo: {
+      isHistoricCollege: true,
+      institutionName: "Gujarat Arts and Science College (Gujarat College), Ahmedabad",
+      foundationYear: 1860,
+      tradition: "Freedom Movement, Gujarati Renaissance & Academic Heritage",
+      notableAlumni: ["Veer Vinod Kinariwala", "Anandshankar Dhruv", "Kavi Nanalal", "K. M. Munshi (attended)", "G. V. Mavalankar (First Speaker of Lok Sabha)", "Vikram Sarabhai (associated family / lectures)"]
+    }
   }
 };
 
@@ -1175,5 +1228,17 @@ export const INDIAN_COLLEGES_ALIASES: Record<string, string> = {
   "st josephs college bangalore": "st josephs college bangalore",
   "st joseph's college bangalore": "st josephs college bangalore",
   "st josephs university bangalore": "st josephs college bangalore",
-  "st josephs bangalore": "st josephs college bangalore"
+  "st josephs bangalore": "st josephs college bangalore",
+
+  // Gujarat College Ahmedabad
+  "gujarat arts and science college": "gujarat arts and science college",
+  "gujarat college": "gujarat arts and science college",
+  "gujarat college ahmedabad": "gujarat arts and science college",
+  "gujarat arts and science college ahmedabad": "gujarat arts and science college",
+  "gujarat arts college": "gujarat arts and science college",
+  "gujarat science college": "gujarat arts and science college",
+  "ellisbridge college": "gujarat arts and science college",
+  "veer vinod kinariwala college": "gujarat arts and science college",
+  "ગુજરાત કોલેજ": "gujarat arts and science college",
+  "ગુજરાત આર્ટ્સ એન્ડ સાયન્સ કોલેજ": "gujarat arts and science college"
 };

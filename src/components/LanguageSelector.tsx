@@ -91,10 +91,10 @@ export const LanguageSelector: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
                   <Languages className="w-4 h-4 text-cyan-400" />
-                  <span>World Languages</span>
+                  <span>{t("world_languages", "World Languages")}</span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                  Global Support
+                  {t("global_support", "Global Support")}
                 </span>
               </div>
 
@@ -104,7 +104,7 @@ export const LanguageSelector: React.FC = () => {
                 <input
                   type="text"
                   id="search-world-language-input"
-                  placeholder="Search any language / खोजें / 搜索..."
+                  placeholder={t("search_language_placeholder", "Search any language / खोजें / 搜索...")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
@@ -166,9 +166,9 @@ export const LanguageSelector: React.FC = () => {
             <div className="p-2.5 border-t border-slate-800/80 bg-slate-900/40 text-[10px] font-mono text-slate-400 flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-cyan-400" />
-                Live AI & Neural Translation
+                {t("live_ai_translation", "Live AI & Neural Translation")}
               </span>
-              <span className="text-slate-500">100+ Dialects</span>
+              <span className="text-slate-500">{t("dialects_supported", "100+ Dialects")}</span>
             </div>
           </motion.div>
         </>

@@ -876,8 +876,1593 @@ export const RELIGIOUS_STRUCTURE_DOSSIERS: Record<string, FallbackLandmarkData> 
       { id: "chap-2", title: "The Faravahar Over the Columns", timestampHint: "0:30", script: "Carved into the pediment, the winged figure embodies the ancient Zoroastrian triad of pure thoughts, words, and deeds.", focusPointId: "pt-2" },
       { id: "chap-3", title: "The Desert Pool of Reflection", timestampHint: "1:00", script: "A circular pool surrounded by evergreen cypress trees reflects the ancient light of Yazd.", focusPointId: "pt-3" }
     ]
+  },
+
+  "prem mandir": {
+    name: "Prem Mandir",
+    localName: "प्रेम मंदिर",
+    city: "Vrindavan, Mathura",
+    country: "India",
+    architecturalStyle: "Pure Italian Carrara Marble Nagara & Rajasthani Temple Architecture",
+    periodEra: "2001–2012 (Dedicated by Jagadguru Kripalu Maharaj)",
+    confidence: 99,
+    summary: "Prem Mandir (The Temple of Divine Love) in holy Vrindavan is a breathtaking ivory-white marble temple complex crafted from 30,000 tons of flawless Italian Carrara marble, celebrated for its intricate filigree carvings, lila tableaux of Radha Krishna, and mesmerizing nighttime color illumination.",
+    coordinatesEstimate: { lat: 27.5714, lng: 77.6744 },
+    arKeypoints: [
+      { id: "pt-1", label: "Central Shikhara & Kalash Apex", featureType: "spire", description: "Rising 125 feet high, the majestic marble spire is crowned with golden kalash and flag.", x: 50, y: 18 },
+      { id: "pt-2", label: "Carrara Marble Carved Pillars", featureType: "column", description: "84 monumental pillars hand-carved with lifelike reliefs of celestial dancers and floral motifs.", x: 38, y: 55 },
+      { id: "pt-3", label: "Radha Krishna Sanctum Portal", featureType: "entrance", description: "Grand entrance archway adorned with intricate peacocks and divine leela tableaux.", x: 50, y: 72 },
+      { id: "pt-4", label: "Illuminated Marble Plinth & Balustrade", featureType: "relief", description: "Pristine white marble circumambulatory pathway that glows with changing chromatic light at dusk.", x: 74, y: 82 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "January 2001", event: "Foundation Stone Laid", description: "Foundation stone laid by spiritual preceptor Jagadguru Kripalu Parishat in the sacred soil of Vrindavan." },
+      { yearOrEra: "February 2012", event: "Grand Consecration", description: "Inaugurated after 11 years of painstaking artisan stone masonry by over 1,000 master craftsmen." },
+      { yearOrEra: "Present Era", event: "Global Pilgrimage & Heritage Wonder", description: "Welcomes millions of pilgrims and architectural enthusiasts annually from across India and the globe." }
+    ],
+    architecturalSecrets: [
+      "Constructed entirely from premium Italian Carrara marble imported from Tuscany, with no iron or steel reinforcement used in the core sanctum.",
+      "The perimeter garden displays life-sized tableaux depicting Krishna raising Govardhan Hill and dancing upon Kaliya Nag.",
+      "A dynamic architectural lighting system shifts the temple facade through 30+ chromatic color transitions every evening without heat damage to the marble."
+    ],
+    culturalSignificance: "Prem Mandir embodies devotion, artistic excellence, and peace, standing as one of Mathura-Vrindavan's most celebrated modern spiritual landmarks.",
+    visitorTips: [
+      "Visit in late afternoon around 5:30 PM to admire the pure white marble in daylight, then watch the spectacular evening musical fountain and illumination at 7:00 PM.",
+      "Dress respectfully with covered shoulders and knees.",
+      "Take time to circumambulate the 54-acre garden complex and inspect the Govardhan Leela displays."
+    ],
+    narrationScript: "Welcome to Prem Mandir, the Temple of Divine Love in Vrindavan, India. Rising before you in pristine ivory elegance, this monumental temple was sculpted from 30,000 tons of Italian Carrara marble. Look at the balance of Nagara architecture, hand-carved jali filigree, and soaring shikharas reaching 125 feet into the sky. At nightfall, the entire marble facade glows in kaleidoscopic shades of blue, amber, and violet.",
+    chapters: [
+      { id: "chap-1", title: "Temple of Divine Love", timestampHint: "0:00", script: "Prem Mandir stands as a modern wonder of sacred Indian architecture, carved from flawless Italian Carrara marble.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Artisan Marble Craftsmanship", timestampHint: "0:25", script: "More than a thousand master craftsmen spent eleven years carving every arch, pillar, and celestial tableau by hand.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Sacred Sanctum of Vrindavan", timestampHint: "0:50", script: "The central shrine honors Radha Krishna and Sita Rama with devotion and peace.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Twilight Symphony of Light", timestampHint: "1:15", script: "At dusk, dynamic illumination bathes the marble in radiant colors, transforming the sacred grounds into a celestial vision.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "tirupati balaji": {
+    name: "Sri Venkateswara Swamy Temple (Tirupati Balaji)",
+    localName: "తిరుమల వేంకటేశ్వర స్వామి దేవాలయం",
+    city: "Tirumala, Tirupati",
+    country: "India",
+    architecturalStyle: "Classical Dravidian Temple Architecture & Gilded Ananda Nilayam Vimana",
+    periodEra: "c. 300 AD (Mentioned in Sangam literature, patronized by Pallava, Chola & Vijayanagara dynasties)",
+    confidence: 99,
+    summary: "Perched atop the sacred Seshachalam Seven Hills in Tirumala, the Venkateswara Temple is the most visited sacred shrine on Earth. Famed for its golden Ananda Nilayam Vimana dome, Dravidian courtyards, and deep spiritual lore of Lord Balaji (Kaliyuga Varada).",
+    coordinatesEstimate: { lat: 13.6833, lng: 79.3472 },
+    arKeypoints: [
+      { id: "pt-1", label: "Ananda Nilayam Golden Vimana", featureType: "dome", description: "Colossal three-tiered sanctum tower sheathed entirely in gilded gold copper plates.", x: 50, y: 22 },
+      { id: "pt-2", label: "Bangaru Vakili (Golden Entrance Portal)", featureType: "entrance", description: "Historic gilded gateway adorned with the Dashavatara reliefs leading directly to the Garbhagriha.", x: 48, y: 62 },
+      { id: "pt-3", label: "Dhwaja Stambha Flagstaff & Balipeetham", featureType: "column", description: "Tall gold-plated ceremonial flag mast that consecrates the temple precinct during Brahmotsavam.", x: 35, y: 75 },
+      { id: "pt-4", label: "Mukkoti Pradakshinam & Tiered Gopuram", featureType: "facade", description: "Granite circumambulation corridor and imposing Dravidian entrance tower greeting millions of pilgrims.", x: 72, y: 40 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 300–800 AD", event: "Early Sangam & Pallava Devotion", description: "Celebrated in ancient Tamil Sangam poetry and patronized by the Pallava Queen Samavai." },
+      { yearOrEra: "1517 AD", event: "Vijayanagara Golden Age", description: "Emperor Krishnadevaraya visited seven times, donating gold jewels and regilding the Ananda Nilayam dome." },
+      { yearOrEra: "Modern Era", event: "Global Spiritual Hub", description: "The world's most venerated pilgrimage destination, welcoming over 60,000 to 100,000 pilgrims daily." }
+    ],
+    architecturalSecrets: [
+      "The self-manifested (Swayambhu) deity idol of Lord Balaji is carved from smooth black stone that maintains a natural constant body temperature of 110°F.",
+      "The Ananda Nilayam Vimana is covered in over 500 kilograms of pure gold, catching early morning sunlight above the mountain valley.",
+      "The temple kitchen (Potu) prepares the world-renowned Tirupati Laddu Prasadam, which holds a registered Geographical Indication (GI) tag."
+    ],
+    culturalSignificance: "Revered as Kaliyuga Vaikuntha (the earthly abode of Vishnu in the current age), Tirupati Balaji is the spiritual heartbeat of millions worldwide.",
+    visitorTips: [
+      "Book Special Entry Darshan tokens well in advance via the official TTD portal.",
+      "Follow traditional dress code (dhoti/kurta for men, saree/churidar for women).",
+      "Visit the sacred Swami Pushkarini holy water tank before entering the main gopuram."
+    ],
+    narrationScript: "Welcome to Sri Venkateswara Swamy Temple at Tirumala, celebrated worldwide as Tirupati Balaji. High in the mist-veiled Seshachalam hills, this temple is the spiritual summit of Kaliyuga. Look above at the Ananda Nilayam: a radiant three-tiered dome clad entirely in gold, rising above the inner sanctum where Lord Venkateswara stands in timeless compassion. For two millennia, emperors, saints, and millions of humble seekers have climbed these holy hills to witness this radiant presence.",
+    chapters: [
+      { id: "chap-1", title: "The Seven Sacred Peaks", timestampHint: "0:00", script: "Tirumala sits nestled amid seven emerald mountain ridges representing the hoods of Adishesha.", focusPointId: "pt-4" },
+      { id: "chap-2", title: "Ananda Nilayam: Abode of Bliss", timestampHint: "0:25", script: "The golden dome glows in morning light, engineered with ancient Dravidian stone craft and Vijayanagara gold.", focusPointId: "pt-1" },
+      { id: "chap-3", title: "Through the Golden Portal", timestampHint: "0:50", script: "Passing through the Bangaru Vakili, pilgrims enter the ancient sanctum where prayers have echoed for millennia.", focusPointId: "pt-2" },
+      { id: "chap-4", title: "The Eternal Festival", timestampHint: "1:15", script: "Around the Dhwaja Stambha, the sacred energy of Brahmotsavam and devotional song resonates without pause.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "somnath temple": {
+    name: "Shree Somnath Jyotirlinga Temple",
+    localName: "સોમનાથ જ્યોતિર્લિંગ મંદિર",
+    city: "Prabhas Patan, Veraval, Gujarat",
+    country: "India",
+    architecturalStyle: "Maru-Gurjara (Chaulukya) Kailash Mahameru Prasad Style",
+    periodEra: "Ancient antiquity; Modern temple reconstructed 1951 (Consecrated by President Dr. Rajendra Prasad)",
+    confidence: 99,
+    summary: "Standing proudly on the shores of the Arabian Sea in Saurashtra, Somnath is the First of the Twelve sacred Jyotirlingas of Lord Shiva. Known as 'The Shrine Eternal', it has risen invincibly through centuries of destruction and reconstruction, showcasing exquisite sandstone carvings and soaring spires.",
+    coordinatesEstimate: { lat: 20.8880, lng: 70.4013 },
+    arKeypoints: [
+      { id: "pt-1", label: "155ft Main Shikhara & Golden Kalash", featureType: "spire", description: "Soaring Kailash Mahameru Prasad spire crowned by a 10-ton stone Kalash and 27ft flag mast.", x: 50, y: 20 },
+      { id: "pt-2", label: "Baan Stambh (Arrow Pillar of the Sea)", featureType: "column", description: "Historic sea pillar marking an unobstructed zero-land straight line to the South Pole (Antarctica).", x: 25, y: 72 },
+      { id: "pt-3", label: "Sabha Mandapa & Carved Torana Arches", featureType: "facade", description: "Intricately sculpted assembly hall featuring Maru-Gurjara bracket figures and ribbed ceilings.", x: 52, y: 55 },
+      { id: "pt-4", label: "Arabian Sea Shoreline Promenade", featureType: "relief", description: "Fortified stone seawall where the waves of the Arabian Sea continuously lap the holy temple foundation.", x: 78, y: 80 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "Ancient Vedic Era", event: "Prabhas Teertha Consecration", description: "Revered in the Rigveda, Mahabharata, and Skanda Purana as the place where Moon god Soma worshipped Shiva." },
+      { yearOrEra: "1026–1706 AD", event: "Era of Resilience", description: "Destroyed and valiantly rebuilt multiple times across centuries by Chaulukya kings and Queen Ahilyabai Holkar." },
+      { yearOrEra: "May 1951", event: "The Shrine Eternal Reborn", description: "Reconstructed in authentic Maru-Gurjara style championed by Sardar Vallabhbhai Patel and consecrated by India's first President." }
+    ],
+    architecturalSecrets: [
+      "The Baan Stambh (Arrow Pillar) bears a 6th-century Sanskrit inscription stating that from this exact point on Earth, a straight line reaches Antarctica with zero landmass in between.",
+      "The modern spire is built strictly according to ancient Shilpa Shastras using golden-yellow sandstone from Dhrangadhra without iron reinforcement.",
+      "At night, a high-tech sound and light show projected across the sandstone facade narrates the temple's thousand-year triumph of spirit."
+    ],
+    culturalSignificance: "Somnath is the eternal symbol of India's cultural resilience and spiritual devotion, honoring Shiva as the Lord of the Moon and protector of the cosmos.",
+    visitorTips: [
+      "Attend the evening Ganga-style Arabian Sea Aarti at 7:00 PM followed by the sound and light show.",
+      "Walk along the scenic Somnath Promenade overlooking the crashing waves.",
+      "Electronics, cameras, and leather items must be placed in free cloakrooms before security."
+    ],
+    narrationScript: "Welcome to Shree Somnath Temple, the premier and first of the twelve sacred Jyotirlingas of Lord Shiva. Standing against the roaring breakers of the Arabian Sea, Somnath is known as 'The Shrine Eternal'—a monument that repeatedly rose from the ashes of history. Gaze upon its 155-foot Shikhara carved in golden sandstone: every pillar and arch tells the story of unyielding faith, where the sacred and the sea merge into eternity.",
+    chapters: [
+      { id: "chap-1", title: "The Shrine Eternal", timestampHint: "0:00", script: "Somnath stands on the western edge of India, where ocean winds and sacred chants have met for thousands of years.", focusPointId: "pt-4" },
+      { id: "chap-2", title: "The Great Spire of Shiva", timestampHint: "0:25", script: "The 155-foot Kailash Mahameru Shikhara dominates the coastline, hand-carved according to ancient Vedic geometry.", focusPointId: "pt-1" },
+      { id: "chap-3", title: "The Arrow Pillar of the Sea", timestampHint: "0:50", script: "The ancient Baan Stambh marks a navigational miracle: a direct meridian line connecting Somnath to the South Pole.", focusPointId: "pt-2" },
+      { id: "chap-4", title: "Resilience in Stone", timestampHint: "1:15", script: "Inside the grand Sabha Mandapa, master craftsmen resurrected classical Maru-Gurjara architecture in the 20th century.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "kedarnath temple": {
+    name: "Kedarnath Jyotirlinga Temple",
+    localName: "केदारनाथ ज्योतिर्लिंग मंदिर",
+    city: "Kedarnath, Rudraprayag, Uttarakhand",
+    country: "India",
+    architecturalStyle: "Himalayan Katyuri Granite Ashlar Architecture",
+    periodEra: "8th Century AD (Revitalized by Adi Shankaracharya; Pandava legendary origins)",
+    confidence: 99,
+    summary: "Nestled at 11,755 feet in the Garhwal Himalayas near the Chorabari Glacier and Mandakini River, Kedarnath is the highest of the 12 Jyotirlingas and the crowning jewel of the Chota Char Dham. Built from interlocking giant grey granite slabs that have endured avalanches, snowstorms, and earthquakes for over a millennium.",
+    coordinatesEstimate: { lat: 30.7352, lng: 79.0669 },
+    arKeypoints: [
+      { id: "pt-1", label: "Interlocking Granite Shikhara & Spire", featureType: "spire", description: "Stepped Katyuri-style pyramidal stone shikhara built from massive grey granite ashlar blocks.", x: 50, y: 24 },
+      { id: "pt-2", label: "Kedarnath Snow Peak Backdrop", featureType: "peak", description: "The monumental 22,769ft Kedarnath mountain massif looming directly behind the temple sanctuary.", x: 50, y: 10 },
+      { id: "pt-3", label: "Colossal Stone Nandi Portal", featureType: "statue", description: "Carved stone bull guarding the pillared hall entrance, worshipped by every ascending pilgrim.", x: 38, y: 70 },
+      { id: "pt-4", label: "Bhim Shila (Miracle Protective Boulder)", featureType: "relief", description: "Massive natural rock that deflected torrential waters and boulders behind the temple during the 2013 flash floods.", x: 68, y: 55 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "Mahabharata Antiquity", event: "Pandava Founding Lore", description: "Legend records that the Pandavas sought Lord Shiva's grace here, where Shiva dove into the earth as a bull." },
+      { yearOrEra: "8th Century AD", event: "Adi Shankaracharya Restructuring", description: "The great philosopher-saint revived the pilgrimage circuit and attained Mahasamadhi behind the temple." },
+      { yearOrEra: "June 2013", event: "The Miracle of Bhim Shila", description: "During catastrophic Himalayan flash floods, a massive boulder settled behind the shrine, parting the torrent and saving the ancient temple." }
+    ],
+    architecturalSecrets: [
+      "The temple is assembled from enormous cut granite blocks held together with iron clamps and mortise joints, engineered to withstand centuries under glaciers.",
+      "The sanctum features an irregular triangular rock pedestal (the hump of Shiva in bull form) instead of a conventional cylindrical lingam.",
+      "Geological surveys revealed the temple spent over 400 years buried entirely under ice during the Little Ice Age (14th–18th century) without structural collapse."
+    ],
+    culturalSignificance: "Kedarnath is the supreme Himalayan pilgrimage destination, open only six months a year from Akshaya Tritiya to Diwali before winter snows close the valley.",
+    visitorTips: [
+      "Trek 16 km from Gaurikund or book authorized helicopter tickets via the official IRCTC portal.",
+      "Acclimatize carefully to the 11,755ft altitude and carry thermals and rainwear even in summer.",
+      "Visit the Bhim Shila boulder directly behind the temple to witness the stone that saved Kedarnath."
+    ],
+    narrationScript: "Welcome to Kedarnath, the highest and most awe-inspiring of the twelve Jyotirlingas, perched 11,755 feet high in the Garhwal Himalayas. Look behind the stone temple: towering directly into the clouds is the 22,000-foot Kedarnath peak and snowfields. Assembled from titanic granite blocks over a thousand years ago, this temple survived centuries buried under ice and weathered violent glacial floods. Notice the Bhim Shila boulder just behind the sanctum—a guardian stone that parted raging waters in 2013.",
+    chapters: [
+      { id: "chap-1", title: "Throne of the Himalayas", timestampHint: "0:00", script: "Surrounded by snow-capped peaks and the Mandakini River, Kedarnath is one of the most sacred places on Earth.", focusPointId: "pt-2" },
+      { id: "chap-2", title: "Titanic Granite Engineering", timestampHint: "0:25", script: "Katyuri craftsmen interlocked massive stone slabs without cement, creating an indestructible mountain fortress of faith.", focusPointId: "pt-1" },
+      { id: "chap-3", title: "Bhim Shila: The Miracle Stone", timestampHint: "0:50", script: "Resting behind the sanctum, the Bhim Shila boulder miraculously sheltered the temple from catastrophe.", focusPointId: "pt-4" },
+      { id: "chap-4", title: "The Sacred Nandi Guard", timestampHint: "1:15", script: "Before the arched entrance, the monolithic stone Nandi bull gazes eternally into the sanctum sanctorum.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "badrinath temple": {
+    name: "Badrinath Temple (Badri Vishal)",
+    localName: "श्री बद्रीनाथ मंदिर",
+    city: "Badrinath, Chamoli, Uttarakhand",
+    country: "India",
+    architecturalStyle: "Traditional Himalayan Pagoda-Nagara Architecture with Vibrant Painted Facade",
+    periodEra: "Ancient origins; Rebuilt by Garhwal kings and Adi Shankaracharya in 9th Century",
+    confidence: 99,
+    summary: "Situated along the rushing Alaknanda River between the Nar and Narayana mountain ranges, Badrinath is the principal Himalayan Char Dham shrine dedicated to Lord Vishnu as Badri Vishal. Distinguished by its brightly painted arched facade, gilded cupola roof, and nearby natural hot sulfur springs (Tapt Kund).",
+    coordinatesEstimate: { lat: 30.7447, lng: 79.4930 },
+    arKeypoints: [
+      { id: "pt-1", label: "Vibrant Arched Himalayan Facade", featureType: "facade", description: "Iconic brightly painted multihued facade featuring neoclassical arches and traditional Garhwali wooden eaves.", x: 50, y: 35 },
+      { id: "pt-2", label: "Golden Gilded Cupola Roof", featureType: "dome", description: "Gilded copper cupola crowning the sanctum that glints against the snowy Neelkanth peak.", x: 50, y: 18 },
+      { id: "pt-3", label: "Alaknanda River Gorge & Bridge", featureType: "relief", description: "Glacial river torrent rushing beneath the temple cliffs, fed directly by the Satopanth glacier.", x: 28, y: 80 },
+      { id: "pt-4", label: "Tapt Kund Thermal Sulfur Springs", featureType: "entrance", description: "Natural steaming sulfur water pools on the riverbank where pilgrims purify themselves before darshan.", x: 72, y: 78 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "9th Century AD", event: "Adi Shankaracharya Consecration", description: "Adi Shankaracharya discovered the black Shaligram idol of Lord Badrinarayan in the Alaknanda's Narad Kund and enshrined it." },
+      { yearOrEra: "16th–17th Century", event: "Garhwal Royal Renovations", description: "The Kings of Garhwal expanded the temple complex after avalanches, adding the colorful arched gateway." },
+      { yearOrEra: "Modern Era", event: "Supreme Vaishnava Pilgrimage", description: "Revered as the holiest of the 108 Divya Desams and the core of the all-India Char Dham circuit." }
+    ],
+    architecturalSecrets: [
+      "The 1-meter-tall black stone deity of Lord Badrinarayan depicts Vishnu seated in deep Padmasana meditation under a Badri (jujube) tree canopy.",
+      "The temple is traditionally served by a Nambudiri Brahmin head priest (Rawal) from Kerala, maintaining a cultural bond established by Adi Shankaracharya across North and South India.",
+      "The Tapt Kund natural hot springs maintain a constant temperature of 131°F (55°C) year-round, despite freezing Himalayan river waters flowing just feet away."
+    ],
+    culturalSignificance: "Badrinath is the premier Char Dham sanctuary where humanity seeks spiritual liberation amidst the grandest alpine scenery of the Indian subcontinent.",
+    visitorTips: [
+      "Bathe in the natural mineral waters of Tapt Kund before ascending the stone steps to the temple.",
+      "Visit Mana village (the last Indian village before the Tibet border), just 3 km past Badrinath.",
+      "Marvel at the pyramidal Neelkanth Peak rising behind the temple at sunrise."
+    ],
+    narrationScript: "Welcome to Badrinath Temple, the hallowed seat of Lord Badri Vishal in the high Himalayas. Standing at 10,279 feet along the foaming waters of the Alaknanda River, Badrinath is instantly recognizable by its vibrant, colorful arched facade and gilded roof. Founded by Adi Shankaracharya in the 9th century, this temple unites India: its Kerala-born Rawal priest performs sacred rites beneath the gaze of the Nar and Narayana mountain ranges.",
+    chapters: [
+      { id: "chap-1", title: "Abode of Badri Vishal", timestampHint: "0:00", script: "Surrounded by vertical Himalayan cliffs, Badrinath welcomes seekers into the heart of the sacred mountains.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Gilded Crown", timestampHint: "0:25", script: "The gold-plated cupola reflects morning light between the majestic peaks of Nar and Narayana.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Waters of the Alaknanda", timestampHint: "0:50", script: "The roaring Alaknanda River carries glacial waters right past the temple steps.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Tapt Kund: Thermal Blessing", timestampHint: "1:15", script: "Steam rises from Tapt Kund, where boiling mineral waters have comforted travelers for millennia.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "jagannath temple": {
+    name: "Shree Jagannath Temple, Puri",
+    localName: "ଶ୍ରୀ ଜଗନ୍ନାଥ ମନ୍ଦିର",
+    city: "Puri",
+    country: "India",
+    architecturalStyle: "Kalinga Rekha Deula Temple Architecture",
+    periodEra: "12th Century AD (Reconstructed by King Anantavarman Chodaganga Deva)",
+    confidence: 99,
+    summary: "One of the supreme Char Dham sanctuaries, the Jagannath Temple in Puri is a 214-foot architectural colossus of Kalinga stonework. Renowned for its mysterious sacred traditions, the world's largest kitchen (Rosha Ghara), and the monumental annual Ratha Yatra chariot festival.",
+    coordinatesEstimate: { lat: 19.8049, lng: 85.8179 },
+    arKeypoints: [
+      { id: "pt-1", label: "214ft Main Rekha Deula Shikhara", featureType: "spire", description: "Curvilinear stone sanctuary tower dominating the Bay of Bengal coastline, crowned with the Neela Chakra.", x: 50, y: 18 },
+      { id: "pt-2", label: "Neela Chakra & Patitapabana Flag", featureType: "relief", description: "Eight-metal (Ashtadhatu) sacred discus atop the spire; its flag defies the sea breeze daily.", x: 50, y: 8 },
+      { id: "pt-3", label: "Singhadwara (The Lion Gate)", featureType: "entrance", description: "Monumental eastern portal guarded by colossal stone lions, leading to the Baisipahacha (22 sacred steps).", x: 42, y: 78 },
+      { id: "pt-4", label: "Aruna Stambha (Sun Pillar)", featureType: "column", description: "16-sided monolithic chlorite stone pillar brought from the Konark Sun Temple in the 18th century.", x: 68, y: 82 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "12th Century AD", event: "Reign of Eastern Ganga Dynasty", description: "King Anantavarman Chodaganga Deva initiated the construction of the present massive stone temple complex." },
+      { yearOrEra: "1568 AD", event: "Resistance & Restoration", description: "Temple treasures protected by sevayats across turbulent sieges and re-established by Gajapati rulers." },
+      { yearOrEra: "Annual Tradition", event: "The Grand Ratha Yatra", description: "Millions gather each summer to pull the towering wooden chariots of Jagannath, Balabhadra, and Subhadra." }
+    ],
+    architecturalSecrets: [
+      "The Patitapabana flag fluttering atop the 214ft spire naturally flutters in the opposite direction of the prevailing wind.",
+      "No birds or airplanes are ever observed flying over the central spire of the Jagannath temple.",
+      "The temple kitchen feeds over 50,000 people daily using 7 earthen pots stacked atop each other over wood fires; the top pot cooks first."
+    ],
+    culturalSignificance: "Jagannath (Lord of the Universe) transcends caste, sect, and dogma, celebrating divine love and brotherhood through the world's oldest and grandest chariot festival.",
+    visitorTips: [
+      "Traditional Indian attire is mandatory; leather goods, mobile phones, and cameras are strictly prohibited inside.",
+      "Taste the sacred Mahaprasad (Ananda Bazaar) prepared fresh in the world's largest temple kitchen.",
+      "Inspect the Aruna Stambha monolithic sun pillar standing before the Lion Gate."
+    ],
+    narrationScript: "Welcome to Shree Jagannath Temple in Puri, on the eastern coast of Odisha. Rising 214 feet into the sky, this curvilinear stone marvel is a pinnacle of Kalinga architecture. Dedicated to Jagannath, Balabhadra, and Subhadra, the temple is alive with ancient mysteries: its flag flutters against the wind, its shadow never falls upon the ground at noon, and its kitchen is the largest on Earth. Every year, millions gather right here to pull the giant chariots of the Ratha Yatra.",
+    chapters: [
+      { id: "chap-1", title: "Kalinga Stone Colossus", timestampHint: "0:00", script: "The soaring Rekha Deula shikhara has watched over the Bay of Bengal for over nine centuries.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Neela Chakra & Flying Flag", timestampHint: "0:25", script: "At the peak sits the ancient eight-metal Neela Chakra discus, re-flagged every single afternoon by fearless climbers.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Singhadwara: The Lion's Portal", timestampHint: "0:50", script: "Two stone lions guard the eastern entrance, leading pilgrims across the sacred twenty-two steps.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Aruna Stambha: Pillar of the Sun", timestampHint: "1:15", script: "Carved from polished dark chlorite, the Aruna Stambha once stood before the Sun Temple of Konark.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "ramanathaswamy temple": {
+    name: "Ramanathaswamy Temple (Rameswaram)",
+    localName: "இராமேசுவரம் இராமநாதசுவாமி கோயில்",
+    city: "Rameswaram, Ramanathapuram, Tamil Nadu",
+    country: "India",
+    architecturalStyle: "Dravidian Architecture with Monumental Pillared Corridors",
+    periodEra: "12th–17th Century AD (Expanded by Pandya Kings and Jaffna Sethupathis)",
+    confidence: 99,
+    summary: "Located on Pamban Island at the southern tip of India, Ramanathaswamy Temple is both a Jyotirlinga and an all-India Char Dham shrine. It boasts the longest and most spectacular pillared temple corridor on Earth, with over 1,200 hand-carved granite pillars lining its third corridor.",
+    coordinatesEstimate: { lat: 9.2881, lng: 79.3174 },
+    arKeypoints: [
+      { id: "pt-1", label: "Third Corridor of 1,212 Pillars", featureType: "column", description: "The world's longest pillared hall: 1,220 meters of sculpted granite columns and painted geometric ceiling beams.", x: 50, y: 55 },
+      { id: "pt-2", label: "Towering Eastern Rajagopuram", featureType: "spire", description: "126-foot high multi-tiered Dravidian gateway tower dominating the island skyline.", x: 50, y: 22 },
+      { id: "pt-3", label: "Agni Teertham Sacred Sea Beach", featureType: "relief", description: "Holy Bay of Bengal shoreline where pilgrims take their first ritual dip before bathing at the 22 wells.", x: 25, y: 80 },
+      { id: "pt-4", label: "22 Theertham Sacred Wells", featureType: "entrance", description: "Ancient freshwater wells within the temple complex, each containing water of distinct taste and mineral content.", x: 74, y: 72 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "Ramayana Era", event: "Consecration by Lord Rama", description: "Lord Rama worshipped Shiva here, consecrating the sand lingam created by Sita to atone for the war in Lanka." },
+      { yearOrEra: "12th Century AD", event: "Chola & Pandya Expansion", description: "Expanded from a humble thatched shrine into a magnificent stone temple complex by Parakrama Bahu and Jaffna rulers." },
+      { yearOrEra: "18th Century AD", event: "Sethupathi Masterpiece", description: "Muthuramalinga Sethupathi completed the monumental third pillared corridor, carving over 1,200 continuous granite pillars." }
+    ],
+    architecturalSecrets: [
+      "The outer corridor measures 6.9 meters high, 197 meters east-west, and 133 meters north-south, forming the longest temple corridor in the world.",
+      "Granite blocks for the massive corridors had to be transported across the Pamban sea straits, as no granite quarries exist on the sandy island.",
+      "The temple houses two lingams: the Ramalingam molded by Sita out of sand, and the Viswalingam brought by Hanuman from Mount Kailash."
+    ],
+    culturalSignificance: "Rameswaram links Northern and Southern spiritual traditions: a pilgrimage to Kashi (Varanasi) is considered complete only after bringing Ganga water to Ramanathaswamy.",
+    visitorTips: [
+      "Begin by bathing at Agni Teertham sea beach, then bathe at the 22 holy wells inside the temple before darshan.",
+      "Walk the Third Corridor early in the morning when shafts of sunlight illuminate the perspective of granite pillars.",
+      "Visit nearby Dhanushkodi and Ram Setu (Adam's Bridge) to see where the coral reefs cross toward Sri Lanka."
+    ],
+    narrationScript: "Welcome to Ramanathaswamy Temple in Rameswaram, on Pamban Island at the southern threshold of India. Reaching across history as both a Jyotirlinga and Char Dham, this temple contains one of humanity's greatest architectural wonders: a labyrinth of soaring pillared corridors stretching over a kilometer in length. Walk beneath 1,212 granite pillars carved by master artisans centuries ago, where Lord Rama prayed before crossing the ocean to Lanka.",
+    chapters: [
+      { id: "chap-1", title: "Pillared Corridor of the World", timestampHint: "0:00", script: "Stretching nearly 200 meters in a single perspective, this corridor is the longest pillared hall on Earth.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Gateway of Pamban Island", timestampHint: "0:25", script: "The multi-tiered eastern Rajagopuram towers above the palm trees and ocean waters of Rameswaram.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "The 22 Holy Wells", timestampHint: "0:50", script: "Within the temple courtyards lie 22 sacred wells, each drawn to bless and purify visiting pilgrims.", focusPointId: "pt-4" },
+      { id: "chap-4", title: "Agni Teertham: Shores of Faith", timestampHint: "1:15", script: "Where calm turquoise waters meet the sand, pilgrims perform sacred rites before entering the temple gates.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "konark sun temple": {
+    name: "Sun Temple, Konark (Black Pagoda)",
+    localName: "କୋଣାର୍କ ସୂର୍ଯ୍ୟ ମନ୍ଦିର",
+    city: "Konark, Puri, Odisha",
+    country: "India",
+    architecturalStyle: "Kalinga Monumental Chariot Architecture (UNESCO World Heritage)",
+    periodEra: "c. 1250 AD (Reign of King Narasimhadeva I, Eastern Ganga Dynasty)",
+    confidence: 99,
+    summary: "A UNESCO World Heritage masterpiece, the Konark Sun Temple is conceived as a gargantuan stone chariot for Surya, the Sun God. Featuring 24 intricately sculpted stone wheels that function as accurate astronomical sundials, pulled by seven spirited horses along the Bay of Bengal coast.",
+    coordinatesEstimate: { lat: 19.8876, lng: 86.0945 },
+    arKeypoints: [
+      { id: "pt-1", label: "24 Carved Sundial Wheels", featureType: "relief", description: "9.9ft high stone wheels featuring 8 major and 8 minor spokes that calculate time to the exact minute by shadow.", x: 38, y: 72 },
+      { id: "pt-2", label: "Jagamohana (Assembly Hall) Pyramid", featureType: "dome", description: "Stepped 128ft pyramidal stone roof adorned with sculptures of celestial musicians (Surasundaris).", x: 50, y: 32 },
+      { id: "pt-3", label: "Natya Mandapa (Hall of Dance)", featureType: "facade", description: "Pillared open-air dance pavilion entirely covered in bas-relief sculptures of Odissi classical dance postures.", x: 68, y: 65 },
+      { id: "pt-4", label: "Galloping Stone Horses of the Sun", featureType: "statue", description: "Seven monumental war-horse sculptures rearing forward, symbolizing the seven days of the week and rainbow colors.", x: 22, y: 78 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 1250 AD", event: "Construction by King Narasimhadeva I", description: "1,200 artisans spent 12 years quarrying Khondalite and chlorite stone to build the colossal chariot of the Sun." },
+      { yearOrEra: "16th–17th Century", event: "European Sailor Navigation", description: "European mariners named Konark the 'Black Pagoda' using its dark stone silhouette as a landmark for navigation." },
+      { yearOrEra: "1984", event: "UNESCO World Heritage Recognition", description: "Enscribed by UNESCO as one of humanity's greatest architectural and astronomical achievements." }
+    ],
+    architecturalSecrets: [
+      "The wheels are functioning sundials: by placing a finger or stick at the center of the axle, the shadow cast across the carved beads indicates the precise time of day.",
+      "The original temple sanctuary tower was over 229 feet (70m) high, engineered with magnetic iron beams that reportedly held the central Surya idol floating in midair.",
+      "The temple is aligned with mathematical precision: the first rays of dawn at the winter and summer solstices illuminate the center of the sanctum."
+    ],
+    culturalSignificance: "Konark is the highest achievement of Kalinga stone artistry, capturing time, rhythm, and cosmic energy in an immortal chariot of sandstone.",
+    visitorTips: [
+      "Hire an authorized heritage guide or inspect the wheels closely to see how the spoke shadows calculate time.",
+      "Visit early in the morning when warm golden sunlight lights up the musicians carved into the upper tiers.",
+      "Attend the annual Konark Dance Festival held in December against the illuminated stone backdrop."
+    ],
+    narrationScript: "Welcome to the Sun Temple of Konark, a UNESCO World Heritage wonder on the coast of Odisha. Conceived in the 13th century by King Narasimhadeva, this is not merely a temple—it is a cosmic chariot in stone. Look at the twenty-four titanic wheels carved into its base: each is an accurate sundial, pulled by seven galloping horses across the heavens. Carved from red Khondalite stone, every square inch celebrates dance, astronomy, and the life-giving warmth of the Sun.",
+    chapters: [
+      { id: "chap-1", title: "The Cosmic Stone Chariot", timestampHint: "0:00", script: "Conceived as the chariot of the Sun God Surya, Konark is one of the grandest architectural feats in human history.", focusPointId: "pt-2" },
+      { id: "chap-2", title: "The Wheels of Time", timestampHint: "0:25", script: "Twenty-four stone wheels line the plinth, sculpted with spokes that tell time to the minute by the sun's shadow.", focusPointId: "pt-1" },
+      { id: "chap-3", title: "Natya Mandapa: Hall of Rhythm", timestampHint: "0:50", script: "Every pillar in the dance hall is covered in graceful dancers preserving the ancient traditions of Odissi.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Seven Horses of Dawn", timestampHint: "1:15", script: "Seven rearing stone horses leap from the plinth, pulling the chariot toward the golden horizon of the Bay of Bengal.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "akshardham temple": {
+    name: "Swaminarayan Akshardham, New Delhi",
+    localName: "स्वामीनारायण अक्षरधाम मंदिर",
+    city: "New Delhi",
+    country: "India",
+    architecturalStyle: "Classical Nagara & Rajasthani Vastu Shastra Architecture",
+    periodEra: "Consecrated November 2005 (Inspired by Pramukh Swami Maharaj)",
+    confidence: 99,
+    summary: "Spanning 100 acres along the Yamuna River, Swaminarayan Akshardham in New Delhi is the largest comprehensive Hindu temple complex in the world. Constructed without structural steel from pink Rajasthani sandstone and Italian Carrara marble, it features 234 carved pillars, 9 domes, and 20,000 murtis.",
+    coordinatesEstimate: { lat: 28.6127, lng: 77.2773 },
+    arKeypoints: [
+      { id: "pt-1", label: "141ft Central Mandir & Golden Murti", featureType: "spire", description: "Monumental central sanctum rising 141 feet, featuring 9 ornate domes and hand-carved stone shikharas.", x: 50, y: 22 },
+      { id: "pt-2", label: "Gajendra Pith (Elephant Plinth)", featureType: "relief", description: "148 life-sized stone elephants carved around the base honoring peace, nature, and divine compassion.", x: 50, y: 75 },
+      { id: "pt-3", label: "Yagnapurush Kund Stepwell", featureType: "entrance", description: "India's largest stepwell featuring 2,870 stone steps and a dramatic musical laser water show.", x: 78, y: 65 },
+      { id: "pt-4", label: "Parikrama Colonnade of 234 Pillars", featureType: "column", description: "Continuous red sandstone colonnade with hand-carved capitals depicting India's saints and philosophers.", x: 25, y: 60 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "November 2000", event: "Construction Commences", description: "Over 7,000 artisans and 4,000 volunteers began carving thousands of tons of sandstone without heavy machinery." },
+      { yearOrEra: "November 2005", event: "Grand Dedication", description: "Inaugurated by President Dr. A.P.J. Abdul Kalam and Prime Minister Manmohan Singh." },
+      { yearOrEra: "2007", event: "Guinness World Record", description: "Formally verified by Guinness World Records as the World's Largest Comprehensive Hindu Temple." }
+    ],
+    architecturalSecrets: [
+      "Built entirely from interlocking sandstone and marble blocks without a single gram of structural steel or reinforced concrete.",
+      "The Gajendra Pith plinth weighs over 3,000 tons and represents one of the largest continuous stone animal reliefs in world history.",
+      "Surrounding the monument is the Narayan Sarovar, containing water from 151 sacred rivers and lakes across India."
+    ],
+    culturalSignificance: "Akshardham celebrates the timeless heritage of Sanatana Dharma, Indian art, architecture, and universal human values of peace and devotion.",
+    visitorTips: [
+      "Plan at least 3–4 hours to explore the central mandir, the cultural boat ride, and the evening musical fountain show.",
+      "Electronic devices, bags, and phones are securely stored in the outer cloakroom.",
+      "Admire the Gajendra Pith elephant carvings around the lower perimeter."
+    ],
+    narrationScript: "Welcome to Swaminarayan Akshardham in New Delhi, the world's largest comprehensive Hindu temple complex. Consecrated in 2005 under the spiritual guidance of Pramukh Swami Maharaj, this monumental sanctuary was hand-carved by 11,000 artisans from pink Rajasthani sandstone and Italian Carrara marble. Look at the central monument rising 141 feet high: surrounded by 148 stone elephants and 234 sculpted pillars, it stands as a testament to the living heritage of Indian architecture.",
+    chapters: [
+      { id: "chap-1", title: "A Modern Wonder of Stone", timestampHint: "0:00", script: "Built without steel or concrete, Akshardham demonstrates the timeless power of classical Indian stone carving.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Elephant Plinth", timestampHint: "0:25", script: "Around the base, 148 life-sized stone elephants carry the temple upon their backs in tribute to peace and nature.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Yagnapurush Kund", timestampHint: "0:50", script: "India's largest stepwell combines ancient geometry with modern multimedia laser and water fountains.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Pillared Colonnade of Saints", timestampHint: "1:15", script: "The colonnade of 234 carved pillars honors the sages, scientists, and spiritual teachers of Indian civilization.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "mahakaleshwar temple": {
+    name: "Mahakaleshwar Jyotirlinga Temple",
+    localName: "श्री महाकालेश्वर ज्योतिर्लिंग",
+    city: "Ujjain, Madhya Pradesh",
+    country: "India",
+    architecturalStyle: "Bhumija & Maratha-Nagara Temple Architecture",
+    periodEra: "Antiquity; Renovated by Paramara Dynasty & General Ranoji Shinde in 1734 AD",
+    confidence: 99,
+    summary: "Located on the sacred banks of the Shipra River in ancient Ujjain (Avantika), Mahakaleshwar is the only South-Facing (Dakshinmukhi) Jyotirlinga among the twelve. Famed for its legendary early-morning Bhasma Aarti and its multi-tiered sanctum where Shiva reigns as the Lord of Time and Death (Mahakala).",
+    coordinatesEstimate: { lat: 23.1827, lng: 75.7682 },
+    arKeypoints: [
+      { id: "pt-1", label: "Multi-Tiered Shikhara & Spire", featureType: "spire", description: "Bhumija-style stone shikhara rising above the Rudrasagar Lake and Ujjain skyline.", x: 50, y: 22 },
+      { id: "pt-2", label: "Dakshinmukhi Garbhagriha Portal", featureType: "entrance", description: "Subterranean sanctum housing the south-facing swayambhu Jyotirlinga lingam.", x: 45, y: 65 },
+      { id: "pt-3", label: "Koteshwar Kund Holy Water Tank", featureType: "relief", description: "Sacred stepped stone tank within the temple courtyard surrounded by smaller shrines.", x: 72, y: 75 },
+      { id: "pt-4", label: "Mahakal Lok Grand Corridor", featureType: "column", description: "Expansive 900-meter cultural corridor featuring 108 grand stone pillars and Shiva Purana murals.", x: 28, y: 70 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "Ancient Era", event: "Avantika: The Greenwich of Ancient India", description: "Ujjain served as the prime meridian of Hindu astronomy and the legendary capital of Emperor Vikramaditya." },
+      { yearOrEra: "1734 AD", event: "Maratha Revival by Ranoji Shinde", description: "General Ranoji Shinde rebuilt the present temple structure and revived traditional worship rituals." },
+      { yearOrEra: "October 2022", event: "Mahakal Lok Corridor Unveiled", description: "Inauguration of the massive 900m cultural promenade celebrating Shiva's cosmic lore." }
+    ],
+    architecturalSecrets: [
+      "Mahakaleshwar is the only Jyotirlinga facing south (Dakshinmukhi)—the direction of Yama (death)—symbolizing Shiva's power to conquer death itself.",
+      "The sanctum has three tiers: Mahakaleshwar in the lower subterranean level, Omkareshwar in the middle tier, and Nagchandreshwar in the top tier (opened only once a year on Nag Panchami).",
+      "The sacred Bhasma Aarti uses holy cremation ash at 4:00 AM every morning in a ritual practiced nowhere else in the world."
+    ],
+    culturalSignificance: "Ujjain is one of the four sacred Kumbh Mela sites (Simhastha), with Mahakaleshwar at the center of astronomical and spiritual gravity.",
+    visitorTips: [
+      "Register online in advance for the world-famous 4:00 AM Bhasma Aarti.",
+      "Walk through the newly inaugurated Mahakal Lok corridor in the evening when the murals and statues are illuminated.",
+      "Take a holy bath at Ram Ghat along the Shipra River before visiting the temple."
+    ],
+    narrationScript: "Welcome to Mahakaleshwar Temple in Ujjain, the ancient city of Avantika. Here, Lord Shiva reigns as Mahakala—the Master of Time, Eternity, and Death. Unlike all other Jyotirlingas, Mahakaleshwar faces south toward the realm of death, offering protection and liberation to all who seek his grace. Enter into the sacred subterranean sanctum where the scent of bilva leaves and the rhythms of the dawn Bhasma Aarti have reverberated for thousands of years.",
+    chapters: [
+      { id: "chap-1", title: "Lord of Time and Eternity", timestampHint: "0:00", script: "In ancient Ujjain, the prime meridian of Vedic astronomy, Mahakala governs the cosmic cycle.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The South-Facing Sanctum", timestampHint: "0:25", script: "Deep within the subterranean stone chamber rests the self-manifested south-facing Jyotirlinga.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Koteshwar Kund", timestampHint: "0:50", script: "The historic stepped tank mirrors the temple towers, offering peaceful reflection within the complex.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "The Mahakal Lok Corridor", timestampHint: "1:15", script: "Over 100 stone pillars and massive murals bring the epics of the Shiva Purana to life.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "kailasa temple": {
+    name: "Kailasa Temple, Ellora (Cave 16)",
+    localName: "कैलास मंदिर, वेरुळ",
+    city: "Ellora, Aurangabad (Chhatrapati Sambhajinagar), Maharashtra",
+    country: "India",
+    architecturalStyle: "Monolithic Rock-Cut Rashtrakuta Dravidian Architecture (UNESCO World Heritage)",
+    periodEra: "8th Century AD (c. 756–773 AD, Commissioned by King Krishna I)",
+    confidence: 99,
+    summary: "The pinnacle of rock-cut architecture on Earth, Cave 16 of the Ellora Caves is a colossal monolithic temple carved entirely from a single basalt cliffside from the top down. Over 200,000 tons of rock were chiseled away to create a multi-story freestanding temple mirroring Mount Kailash.",
+    coordinatesEstimate: { lat: 20.0238, lng: 75.1793 },
+    arKeypoints: [
+      { id: "pt-1", label: "Top-Down Monolithic Central Vimana", featureType: "spire", description: "Rising 30 meters high, carved out of the living basalt cliff without a single joined stone.", x: 50, y: 25 },
+      { id: "pt-2", label: "Ravana Shaking Mount Kailash Relief", featureType: "relief", description: "World-renowned dramatic stone relief depicting demon king Ravana trapped beneath Shiva's toe on Kailash.", x: 42, y: 65 },
+      { id: "pt-3", label: "Monolithic Elephant & Dhwaja Stambha", featureType: "statue", description: "Life-sized stone war elephant and 15-meter victory pillar carved from the courtyard floor.", x: 30, y: 72 },
+      { id: "pt-4", label: "Two-Story Nandi Mandapa Bridge", featureType: "facade", description: "Elevated rock bridge connecting the entrance gateway to the Nandi shrine and main assembly hall.", x: 72, y: 55 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 756–773 AD", event: "Rashtrakuta Engineering Feat", description: "King Krishna I commissioned master sculptors who began at the cliff top, carving downward with chisels and hammers." },
+      { yearOrEra: "1983", event: "UNESCO World Heritage Inscription", description: "Honored by UNESCO as one of the most astonishing achievements of human genius." }
+    ],
+    architecturalSecrets: [
+      "Unlike conventional construction where stone is piled up, Kailasa was carved top-down from the mountain ridge; a single mistake in measurement would have ruined the entire temple.",
+      "Over 200,000 to 400,000 tons of solid volcanic basalt were removed over several decades without modern explosives or steel machinery.",
+      "The temple was originally coated in brilliant white plaster to resemble the snow-covered peak of Mount Kailash in the Himalayas."
+    ],
+    culturalSignificance: "Kailasa Temple is widely recognized by architectural historians and civil engineers as the greatest single rock-carved monolithic structure on planet Earth.",
+    visitorTips: [
+      "Climb the cliffside trail overlooking Cave 16 to appreciate the breathtaking top-down scale of the excavation.",
+      "Bring a flashlight to examine the intricate Ramayana and Mahabharata narrative friezes in the lower galleries.",
+      "Visit early in the morning for cooler weather and stunning directional light."
+    ],
+    narrationScript: "Welcome to Kailasa Temple at Ellora, the greatest monolithic rock-cut monument ever achieved by human hands. What you are looking at was not built—it was excavated. Starting at the crest of the basalt cliff above, master Rashtrakuta artisans carved downward through solid mountain rock, chiseling away over two hundred thousand tons of volcanic stone. What emerged is a freestanding multi-story temple, complete with two-story halls, life-sized elephants, and towering pillars, all carved from a single mountain.",
+    chapters: [
+      { id: "chap-1", title: "Carved from a Mountain", timestampHint: "0:00", script: "Kailasa stands as an unmatched marvel of engineering: an entire palace-temple carved from top to bottom.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Ravana Beneath the Mountain", timestampHint: "0:25", script: "The relief of Ravana shaking Kailash captures raw kinetic energy and dramatic tension in ancient stone.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Monolithic Elephants", timestampHint: "0:50", script: "In the courtyard, life-sized stone elephants and soaring victory pillars stand rooted in the living bedrock.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Bridges in the Sky", timestampHint: "1:15", script: "Carved stone bridges span the courtyard, connecting the entrance gate to the assembly hall above.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "kandariya mahadeva temple": {
+    name: "Kandariya Mahadeva Temple, Khajuraho",
+    localName: "कंदरिया महादेव मंदिर, खजुराहो",
+    city: "Khajuraho, Chhatarpur, Madhya Pradesh",
+    country: "India",
+    architecturalStyle: "High Nagara Sandhara Shikhara Style (UNESCO World Heritage)",
+    periodEra: "c. 1030 AD (Reign of King Vidyadhara, Chandela Dynasty)",
+    confidence: 99,
+    summary: "The grandest and tallest temple in the UNESCO-inscribed Khajuraho Western Group, Kandariya Mahadeva represents the absolute zenith of Nagara temple architecture. Its 31-meter main spire replicates a mountain range with 84 mini-spires (Urushringas), covered in over 870 breathtaking sculptures.",
+    coordinatesEstimate: { lat: 24.8532, lng: 79.9197 },
+    arKeypoints: [
+      { id: "pt-1", label: "31m Mountain-Cluster Shikhara", featureType: "spire", description: "Masterpiece Nagara spire cascading into 84 secondary urushringa spires mimicking Mount Meru.", x: 50, y: 18 },
+      { id: "pt-2", label: "Carved Mithuna & Surasundari Reliefs", featureType: "relief", description: "Famous friezes of celestial nymphs applying makeup, playing music, and celebratory divine couples.", x: 45, y: 58 },
+      { id: "pt-3", label: "Jagati High Raised Platform", featureType: "facade", description: "Elevated granite and sandstone terrace elevating the monument above the landscape.", x: 50, y: 82 },
+      { id: "pt-4", label: "Makara Torana Entrance Arch", featureType: "entrance", description: "Spectacular stone archway carved with mythical makaras leading into the Ardhamandapa portico.", x: 68, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 1030 AD", event: "Built by Chandela King Vidyadhara", description: "Constructed to celebrate the king's victory over Mahmud of Ghazni and dedicated to Lord Shiva." },
+      { yearOrEra: "13th–19th Century", event: "Hidden in the Forest", description: "Preserved from destruction by the dense forests of Bundelkhand until rediscovery by British engineer T.S. Burt in 1838." },
+      { yearOrEra: "1986", event: "UNESCO World Heritage Listing", description: "Inscribed by UNESCO as an exceptional testimony to medieval Indian architectural genius." }
+    ],
+    architecturalSecrets: [
+      "The complex geometry of the 84 cascading subsidiary spires creates a rhythmic visual sensation of looking at a natural mountain range from every angle.",
+      "The sandstone blocks were fitted together with precision tongue-and-groove joints without mortar, standing rock-solid for a thousand years.",
+      "While famous for sensuous iconography, erotic motifs represent less than 10% of the carvings—the remaining 90% depict daily medieval life, musicians, soldiers, and sacred deities."
+    ],
+    culturalSignificance: "Kandariya Mahadeva celebrates the wholeness of human existence—dharma, artha, kama, and moksha—integrated into sacred temple geometry.",
+    visitorTips: [
+      "Visit during golden hour (late afternoon) when warm sunlight highlights the three-dimensional depth of the carvings.",
+      "Use binoculars or a telephoto camera lens to study the intricate jewelry and hairstyles on the upper tiers.",
+      "Attend the vibrant Khajuraho Dance Festival in February held right before the floodlit temples."
+    ],
+    narrationScript: "Welcome to the Kandariya Mahadeva Temple in Khajuraho, the crowning masterpiece of medieval Indian architecture. Built in the 11th century by Chandela King Vidyadhara, this temple rises like a stone mountain range 102 feet into the sky. Its shikhara cascades into eighty-four smaller spires, mimicking Mount Meru. Over eight hundred hand-carved statues adorn its golden sandstone walls, celebrating every facet of life, love, music, and divine liberation.",
+    chapters: [
+      { id: "chap-1", title: "The Mountain of Meru", timestampHint: "0:00", script: "The stepped shikhara rises like a mountain summit, representing the ascent of human consciousness.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Art of Celestial Grace", timestampHint: "0:25", script: "Over eight hundred sculptures of celestial nymphs, warriors, and dancers adorn the sandstone walls.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "The Makara Torana", timestampHint: "0:50", script: "Passing beneath the sculpted makara arch, the worshiper steps into the sacred inner chambers.", focusPointId: "pt-4" },
+      { id: "chap-4", title: "The High Terrace of Faith", timestampHint: "1:15", script: "Standing on the elevated Jagati terrace, the temple commands the landscape with monumental grace.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "virupaksha temple": {
+    name: "Virupaksha Temple, Hampi",
+    localName: "ವಿರೂಪಾಕ್ಷ ದೇವಾಲಯ, ಹಂಪಿ",
+    city: "Hampi, Vijayanagara, Karnataka",
+    country: "India",
+    architecturalStyle: "Dravidian Vijayanagara Imperial Temple Architecture (UNESCO World Heritage)",
+    periodEra: "7th Century origins; Major expansion 1510 AD by Emperor Krishnadevaraya",
+    confidence: 99,
+    summary: "The spiritual heart of the UNESCO World Heritage city of Hampi, Virupaksha Temple has seen uninterrupted worship since the 7th century AD. Standing beside the Tungabhadra River, it is famed for its 50-meter tiered eastern Rajagopuram, Ranga Mandapa ceiling murals, and ancient inverted pinhole shadow phenomenon.",
+    coordinatesEstimate: { lat: 15.3353, lng: 76.4600 },
+    arKeypoints: [
+      { id: "pt-1", label: "50-Meter 9-Tiered Eastern Rajagopuram", featureType: "spire", description: "Imposing brick-and-granite entrance tower commanding the Hampi Bazaar street.", x: 50, y: 20 },
+      { id: "pt-2", label: "Inverted Pinhole Shadow Chamber", featureType: "relief", description: "Ancient camera obscura optical aperture that casts an inverted shadow of the 50m tower onto an interior wall.", x: 38, y: 55 },
+      { id: "pt-3", label: "Ranga Mandapa & Vijayanagara Ceiling Murals", featureType: "facade", description: "Pillared hall built by Krishnadevaraya featuring 16th-century murals of the Mahabharata and Shiva's wedding.", x: 52, y: 65 },
+      { id: "pt-4", label: "Sacred Tungabhadra River Ghats", featureType: "entrance", description: "Granite steps descending to the holy Tungabhadra River, lined with shrines and massive boulders.", x: 74, y: 78 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "7th Century AD", event: "Pre-Vijayanagara Origins", description: "Began as a humble riverside shrine to Lord Virupaksha (an aspect of Shiva) and Goddess Pampa." },
+      { yearOrEra: "1510 AD", event: "Krishnadevaraya Coronation Gift", description: "Emperor Krishnadevaraya built the grand Ranga Mandapa and the eastern tower to mark his accession." },
+      { yearOrEra: "1565 AD to Present", event: "Living Temple Survival", description: "Miraculously survived the destruction of Hampi, continuing daily worship without interruption to this day." }
+    ],
+    architecturalSecrets: [
+      "In a small rear dark chamber, a tiny pinhole slit in the stone wall acts as a natural camera obscura, projecting a crisp upside-down shadow of the 50m eastern tower.",
+      "The temple elephant Lakshmi blesses devotees at the entrance portal every morning with her trunk.",
+      "The main street extending 700 meters from the gate was the famous Hampi Bazaar, where medieval international merchants traded pearls, rubies, and Arabian war horses."
+    ],
+    culturalSignificance: "Virupaksha is the living soul of Hampi—a rare ancient temple where chants and bells have continued without pause across fourteen centuries.",
+    visitorTips: [
+      "Ask a temple priest or guide to show you the inverted pinhole camera shadow room near the rear sanctum.",
+      "Climb Matanga Hill at sunrise for a panoramic view of Virupaksha's tower rising above the boulder-strewn landscape.",
+      "Watch the temple elephant take her morning bath at the river ghats around 8:00 AM."
+    ],
+    narrationScript: "Welcome to the Virupaksha Temple in Hampi, the eternal spiritual capital of the Vijayanagara Empire. Unlike the surrounding ruins of this medieval metropolis, worship here has never ceased for over thirteen centuries. Look up at the soaring 50-meter Rajagopuram rising above the ancient bazaar. Inside, discover optical wonders where ancient architects engineered a camera obscura into the stone, casting an inverted shadow of the great tower on the sanctum wall.",
+    chapters: [
+      { id: "chap-1", title: "Eternal Beacon of Hampi", timestampHint: "0:00", script: "Virupaksha has witnessed the rise and fall of empires while keeping its sacred flame alive.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Optical Wonder", timestampHint: "0:25", script: "Inside a darkened stone chamber, ancient architects engineered an inverted pinhole camera shadow.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Murals of Krishnadevaraya", timestampHint: "0:50", script: "The Ranga Mandapa ceiling preserves 16th-century paintings of the Ramayana and Vijayanagara royal court.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "River of the Goddess Pampa", timestampHint: "1:15", script: "The granite ghats descend to the Tungabhadra River, where myths of Shiva and Pampa began.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "padmanabhaswamy temple": {
+    name: "Sree Padmanabhaswamy Temple",
+    localName: "ശ്രീ പദ്മനാഭസ്വാമി ക്ഷേത്രം",
+    city: "Thiruvananthapuram, Kerala",
+    country: "India",
+    architecturalStyle: "Chera & Dravidian Fusion Architecture with 100ft Gopuram",
+    periodEra: "Ancient 8th Century origins; Rebuilt 1731 AD by King Anizham Thirunal Marthanda Varma",
+    confidence: 99,
+    summary: "Located in the heart of Kerala's capital, Sree Padmanabhaswamy Temple is renowned as the wealthiest religious institution on planet Earth. Featuring a majestic 100-foot 7-tier gopuram, a 30-foot idol of Lord Vishnu reclining on the serpent Anantha seen through three doors, and enigmatic underground vaults (Kallaras).",
+    coordinatesEstimate: { lat: 8.4830, lng: 76.9436 },
+    arKeypoints: [
+      { id: "pt-1", label: "100ft 7-Tiered Dravidian Rajagopuram", featureType: "spire", description: "Magnificent sculpted tower displaying intricate stone reliefs of the Dashavatara against the Kerala sky.", x: 50, y: 22 },
+      { id: "pt-2", label: "Padmatheertham Sacred Lotus Tank", featureType: "relief", description: "Large rectangular stone water body in front of the temple where royal rituals and sacred baths take place.", x: 50, y: 78 },
+      { id: "pt-3", label: "Ottakkal Mandapam & Three-Door Sanctum", featureType: "entrance", description: "Monolithic single-stone granite platform leading to the three doors viewing head, torso, and feet of reclining Vishnu.", x: 45, y: 55 },
+      { id: "pt-4", label: "Subterranean Vaults (Kallara Vault B)", featureType: "facade", description: "Subterranean treasure chambers housing ancient gold, diamonds, and royal artifacts valued in the billions.", x: 70, y: 60 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "8th Century AD", event: "Mentioned by Alvars", description: "Celebrated in Divya Prabandham literature by Nammalvar as one of the 108 supreme Divya Desams." },
+      { yearOrEra: "1750 AD", event: "Thrippadidanam Royal Dedication", description: "King Marthanda Varma surrendered his entire kingdom of Travancore to Lord Padmanabha, ruling as His humble servant (Padmanabhadasa)." },
+      { yearOrEra: "2011", event: "Discovery of Treasure Vaults", description: "Supreme Court inventory revealed historic gold idols, precious gems, and antique coins worth an estimated $22 billion in Vaults A to F." }
+    ],
+    architecturalSecrets: [
+      "The 18-foot reclining idol of Padmanabha is composed of 12,008 sacred Shaligram stones brought on elephant back from Nepal's Gandaki River, coated with a special herbal plaster (Kadu Sharkara Yogam).",
+      "During the equinoxes, the setting sun aligns with mathematical precision through all seven tiers of the 100ft Rajagopuram windows.",
+      "Vault B remains unopened and surrounded by mystical legends of iron cobras and ancient acoustic seals."
+    ],
+    culturalSignificance: "The temple is the patron sanctuary of the Royal Family of Travancore and represents the spiritual crown of Kerala's heritage.",
+    visitorTips: [
+      "Strict traditional Kerala dress code: men must wear white mundu/dhoti without shirts; women must wear sarees.",
+      "Strict security checks; all electronics and phones must be deposited in the outer cloakrooms.",
+      "Arrive early in the morning (around 6:30 AM) to experience the peaceful atmosphere before long queues form."
+    ],
+    narrationScript: "Welcome to Sree Padmanabhaswamy Temple in Thiruvananthapuram, Kerala—the richest temple on planet Earth. Gaze upon its 100-foot Dravidian gopuram rising above the Padmatheertham lotus pond. In 1750, the King of Travancore surrendered his entire kingdom to the deity, ruling merely as a servant of Padmanabha. Inside the sanctum, Vishnu reclines on the thousand-headed serpent Anantha, carved from twelve thousand holy Shaligram stones.",
+    chapters: [
+      { id: "chap-1", title: "The Royal Gopuram", timestampHint: "0:00", script: "The seven-tiered tower blends Tamil Dravidian sculpture with Kerala's traditional rooflines.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Padmatheertham: The Lotus Pond", timestampHint: "0:25", script: "The sacred water body reflects the stone tower in peaceful morning light.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "The Three Sacred Portals", timestampHint: "0:50", script: "Devotees view the colossal reclining deity through three doors: head and Shiva lingam, chest, and lotus feet.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Vaults of Antiquity", timestampHint: "1:15", script: "Deep below the stone courtyards lie the ancient vaults holding millenniums of royal offerings.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "ranganathaswamy temple": {
+    name: "Sri Ranganathaswamy Temple, Srirangam",
+    localName: "ஸ்ரீ ரங்கநாதசுவாமி கோயில், ஸ்ரீரங்கம்",
+    city: "Tiruchirappalli, Tamil Nadu",
+    country: "India",
+    architecturalStyle: "Dravidian Temple Complex (Largest Functioning Hindu Temple on Earth)",
+    periodEra: "c. 6th–16th Century (Chola, Pandya, Hoysala, Vijayanagara Dynasties)",
+    confidence: 99,
+    summary: "Spanning 156 acres on an island in the Kaveri River, Srirangam is the largest functioning Hindu temple complex in the world. It features 7 concentric walled enclosures (Prakaras), 21 colossal Gopuram towers, the 236-foot Rajagopuram (tallest temple tower in Asia), and the celebrated Hall of 1,000 Pillars.",
+    coordinatesEstimate: { lat: 10.8622, lng: 78.6901 },
+    arKeypoints: [
+      { id: "pt-1", label: "236ft Southern Rajagopuram", featureType: "spire", description: "Asia's tallest temple tower, a 13-tiered polychrome Dravidian colossus completed in 1987.", x: 50, y: 18 },
+      { id: "pt-2", label: "Hall of 1,000 Pillars & Rearing Steeds", featureType: "column", description: "Monumental granite hall featuring dynamic sculptures of warriors mounted on rampant rearing horses.", x: 40, y: 65 },
+      { id: "pt-3", label: "Golden Ranga Vimana", featureType: "dome", description: "Pure gold-plated circular sanctum tower shaped like the Omkar Pranava over the reclining Ranganatha.", x: 55, y: 35 },
+      { id: "pt-4", label: "Seven Concentric Enclosure Walls", featureType: "entrance", description: "Massive perimeter granite ramparts enclosing a living temple city of over 40,000 residents.", x: 75, y: 75 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 6th–10th Century", event: "Chola Dynasty Foundations", description: "Patronized by Chola emperors and praised by all twelve Alvar saints as the first Divya Desam." },
+      { yearOrEra: "1310–1323 AD", event: "Sieges & Preservation", description: "Temple treasures protected during the Delhi Sultanate invasions by heroic sevayats." },
+      { yearOrEra: "1987", event: "Completion of the Grand Rajagopuram", description: "The 236-foot Southern Rajagopuram was completed under the leadership of the 44th Jeeyar of Ahobila Mutt." }
+    ],
+    architecturalSecrets: [
+      "With a perimeter of 4 kilometers and 156 acres, Srirangam is larger than Vatican City, functioning as an entire living religious municipality.",
+      "The Hall of 1,000 Pillars (actually 953 pillars) was carved from single granite shafts during the Vijayanagara period, with intricate undercuts so deep a thread can pass through.",
+      "The temple houses an ancient solar clock and stone inscriptions spanning over eight centuries in Tamil, Sanskrit, Kannada, and Telugu."
+    ],
+    culturalSignificance: "Srirangam is the premier temple of Sri Vaishnavism, honored as the premier Bhoologa Vaikundam (heaven on Earth).",
+    visitorTips: [
+      "Climb to the rooftop viewing platform on the inner enclosure for a breathtaking view of all 21 Gopurams.",
+      "Visit during the 21-day Vaikunta Ekadasi festival in December to witness the opening of the Paramapada Vasal (Gate of Heaven).",
+      "Allow at least 3 hours to appreciate the vast scale of the outer and inner courtyards."
+    ],
+    narrationScript: "Welcome to Sri Ranganathaswamy Temple in Srirangam, the largest functioning Hindu temple on Earth. Spanning an entire island of 156 acres between the Kaveri and Kollidam rivers, this temple city is enclosed within seven concentric granite walls. Look at the towering southern Rajagopuram: rising 236 feet into the sky, it is the tallest temple tower in all of Asia. Inside, over nine hundred monolithic stone pillars and twenty-one gopurams create a stone mandala of devotion.",
+    chapters: [
+      { id: "chap-1", title: "Asia's Tallest Gateway", timestampHint: "0:00", script: "The 236-foot Rajagopuram stands as an engineering colossus greeting millions of pilgrims.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Seven Walled Cities", timestampHint: "0:25", script: "Seven concentric stone enclosures represent the seven bodies and chakras of human existence.", focusPointId: "pt-4" },
+      { id: "chap-3", title: "Hall of Rearing War Horses", timestampHint: "0:50", script: "The Thousand Pillar Hall features master Vijayanagara carvings of wild horses leaping into battle.", focusPointId: "pt-2" },
+      { id: "chap-4", title: "The Golden Sanctuary", timestampHint: "1:15", script: "Beneath the golden Ranga Vimana dome rests Lord Ranganatha in timeless cosmic slumber.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "shore temple": {
+    name: "Shore Temple, Mahabalipuram",
+    localName: "மாமல்லபுரம் கடற்கரை கோயில்",
+    city: "Mamallapuram, Chengalpattu, Tamil Nadu",
+    country: "India",
+    architecturalStyle: "Pallava Structural Granite Architecture (UNESCO World Heritage)",
+    periodEra: "c. 700–728 AD (Reign of King Narasimhavarman II / Rajasimha)",
+    confidence: 99,
+    summary: "One of the earliest structural stone temples of Southern India, the Shore Temple stands directly on the Bay of Bengal shoreline at Mahabalipuram. A UNESCO World Heritage icon, its twin granite spires have endured ocean gales, salt spray, and tsunamis for over 1,300 years.",
+    coordinatesEstimate: { lat: 12.6162, lng: 80.1983 },
+    arKeypoints: [
+      { id: "pt-1", label: "Twin Pyramidal Granite Spires", featureType: "spire", description: "Stepped vimana towers of carved granite blocks facing directly east toward the sunrise over the sea.", x: 50, y: 30 },
+      { id: "pt-2", label: "Monolithic Nandi Perimeter Enclosure", featureType: "statue", description: "Compound wall surmounted by dozens of weathered monolithic stone Nandi bulls.", x: 35, y: 68 },
+      { id: "pt-3", label: "Bay of Bengal Ocean Breakers", featureType: "relief", description: "Crashing waves of the Coromandel Coast that historically greeted ancient international merchant fleets.", x: 78, y: 75 },
+      { id: "pt-4", label: "Reclining Vishnu & Somaskanda Sanctums", featureType: "entrance", description: "Ancient inner shrines housing both Shiva and a rare bedrock carving of reclining Vishnu (Anantasayana).", x: 48, y: 60 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 700–728 AD", event: "Pallava Structural Revolution", description: "King Narasimhavarman II pioneered structural block masonry, shifting from cave-excavated temples to freestanding stone." },
+      { yearOrEra: "8th Century AD", event: "Bustling Silk & Spice Port", description: "Served as a navigational landmark for ships sailing between India, Sri Lanka, China, and Southeast Asia." },
+      { yearOrEra: "2004", event: "The Tsunami Revelation", description: "The 2004 Indian Ocean tsunami briefly receded, uncovering ancient submerged granite foundations of the legendary 'Seven Pagodas'." }
+    ],
+    architecturalSecrets: [
+      "The temple survived the catastrophic 2004 tsunami with minimal damage due to its heavy granite foundation and a submerged breakwater system engineered by Pallava builders.",
+      "It represents a transitional turning point in Indian art, moving from rock-cut caves to freestanding structural stone temples.",
+      "Ancient European travelers called this coast the 'Seven Pagodas', believing six other sister temples were submerged beneath the waves."
+    ],
+    culturalSignificance: "The Shore Temple is the crowning gem of Pallava maritime architecture, blending sacred devotion with ancient international trade routes.",
+    visitorTips: [
+      "Visit at sunrise to photograph the golden light illuminating the granite towers against the Bay of Bengal.",
+      "Explore nearby monuments: the monolithic Pancha Rathas and Arjuna's Penance giant rock relief.",
+      "Notice the protective casuarina trees and stone seawalls preserving the temple from salt erosion."
+    ],
+    narrationScript: "Welcome to the Shore Temple of Mahabalipuram, standing on the wave-swept coast of Tamil Nadu. For over thirteen hundred years, these twin granite spires have caught the first rays of sunrise over the Bay of Bengal. Built in the 8th century by the Pallava king Rajasimha, this was one of South India's first structural stone temples. Surrounded by dozens of carved stone Nandi bulls, it has weathered ocean storms and tsunamis, standing as an eternal beacon between the land and the sea.",
+    chapters: [
+      { id: "chap-1", title: "Guardian of the Bay of Bengal", timestampHint: "0:00", script: "Standing at the edge of the ocean, the Shore Temple greeted ancient merchants sailing to Southeast Asia.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Nandi Wall", timestampHint: "0:25", script: "Weathered by thirteen centuries of sea spray, stone Nandi bulls guard the sacred perimeter.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Twin Shrines of Shiva and Vishnu", timestampHint: "0:50", script: "Inside lie three sanctuaries dedicated to both Shiva's cosmic family and reclining Vishnu.", focusPointId: "pt-4" },
+      { id: "chap-4", title: "Legend of the Seven Pagodas", timestampHint: "1:15", script: "The sea whispers ancient legends of six other sister temples resting beneath the coastal waves.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "kamakhya temple": {
+    name: "Maa Kamakhya Devalaya",
+    localName: "মা কামাখ্যা দেৱালয়",
+    city: "Guwahati",
+    country: "India",
+    architecturalStyle: "Nilachal Hybrid Architecture (Cruciform Base with Beehive Dome)",
+    periodEra: "Ancient origins; Reconstructed 1565 AD by King Nara Narayana & General Chilarai",
+    confidence: 99,
+    summary: "Perched atop the lush Nilachal Hill overlooking the Brahmaputra River in Assam, Kamakhya is the most revered of the 51 Shakti Peethas. Celebrated for its unique Nilachal beehive shikhara architecture and the sacred subterranean cave shrine where the divine creative force of Mother Earth is worshipped.",
+    coordinatesEstimate: { lat: 26.1664, lng: 91.7058 },
+    arKeypoints: [
+      { id: "pt-1", label: "Beehive-Shaped Nilachal Shikhara", featureType: "spire", description: "Distinctive polygonal stone tower with horizontal ribbed mouldings and miniature spires.", x: 50, y: 24 },
+      { id: "pt-2", label: "Subterranean Natural Spring Garbhagriha", featureType: "entrance", description: "Dark cave sanctum housing a natural underground freshwater spring over a sacred rock fissure.", x: 42, y: 65 },
+      { id: "pt-3", label: "Brahmaputra River Valley Overlook", featureType: "relief", description: "Panoramic vistas of the mighty Brahmaputra River winding through the green hills of Assam.", x: 78, y: 35 },
+      { id: "pt-4", label: "Natamandapa & Outer Sculptured Wall", featureType: "facade", description: "Assembly hall adorned with stone reliefs of Ganesha, Chamunda, and ancient Koch dynasty kings.", x: 55, y: 75 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "Ancient Puranic Era", event: "Origin of the Shakti Peetha", description: "According to legend, the yoni (creative organ) of Sati fell on Nilachal Hill, consecrating it as the supreme Tantric shrine." },
+      { yearOrEra: "1565 AD", event: "Rebuilding by Koch Kings", description: "King Nara Narayana and general Chilarai rebuilt the temple in its unique hybrid architectural form." },
+      { yearOrEra: "Annual June Event", event: "Ambubachi Mela", description: "Attracts hundreds of thousands of pilgrims and sadhus celebrating the annual fertility cycle of Mother Earth." }
+    ],
+    architecturalSecrets: [
+      "The temple has no sculpted deity figure in its sanctum—devotees worship a natural cleft in the bedrock continuously moistened by an underground spring.",
+      "The unique 'Nilachal' style was invented when master masons failed to rebuild the collapsed original Nagara spire, designing a sturdy dome of dressed stone that has stood for 450 years.",
+      "During the annual Ambubachi Mela in June, the subterranean spring water turns red for three days, symbolizing the creative generative cycle of the cosmos."
+    ],
+    culturalSignificance: "Kamakhya is the premier sanctuary of Tantric Shakti worship, honoring the divine feminine as the primary creator, nurturer, and transformer of the universe.",
+    visitorTips: [
+      "Arrive early in the morning as queues for the inner cave sanctum can take several hours.",
+      "Dress conservatively in traditional clothes and remove footwear at the entrance gates.",
+      "Enjoy the panoramic sunset views of the Brahmaputra River from the temple complex."
+    ],
+    narrationScript: "Welcome to Maa Kamakhya Devalaya on Nilachal Hill in Guwahati, Assam. Revered as the supreme seat of the fifty-one Shakti Peethas, Kamakhya honors the primordial creative power of the universe. Look at its unique beehive-shaped dome: known as the Nilachal style, it was engineered in the 16th century after ancient stone spires collapsed. Inside the dark, cool cave beneath, an underground natural spring flows over the sacred rock, celebrating the eternal life-giving energy of Mother Earth.",
+    chapters: [
+      { id: "chap-1", title: "Seat of the Divine Mother", timestampHint: "0:00", script: "High on Nilachal Hill, Kamakhya is the most revered sanctuary of Shakti worship in the world.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Subterranean Spring", timestampHint: "0:25", script: "Down stone steps into a natural cave, an eternal spring flows over the bedrock sanctum.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Nilachal Architectural Style", timestampHint: "0:50", script: "The distinctive ribbed dome combines indigenous Assamese and classical Indian architectural elements.", focusPointId: "pt-4" },
+      { id: "chap-4", title: "Over the Mighty Brahmaputra", timestampHint: "1:15", script: "From the temple gardens, the great Brahmaputra River winds majestically through the valley.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "ram mandir ayodhya": {
+    name: "Shri Ram Janmabhoomi Mandir",
+    localName: "श्री राम जन्मभूमि मंदिर, अयोध्या",
+    city: "Ayodhya, Uttar Pradesh",
+    country: "India",
+    architecturalStyle: "Grand Nagara Style with Traditional Vastu Shastra",
+    periodEra: "Consecrated January 2024 (Chief Architect: Chandrakant Sompura)",
+    confidence: 99,
+    summary: "Erected at the sacred birthplace of Lord Rama along the holy Sarayu River in Ayodhya, the Shri Ram Janmabhoomi Mandir is a monumental masterpiece of Nagara temple architecture. Built entirely from hand-carved Bansi Paharpur pink sandstone and Makrana white marble without steel or iron, designed to endure for over a thousand years.",
+    coordinatesEstimate: { lat: 26.7956, lng: 82.1943 },
+    arKeypoints: [
+      { id: "pt-1", label: "161ft High Nagara Main Shikhara", featureType: "spire", description: "Soaring central spire crowned with golden Amrit Kalash and saffron flag.", x: 50, y: 18 },
+      { id: "pt-2", label: "Five Grand Mandapas (Domes)", featureType: "dome", description: "Five sacred pavilions: Nritya, Rang, Sabha, Prarthana, and Kirtan Mandapas with carved cupolas.", x: 50, y: 45 },
+      { id: "pt-3", label: "392 Sculpted Sandstone Pillars", featureType: "column", description: "Three-tiered pillars carved with statues of deities, apsaras, and Ramayana motifs.", x: 32, y: 65 },
+      { id: "pt-4", label: "Singhadwara & 32-Step Marble Stairway", featureType: "entrance", description: "Grand entrance gateway flanked by carved stone elephants, lions, Hanuman, and Garuda.", x: 68, y: 78 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "Ancient Antiquity", event: "Birthplace of Shri Rama", description: "Revered in the Ramayana as the capital of the ancient Ikshvaku dynasty and the birthplace of Lord Rama." },
+      { yearOrEra: "August 2020", event: "Bhoomi Pujan Ceremony", description: "Foundation stone laid following centuries of civilizational devotion and cultural aspiration." },
+      { yearOrEra: "22 January 2024", event: "Pran Pratishtha Consecration", description: "The 51-inch black granite idol of Ram Lalla was consecrated in a historic national ceremony." }
+    ],
+    architecturalSecrets: [
+      "Built without a single ounce of iron or steel reinforcement to ensure the structure lasts over 1,000 years without corrosion.",
+      "The temple foundation is made of a 14-meter-thick engineered roller-compacted concrete rock mass that mimics natural bedrock.",
+      "A Surya Tilak optical mirror-and-lens mechanism was engineered by CBRI scientists to focus the sun's rays directly onto the forehead of Ram Lalla every Ram Navami at noon."
+    ],
+    culturalSignificance: "The temple represents the cultural soul and civilizational homecoming of millions of devotees worldwide, celebrating righteousness (Maryada Purushottam).",
+    visitorTips: [
+      "Book Aarti or Sugam Darshan passes via the official Shri Ram Janmabhoomi Teerth Kshetra portal.",
+      "Enjoy the newly renovated Sarayu River Aarti and Ram Ki Paidi illuminated steps in the evening.",
+      "Follow traditional respectful dress guidelines."
+    ],
+    narrationScript: "Welcome to the Shri Ram Janmabhoomi Mandir in Ayodhya, the revered birthplace of Lord Rama. Rising 161 feet above the sacred soil of the Ikshvaku kings, this monumental temple is an epic of Indian Nagara architecture. Crafted from 380,000 cubic feet of pink Bansi Paharpur sandstone from Rajasthan and pristine Makrana marble, it stands without a single beam of iron or steel. Step through the Singhadwara, where 392 intricately carved pillars guide your journey into the sanctum of Ram Lalla.",
+    chapters: [
+      { id: "chap-1", title: "The Sacred Spire of Ayodhya", timestampHint: "0:00", script: "Rising 161 feet, the central Shikhara represents the return of ancient Indian classical architecture.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Five Mandapas of Devotion", timestampHint: "0:25", script: "Five carved domes represent song, prayer, dance, assembly, and celebration.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Forest of Stone Pillars", timestampHint: "0:50", script: "Nearly four hundred pillars are carved with divine deities and epics of the Ramayana.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Through the Singhadwara", timestampHint: "1:15", script: "Stone lions, elephants, Hanuman, and Garuda guard the grand 32-step marble entrance stairway.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "batu caves": {
+    name: "Batu Caves (Lord Murugan Temple)",
+    localName: "பத்து மலை முருகன் கோயில்",
+    city: "Gombak, Selangor",
+    country: "Malaysia",
+    architecturalStyle: "Limestone Karst Cave Temple with Colossal Murugan Statue",
+    periodEra: "Consecrated 1890; Monumental Golden Statue unveiled 2006",
+    confidence: 99,
+    summary: "Just north of Kuala Lumpur, Batu Caves is a colossal 400-million-year-old limestone hill honeycombed with vast cave temples. Fronted by the world's tallest statue of Lord Murugan (140 feet, coated in 300 liters of gold paint) and a steep flight of 272 rainbow-colored steps leading up to the Cathedral Cave.",
+    coordinatesEstimate: { lat: 3.2379, lng: 101.6840 },
+    arKeypoints: [
+      { id: "pt-1", label: "140ft Colossal Golden Murugan Statue", featureType: "statue", description: "The world's second-tallest Hindu deity statue, crafted from 250 tons of steel and 1,550 cubic meters of concrete.", x: 32, y: 48 },
+      { id: "pt-2", label: "272 Rainbow Painted Steps", featureType: "entrance", description: "Famous steep staircase painted in vibrant rainbow hues ascending 100 meters up the limestone cliff.", x: 50, y: 70 },
+      { id: "pt-3", label: "Cathedral Cave (Temple Cave) Ceiling", featureType: "relief", description: "Titanic natural limestone chamber soaring 100 meters high with natural skylights and shrines.", x: 50, y: 20 },
+      { id: "pt-4", label: "Ornate Dravidian Temple Shrines Inside", featureType: "facade", description: "Vibrant South Indian Gopuram and sanctums sheltered inside the ancient cavern.", x: 68, y: 55 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1890", event: "Dedicated by K. Thamboosamy Pillai", description: "Prominent Tamil community leader founded the temple inside the cave, recognizing the cave entrance resembled the spear (vel) of Murugan." },
+      { yearOrEra: "1892", event: "First Thaipusam Festival", description: "Began celebrating the annual Thaipusam festival, which now attracts over 1.5 million pilgrims every January." },
+      { yearOrEra: "2006", event: "Unveiling of the Golden Murugan", description: "Three years of sculpting by 15 Indian master artisans culminated in the 140-foot golden statue." }
+    ],
+    architecturalSecrets: [
+      "The limestone formation is estimated by geologists to be over 400 million years old, having provided shelter to ancient indigenous peoples and wildlife.",
+      "The colossal Murugan statue took 350 tons of steel bars, 1,550 cubic meters of concrete, and 300 liters of gold paint brought from Thailand.",
+      "During Thaipusam, devotees carrying elaborate kavadis and milk pots ascend the 272 steps in a trance accompanied by the rhythm of urumi melam drums."
+    ],
+    culturalSignificance: "Batu Caves is the focal spiritual center for the Hindu diaspora in Southeast Asia, celebrated for its harmony of nature and devotion.",
+    visitorTips: [
+      "Dress respectfully: shoulders and knees must be covered to climb the 272 steps.",
+      "Watch out for the playful resident macaque monkeys along the stairs—keep food and water bottles inside bags.",
+      "Visit in the morning between 7:30 AM and 9:00 AM to beat the tropical heat and crowds."
+    ],
+    narrationScript: "Welcome to Batu Caves in Selangor, Malaysia, one of the most iconic Hindu shrines outside India. Rising before you is the 140-foot golden statue of Lord Murugan, gleaming brilliantly against a 400-million-year-old limestone cliff. To reach the sacred Cathedral Cave above, climb the famous flight of 272 rainbow-painted steps. Inside, the limestone ceiling soars 300 feet into the air, with natural sunbeams illuminating ornate Dravidian shrines sheltered within the earth.",
+    chapters: [
+      { id: "chap-1", title: "The Golden Colossus", timestampHint: "0:00", script: "Standing 140 feet tall, the statue of Lord Murugan welcomes millions of pilgrims from around the world.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Rainbow Stairway", timestampHint: "0:25", script: "Two hundred and seventy-two colorful steps climb straight up the sheer limestone cliffside.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Cathedral of Nature", timestampHint: "0:50", script: "Inside the mountain, a colossal natural limestone cave creates an ancient natural sanctuary.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Thaipusam: Festival of Faith", timestampHint: "1:15", script: "Every winter, over a million devotees gather here carrying kavadis in devotion to Lord Murugan.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "tanah lot": {
+    name: "Pura Tanah Lot",
+    localName: "Pura Tanah Lot, Bali",
+    city: "Tabanan, Bali",
+    country: "Indonesia",
+    architecturalStyle: "Balinese Sea Temple (Pura Segara) & Meru Tower Architecture",
+    periodEra: "16th Century AD (Founded by Dang Hyang Nirartha)",
+    confidence: 99,
+    summary: "Perched dramatically atop an ancient wave-swept offshore rock formation in the Indian Ocean, Pura Tanah Lot is Bali's most photographed sea temple. Famous for its multi-tiered thatched Meru towers silhouetted against brilliant tropical sunsets, and holy freshwater springs bubbling in the saltwater sea.",
+    coordinatesEstimate: { lat: -8.6212, lng: 115.0868 },
+    arKeypoints: [
+      { id: "pt-1", label: "Multi-Tiered Thatched Meru Roofs", featureType: "spire", description: "Traditional black palm-fiber thatched roofs rising in odd-numbered tiers honoring sea deities.", x: 50, y: 30 },
+      { id: "pt-2", label: "Wave-Carved Offshore Rock Island", featureType: "peak", description: "Rugged black volcanic rock pedestal completely surrounded by ocean waves at high tide.", x: 50, y: 65 },
+      { id: "pt-3", label: "Holy Freshwater Cave Spring", featureType: "entrance", description: "Sacred cave beneath the rock where natural freshwater flows miraculously in the middle of the sea.", x: 38, y: 78 },
+      { id: "pt-4", label: "Candi Bentar (Split Gateway)", featureType: "facade", description: "Characteristic Balinese split entrance gateway framing views of the ocean waves and temple.", x: 72, y: 60 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "16th Century AD", event: "Founded by Dang Hyang Nirartha", description: "The venerated Hindu sage Nirartha slept on the rock and instructed local fishermen to build a shrine to the sea gods." },
+      { yearOrEra: "1980", event: "Restoration of the Rock Foundation", description: "The Japanese government assisted the Indonesian heritage department in reinforcing the eroded rock with discreet artificial stone." },
+      { yearOrEra: "Present Era", event: "Iconic Cultural Heritage", description: "Remains one of the seven sea temples forming an unbroken protective spiritual chain around the coast of Bali." }
+    ],
+    architecturalSecrets: [
+      "Tanah Lot is one of seven sea temples along the Balinese coast, positioned so that each temple is visually in sight of the next one.",
+      "At high tide, the rock is completely cut off from the mainland, turning the temple into an island floating upon the surf.",
+      "Local legend holds that sacred venomous sea snakes living in caves beneath the rock guard the temple from evil spirits."
+    ],
+    culturalSignificance: "Tanah Lot plays a vital role in Balinese Hindu spirituality, dedicated to Bhatara Segara (the sea deity) to protect the island from ocean storms.",
+    visitorTips: [
+      "Arrive around 4:30 PM to explore the grounds at low tide, then stay for the breathtaking sunset at 6:00 PM.",
+      "Non-Balinese Hindus cannot enter the inner sanctum atop the rock, but can walk around the base and receive a blessing at the freshwater spring.",
+      "Wear water-resistant footwear as rocks can be wet and slippery."
+    ],
+    narrationScript: "Welcome to Pura Tanah Lot, the iconic sea temple of Bali, Indonesia. Perched atop an offshore rock carved by centuries of ocean waves, Tanah Lot means 'Land in the Sea.' Founded in the 16th century by the sage Nirartha, this sacred shrine honors the ocean deities who protect Bali. At high tide, the waves encircle the rock, isolating the temple like a mythical island. Gaze at its dark thatched Meru towers silhouetted against the glowing colors of an Indian Ocean sunset.",
+    chapters: [
+      { id: "chap-1", title: "Temple on the Waves", timestampHint: "0:00", script: "Perched on volcanic rock, Tanah Lot has guarded Bali's southern shores for five hundred years.", focusPointId: "pt-2" },
+      { id: "chap-2", title: "The Meru Spire of the Sea", timestampHint: "0:25", script: "Black palm-fiber thatched roofs rise in tiered layers toward the tropical sky.", focusPointId: "pt-1" },
+      { id: "chap-3", title: "Freshwater in the Salt Sea", timestampHint: "0:50", script: "Beneath the rock, a holy freshwater spring flows continuously amid the saltwater ocean.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Sunset Over the Indian Ocean", timestampHint: "1:15", script: "As dusk falls, the silhouette of Tanah Lot becomes one of the world's most breathtaking visions.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "pura ulun danu beratan": {
+    name: "Pura Ulun Danu Beratan",
+    localName: "Pura Ulun Danu Beratan, Bedugul",
+    city: "Bedugul, Tabanan, Bali",
+    country: "Indonesia",
+    architecturalStyle: "Balinese Water Temple (Pura Tirta) & Meru Pagoda Architecture",
+    periodEra: "Built 1633 AD by I Gusti Agung Putu (King of Mengwi)",
+    confidence: 99,
+    summary: "Floating serenely on the misty waters of Lake Bratan 4,000 feet above sea level in Bali's volcanic highlands, Pura Ulun Danu Beratan is a breathtaking 17th-century water temple. Dedicated to Dewi Danu, the goddess of lakes and rivers, its 11-tiered Meru tower seems to float magically upon the water against a backdrop of mist-shrouded volcanic peaks.",
+    coordinatesEstimate: { lat: -8.2751, lng: 115.1656 },
+    arKeypoints: [
+      { id: "pt-1", label: "11-Tiered Lingga Petak Meru Pagoda", featureType: "spire", description: "Iconic eleven-roofed black palm thatch tower dedicated to Lord Shiva and Goddess Parvati.", x: 50, y: 25 },
+      { id: "pt-2", label: "Reflecting Waters of Lake Bratan", featureType: "relief", description: "Serene volcanic crater lake reflecting the temple towers and alpine mountain clouds.", x: 50, y: 75 },
+      { id: "pt-3", label: "7-Tiered Pura Penataran Pucak Mangu", featureType: "dome", description: "Secondary tiered Meru shrine dedicated to the god of Mount Mangu.", x: 68, y: 40 },
+      { id: "pt-4", label: "Lush Botanical Gardens & Candi Bentar", featureType: "entrance", description: "Manicured highland garden courtyards featuring split stone gates and lotus ponds.", x: 30, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1633 AD", event: "Commissioned by the King of Mengwi", description: "Built by I Gusti Agung Putu to manage the island's Subak irrigation network and honor the water goddess." },
+      { yearOrEra: "2012", event: "UNESCO World Heritage Recognition", description: "Recognized as part of the cultural landscape of Bali's Subak cooperative water management system." }
+    ],
+    architecturalSecrets: [
+      "The temple controls the water flow of Lake Bratan, which feeds the rivers that irrigate southern Bali's famous UNESCO rice terraces through the ancient Subak system.",
+      "The 11-tiered tower rests on two small islets just off the lake shoreline, appearing to float weightlessly when the water level rises.",
+      "A Buddhist stupa with a statue of Buddha seated under a parasol sits inside the complex, symbolizing centuries of peaceful Hindu-Buddhist syncretism in Bali."
+    ],
+    culturalSignificance: "Ulun Danu Beratan is the agricultural life-giver of Bali, ensuring abundance, clean water, and fertile crops for the entire island.",
+    visitorTips: [
+      "Arrive early between 8:00 AM and 9:30 AM before afternoon mountain mist and rain roll into the highlands.",
+      "Rent a traditional pedal boat or wooden canoe to view and photograph the floating temple from the lake waters.",
+      "Bring a light sweater or jacket as the highland mountain climate is noticeably cooler than coastal Bali."
+    ],
+    narrationScript: "Welcome to Pura Ulun Danu Beratan, floating upon the misty waters of Lake Bratan in the highlands of Bali, Indonesia. Built in 1633 by the King of Mengwi, this serene temple is dedicated to Dewi Danu, the goddess of waters who nourishes Bali's rice terraces. Gaze at the eleven-tiered Meru tower rising from the water: surrounded by reflections of volcanic ridges and alpine clouds, it is a timeless masterpiece of Balinese spiritual harmony with nature.",
+    chapters: [
+      { id: "chap-1", title: "Temple on the Mountain Lake", timestampHint: "0:00", script: "Four thousand feet high in the volcanic caldera, Lake Bratan cradles this floating water sanctuary.", focusPointId: "pt-2" },
+      { id: "chap-2", title: "The Eleven Tiers of Meru", timestampHint: "0:25", script: "The eleven-tiered thatched pagoda seems to drift upon the water, honoring Shiva and Parvati.", focusPointId: "pt-1" },
+      { id: "chap-3", title: "Goddess of the Waters", timestampHint: "0:50", script: "For centuries, Balinese farmers have gathered here to pray for the holy water that irrigates their fields.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Harmony in the Highlands", timestampHint: "1:15", script: "Surrounded by blooming gardens, the temple embodies the sacred Balinese philosophy of Tri Hita Karana.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "pashupatinath temple": {
+    name: "Pashupatinath Temple",
+    localName: "श्री पशुपतिनाथ मन्दिर, काठमाडौँ",
+    city: "Kathmandu",
+    country: "Nepal",
+    architecturalStyle: "Nepalese Tiered Pagoda Style (UNESCO World Heritage)",
+    periodEra: "Origins c. 400 AD; Rebuilt 1692 AD by King Bhupatindra Malla",
+    confidence: 99,
+    summary: "Stretching along both banks of the sacred Bagmati River in Kathmandu, Pashupatinath is the oldest and most venerated Hindu temple complex in Nepal. A UNESCO World Heritage site, celebrated for its two-tiered golden pagoda roof, colossal gilded bronze Nandi Bull, four-faced Mukhalinga, and riverside cremation ghats.",
+    coordinatesEstimate: { lat: 27.7104, lng: 85.3487 },
+    arKeypoints: [
+      { id: "pt-1", label: "Two-Tiered Golden Pagoda Spire", featureType: "spire", description: "Spectacular copper pagoda roof layered in heavy gold leaf, crowned with a golden Gajur pinnacle.", x: 50, y: 22 },
+      { id: "pt-2", label: "Colossal Gilded Bronze Nandi Bull", featureType: "statue", description: "Massive kneeling bull statue plated in gold positioned directly facing the western door.", x: 42, y: 68 },
+      { id: "pt-3", label: "Bagmati River & Arya Ghat", featureType: "relief", description: "Sacred river steps where solemn Hindu cremation rituals and evening Maha Aarti take place.", x: 74, y: 75 },
+      { id: "pt-4", label: "Four Silver-Sheeted Sanctum Portals", featureType: "entrance", description: "Embossed silver repoussé doorways opening to the four faces of the holy Pashupatinath Mukhalinga.", x: 50, y: 55 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 400 AD", event: "Licchavi Dynasty Foundations", description: "Recorded as an ancient sanctuary dedicated to Lord Shiva as Pashupati (Lord of all Beings)." },
+      { yearOrEra: "1692 AD", event: "Malla Pagoda Reconstruction", description: "King Bhupatindra Malla reconstructed the present two-tiered golden pagoda after termite damage." },
+      { yearOrEra: "April 2015", event: "Earthquake Survival", description: "Miraculously survived the massive 7.8-magnitude Nepal earthquake with its main pagoda intact." }
+    ],
+    architecturalSecrets: [
+      "The sanctum houses a one-meter-tall black stone four-faced Lingam (Mukhalinga), with each face looking toward the four cardinal directions representing different aspects of Shiva.",
+      "The wooden roof struts supporting the two pagoda tiers are hand-carved with intricate figures of deities, including rare protective avatars.",
+      "By ancient tradition, the four priests (Bhattas) of Pashupatinath are chosen exclusively from Vedic scholars from Karnataka and South India, preserving a millennium-old cultural bond."
+    ],
+    culturalSignificance: "Pashupatinath is the national guardian deity of Nepal and the supreme Himalayan sanctuary for millions of Shiva devotees.",
+    visitorTips: [
+      "Attend the mesmerizing Bagmati River Ganga-style Maha Aarti across from the main temple at 6:30 PM every evening.",
+      "Non-Hindus cannot enter the inner courtyard, but have an incredible full view of the golden pagoda and ghats from the eastern terrace.",
+      "Respect the solemnity of the Arya Ghat cremation areas along the riverbank."
+    ],
+    narrationScript: "Welcome to Pashupatinath Temple on the banks of the sacred Bagmati River in Kathmandu, Nepal. Revered as the oldest Hindu sanctuary in the Kathmandu Valley, Pashupatinath honors Lord Shiva as the Protector of all Living Beings. Gaze across the river at its two-tiered pagoda roof, gleaming with sheets of pure gold. Around its base, silver-plated doors and a colossal golden Nandi bull watch over rituals that have accompanied birth, life, and transition into eternity for over fifteen centuries.",
+    chapters: [
+      { id: "chap-1", title: "Lord of All Beings", timestampHint: "0:00", script: "Standing beside the sacred Bagmati River, Pashupatinath is the spiritual center of Nepal.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Golden Pagoda", timestampHint: "0:25", script: "Layers of gold-plated copper rise in classical Nepalese pagoda architecture.", focusPointId: "pt-1" },
+      { id: "chap-3", title: "The Golden Bull of Shiva", timestampHint: "0:50", script: "Before the western silver doors kneels a monumental gilded bronze statue of Nandi.", focusPointId: "pt-2" },
+      { id: "chap-4", title: "Waters of the Bagmati", timestampHint: "1:15", script: "Along the stone steps of the river, evening lamps and incense rise in eternal tribute.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "wat arun": {
+    name: "Wat Arun Ratchawararam (Temple of Dawn)",
+    localName: "วัดอรุณราชวรารามราชวรมหาวิหาร",
+    city: "Bangkok",
+    country: "Thailand",
+    architecturalStyle: "Khmer-Style Prang Encrusted with Chinese Glazed Porcelain",
+    periodEra: "Ayutthaya Kingdom origins; Central Prang completed 1851 (Reigns of Rama II & Rama III)",
+    confidence: 99,
+    summary: "Rising majestically on the west bank of the Chao Phraya River, Wat Arun (The Temple of Dawn) is one of Bangkok's most famous landmarks. It features a spectacular 82-meter Khmer-style central tower (Prang) encrusted with millions of pieces of colorful Chinese porcelain, reflecting the first light of dawn.",
+    coordinatesEstimate: { lat: 13.7437, lng: 100.4889 },
+    arKeypoints: [
+      { id: "pt-1", label: "82-Meter Central Porcelain Prang", featureType: "spire", description: "Towering central pagoda symbolizing Mount Meru, adorned with seashells and colorful porcelain mosaics.", x: 50, y: 18 },
+      { id: "pt-2", label: "Chinese Glazed Ceramic Flower Tiles", featureType: "relief", description: "Intricate floral mosaics recycled from Chinese merchant ship porcelain ballast.", x: 40, y: 55 },
+      { id: "pt-3", label: "Chao Phraya River Waterfront Pier", featureType: "entrance", description: "Scenic riverside boat pier framing views of Bangkok's river traffic and historic skyline.", x: 50, y: 82 },
+      { id: "pt-4", label: "Four Corner Subsidiary Prangs", featureType: "facade", description: "Four smaller satellite prang towers dedicated to Phra Phai, the wind god, at the cardinal directions.", x: 74, y: 40 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1768", event: "Named Temple of Dawn by King Taksin", description: "King Taksin arrived at sunrise after the fall of Ayutthaya and established his new capital here, renaming it Wat Chaeng." },
+      { yearOrEra: "1824–1851", event: "Grand Prang Construction", description: "Kings Rama II and Rama III raised the central spire to its current 82m height and decorated it with porcelain." }
+    ],
+    architecturalSecrets: [
+      "The colorful porcelain tiles decorating the entire tower were once ballast on merchant ships sailing between China and Siam; rather than discarding broken plates, artisans recycled them into floral mosaics.",
+      "The central prang represents Mount Meru of Buddhist cosmology, while the four surrounding smaller towers represent the four guardians of the universe.",
+      "King Taksin originally enshrined the famous Emerald Buddha here before King Rama I moved it across the river to Wat Phra Kaew."
+    ],
+    culturalSignificance: "Wat Arun is the visual emblem of Bangkok and Thailand, symbolizing rebirth, spiritual ascent, and the dawn of a new era.",
+    visitorTips: [
+      "Take the cross-river ferry from Tha Tien pier for only a few Thai Baht to reach the temple steps.",
+      "Climb the steep lower stairs of the central prang for an unforgettable panoramic view across the Chao Phraya River.",
+      "Visit in the late afternoon to see the temple up close, then watch it glow in floodlit gold from across the river at night."
+    ],
+    narrationScript: "Welcome to Wat Arun, the Temple of Dawn, rising on the banks of the Chao Phraya River in Bangkok, Thailand. Named after Aruna, the Hindu god of dawn, this 82-meter tower is an architectural marvel. Look closely at its surface: it is encrusted with millions of pieces of colorful glazed Chinese porcelain and seashells that once served as ship ballast. Representing Mount Meru, the temple catches the first light of morning and glows in gold across the river at dusk.",
+    chapters: [
+      { id: "chap-1", title: "The Spire of Dawn", timestampHint: "0:00", script: "Rising 82 meters above the river, Wat Arun is one of the most recognizable landmarks in Asia.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Mosaics of Chinese Porcelain", timestampHint: "0:25", script: "Up close, millions of discarded Chinese teacups and plates form intricate floral tapestries in stone.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Four Towers of the Winds", timestampHint: "0:50", script: "Four satellite prangs guard the cardinal directions, each crowned with the sacred trident of Shiva.", focusPointId: "pt-4" },
+      { id: "chap-4", title: "The River of Kings", timestampHint: "1:15", script: "From the riverfront terrace, the Chao Phraya River flows past Bangkok's historic temples and palaces.", focusPointId: "pt-3" }
+    ]
+  },
+
+  "wat rong khun": {
+    name: "Wat Rong Khun (White Temple)",
+    localName: "วัดร่องขุ่น, เชียงราย",
+    city: "Chiang Rai",
+    country: "Thailand",
+    architecturalStyle: "Contemporary Surrealist Thai Buddhist Architecture",
+    periodEra: "Designed by Master Chalermchai Kositpipat (Opened 1997)",
+    confidence: 99,
+    summary: "Located in northern Thailand's Chiang Rai province, Wat Rong Khun (The White Temple) is an extraordinary contemporary temple complex executed entirely in blinding white plaster and embedded mirror fragments. Designed by master artist Chalermchai Kositpipat to express purity, human desire, and Buddhist enlightenment.",
+    coordinatesEstimate: { lat: 19.8242, lng: 99.7631 },
+    arKeypoints: [
+      { id: "pt-1", label: "Blinding White Gilded Ubosot", featureType: "spire", description: "Pure white main chapel featuring intricate flame-like eaves and millions of embedded sparkling mirrors.", x: 50, y: 25 },
+      { id: "pt-2", label: "Bridge of the Cycle of Rebirth", featureType: "entrance", description: "Sculpted causeway crossing a sea of hundreds of reaching hands symbolizing human greed and suffering.", x: 50, y: 68 },
+      { id: "pt-3", label: "Gate of Heaven & Mythical Guardians", featureType: "statue", description: "Dramatic white statues of Rahu and Death guarding the entrance to the inner sanctuary.", x: 38, y: 55 },
+      { id: "pt-4", label: "Golden Restroom Palace", featureType: "facade", description: "Elaborately gilded gold palace-like building contrasting worldly desires with the purity of the white temple.", x: 78, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1997", event: "Project Inception", description: "Renowned Chiang Rai artist Chalermchai Kositpipat bought the decaying local temple and began rebuilding it entirely with his own funds." },
+      { yearOrEra: "May 2014", event: "Earthquake Survival & Restoration", description: "A major earthquake shook northern Thailand; the artist repaired damaged murals and committed to completing the 9-building vision." }
+    ],
+    architecturalSecrets: [
+      "The choice of white rather than traditional Thai gold symbolizes the absolute purity of the Buddha, while mirrored glass represents the Dharma reflecting wisdom into the human mind.",
+      "Inside the main chapel, instead of only traditional murals, the artist painted contemporary pop-culture figures (Neo from The Matrix, spaceships, Superman, nuclear explosions) to illustrate human conflict and the search for peace.",
+      "The artist has refused all government and corporate funding, financing the temple exclusively through his artwork to maintain total creative and spiritual freedom."
+    ],
+    culturalSignificance: "Wat Rong Khun is a world-famous masterwork of contemporary sacred art, redefining traditional Buddhist architecture for the modern age.",
+    visitorTips: [
+      "Wear sunglasses on sunny days: the white plaster and mirror mosaics reflect intense northern Thai sunlight.",
+      "Photography is strictly prohibited inside the main Ubosot, so take your time examining the surprising contemporary murals.",
+      "Visit in the early morning at 8:00 AM before tour buses arrive from Chiang Mai."
+    ],
+    narrationScript: "Welcome to Wat Rong Khun, the White Temple of Chiang Rai in northern Thailand. Designed and built by visionary master artist Chalermchai Kositpipat, this is one of the most astonishing temples of the 21st century. Constructed entirely in pure white plaster embedded with mirrored glass, it glints like an icy palace in the tropical sun. To enter, you must cross the Bridge of Rebirth over a sea of reaching hands—a passage from desire and suffering into peace and enlightenment.",
+    chapters: [
+      { id: "chap-1", title: "A Vision of Pure White", timestampHint: "0:00", script: "White symbolizes the purity of the Buddha, while thousands of mirrors reflect cosmic wisdom.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Bridge of the Cycle of Rebirth", timestampHint: "0:25", script: "Crossing the bridge over reaching hands reminds seekers to conquer greed and attachment.", focusPointId: "pt-2" },
+      { id: "chap-3", title: "Guardians of Heaven", timestampHint: "0:50", script: "Mythical Naga serpents and guardians flank the gateway into the inner sanctuary.", focusPointId: "pt-3" },
+      { id: "chap-4", title: "Art for Eternity", timestampHint: "1:15", script: "Inside the chapel, contemporary pop culture and ancient Buddhist wisdom unite on the walls.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "baps robbinsville": {
+    name: "BAPS Shri Swaminarayan Mandir (Akshardham USA)",
+    localName: "BAPS Swaminarayan Akshardham, New Jersey",
+    city: "Robbinsville, New Jersey",
+    country: "United States",
+    architecturalStyle: "Hand-Carved European Marble & Limestone Nagara Mandir",
+    periodEra: "Inaugurated October 2023 (Consecrated by Mahant Swami Maharaj)",
+    confidence: 99,
+    summary: "Spread over 185 acres in Robbinsville, New Jersey, this is the largest Hindu temple in the Western Hemisphere and the second-largest in the world. Sculpted by 12,500 volunteers from Italian Carrara marble, Greek marble, and Bulgarian limestone, featuring 10,000 carved statues, 151 musical instruments, and the sacred Brahma Kund.",
+    coordinatesEstimate: { lat: 40.2311, lng: -74.5779 },
+    arKeypoints: [
+      { id: "pt-1", label: "Central Mahamandir Dome & Shikharas", featureType: "dome", description: "Rising 191 feet high, hand-carved in pure white European marble with intricate celestial dancers.", x: 50, y: 22 },
+      { id: "pt-2", label: "Brahma Kund Sacred Water Stepwell", featureType: "entrance", description: "Traditional stepwell pond containing holy water gathered from over 108 sacred rivers worldwide.", x: 50, y: 78 },
+      { id: "pt-3", label: "10,000 Carved Murtis & Relief Figures", featureType: "relief", description: "Intricate reliefs depicting philosophers, scientists, and ancient Indian musical traditions.", x: 35, y: 55 },
+      { id: "pt-4", label: "Welcome Center & Limestone Colonnade", featureType: "column", description: "Warm Bulgarian limestone colonnade with ornate arches greeting international visitors.", x: 74, y: 60 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "2011", event: "Groundbreaking & Global Carving", description: "Stone quarrying began in Europe, transported to Rajasthan where thousands of master artisans carved panels by hand." },
+      { yearOrEra: "October 2023", event: "Grand Inauguration", description: "Dedicated as an international monument of universal peace, service, and spiritual harmony." }
+    ],
+    architecturalSecrets: [
+      "Over 1.9 million cubic feet of stone from four European countries were used, making it the largest stone temple built outside India in modern history.",
+      "More than 12,500 volunteers from around the world dedicated over 4.7 million volunteer hours to piece together the interlocking stone puzzle.",
+      "The Welcome Center incorporates reclaimed wood and environmentally conscious geothermal heating systems."
+    ],
+    culturalSignificance: "The temple stands as a cultural bridge in North America, celebrating universal humanitarian values, spiritual wisdom, and architectural heritage.",
+    visitorTips: [
+      "Admission is free; book online visit passes in advance on weekends.",
+      "Dress code: shoulders and knees must be covered; shoes are removed before entering the Mandir.",
+      "Visit the vegetarian Nilkanth cafeteria for authentic freshly prepared snacks and meals."
+    ],
+    narrationScript: "Welcome to BAPS Swaminarayan Akshardham in Robbinsville, New Jersey, the largest Hindu temple in the Western Hemisphere. Rising across 185 acres of green American countryside, this monument was hand-carved by twelve thousand volunteers using pristine marble from Italy and Greece. Gaze upon its central Mahamandir rising 191 feet into the sky: surrounded by ten thousand sculpted figures, it stands as an enduring monument to global peace and selfless service.",
+    chapters: [
+      { id: "chap-1", title: "A Landmark in America", timestampHint: "0:00", script: "In the heart of New Jersey, classical Indian stone architecture reaches new heights in the Western world.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "The Living Stone of Europe", timestampHint: "0:25", script: "Carrara and Bulgarian limestone unite in a symphony of hand-carved pillars and celestial domes.", focusPointId: "pt-3" },
+      { id: "chap-3", title: "Brahma Kund: Waters of Unity", timestampHint: "0:50", script: "The holy stepwell holds waters from over a hundred sacred rivers across India and the globe.", focusPointId: "pt-2" },
+      { id: "chap-4", title: "Spirit of Selfless Service", timestampHint: "1:15", script: "Millions of volunteer hours built this sanctuary as a gift of peace to future generations.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "baps abu dhabi": {
+    name: "BAPS Hindu Mandir, Abu Dhabi",
+    localName: "بابس معبد هندوسي أبوظبي",
+    city: "Abu Dhabi",
+    country: "United Arab Emirates",
+    architecturalStyle: "Hand-Carved Pink Sandstone & White Marble Traditional Hindu Architecture",
+    periodEra: "Consecrated February 2024 (Inaugurated by PM Narendra Modi & Mahant Swami Maharaj)",
+    confidence: 99,
+    summary: "The first traditional hand-carved stone Hindu temple in the Middle East, the BAPS Hindu Mandir in Abu Dhabi is a landmark symbol of interfaith harmony and peace. Constructed from 40,000 cubic meters of marble and 180,000 cubic meters of pink Rajasthan sandstone, featuring 7 towering Shikharas representing the seven Emirates of the UAE.",
+    coordinatesEstimate: { lat: 24.5786, lng: 54.7678 },
+    arKeypoints: [
+      { id: "pt-1", label: "Seven Hand-Carved Sandstone Shikharas", featureType: "spire", description: "Seven towering spires honoring the seven Emirates: Abu Dhabi, Dubai, Sharjah, Ajman, Umm Al-Quwain, Ras Al Khaimah, Fujairah.", x: 50, y: 20 },
+      { id: "pt-2", label: "White Italian Marble Pillar Carvings", featureType: "column", description: "Over 400 interior pillars depicting 14 global civilizational tales from Maya, Egyptian, and Arab lore.", x: 40, y: 60 },
+      { id: "pt-3", label: "Dune-Inspired Desert Amphitheater", featureType: "relief", description: "Peaceful desert water channels and amphitheater celebrating global tolerance and friendship.", x: 68, y: 75 },
+      { id: "pt-4", label: "Dome of Harmony & Global Values", featureType: "dome", description: "Intricate ceiling dome carved with symbols of earth, water, fire, air, and space.", x: 50, y: 40 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "August 2015", event: "Land Gifted by UAE Government", description: "The UAE Government led by Crown Prince Sheikh Mohamed bin Zayed Al Nahyan graciously gifted 27 acres of land." },
+      { yearOrEra: "February 2024", event: "Historic Consecration", description: "Inaugurated by Indian Prime Minister Narendra Modi and Mahant Swami Maharaj amid international leaders." }
+    ],
+    architecturalSecrets: [
+      "Built with zero structural steel or carbon reinforcement, using innovative thermal-resistant sandstone suited to the desert climate.",
+      "More than 300 high-tech sensors are embedded within the temple stone to monitor real-time temperature, pressure, and seismic activity.",
+      "The walls uniquely feature carved bas-reliefs illustrating parables from ancient Mesopotamian, Native American, Maya, Aztec, and Arabian civilizations."
+    ],
+    culturalSignificance: "A historic beacon of tolerance and global friendship, demonstrating how culture, faith, and mutual respect bridge nations.",
+    visitorTips: [
+      "Book your visiting slot on the official mandir.ae website prior to arrival.",
+      "Dress respectfully: full-length clothing covering shoulders and knees is mandatory.",
+      "Inspect the 'Dome of Harmony' ceiling to admire the confluence of universal civilizational values."
+    ],
+    narrationScript: "Welcome to the BAPS Hindu Mandir in Abu Dhabi, the first traditional hand-carved stone temple in the Middle East. Standing majestically in the desert between Abu Dhabi and Dubai, this temple was built from 180,000 cubic meters of pink sandstone and white marble without a single piece of steel. Notice its seven towering Shikharas, each paying tribute to one of the seven Emirates of the UAE. Here in the desert, ancient craftsmanship and modern friendship unite in an immortal sanctuary of global peace.",
+    chapters: [
+      { id: "chap-1", title: "Seven Spires of Friendship", timestampHint: "0:00", script: "Seven sandstone spires reach into the desert sky, honoring the seven Emirates of the UAE.", focusPointId: "pt-1" },
+      { id: "chap-2", title: "Dome of Universal Harmony", timestampHint: "0:25", script: "Under the central dome, carvings depict the shared wisdom of ancient world civilizations.", focusPointId: "pt-4" },
+      { id: "chap-3", title: "Italian Marble Craftsmanship", timestampHint: "0:50", script: "More than four hundred hand-carved marble pillars create a cool, serene sanctuary of light.", focusPointId: "pt-2" },
+      { id: "chap-4", title: "Oasis of Peace in the Desert", timestampHint: "1:15", script: "Waterways and green courtyards surround the temple, creating an oasis of friendship and reflection.", focusPointId: "pt-3" }
+    ]
+  },
+
+  // ==========================================
+  // GLOBAL CATHEDRALS & CHURCHES
+  // ==========================================
+  "sagrada familia": {
+    name: "Basílica de la Sagrada Família",
+    localName: "Temple Expiatori de la Sagrada Família",
+    city: "Barcelona, Catalonia",
+    country: "Spain",
+    architecturalStyle: "Catalan Modernisme & Organic Gothic Revival",
+    periodEra: "Commenced 1882 (Designed by Antoni Gaudí)",
+    confidence: 99,
+    summary: "Antoni Gaudí's unfinished magnum opus and a UNESCO World Heritage site, the Sagrada Família represents the ultimate synthesis of Gothic geometry and natural biomimetic engineering, featuring tree-like interior columns, dazzling stained-glass luminescence, and eighteen soaring spires.",
+    coordinatesEstimate: { lat: 41.4036, lng: 2.1744 },
+    arKeypoints: [
+      { id: "pt-1", label: "Nativity Facade Sculptural Group", featureType: "facade", description: "Completed under Gaudí's direct guidance, depicting the birth of Christ through hyper-detailed flora and fauna stone carvings.", x: 50, y: 55 },
+      { id: "pt-2", label: "Tower of Jesus Christ Central Spire", featureType: "spire", description: "The soaring central spire rising to 172.5 meters, crowned with a four-armed illuminated cross.", x: 50, y: 15 },
+      { id: "pt-3", label: "Arborescent Forest Columns", featureType: "column", description: "Interior branching stone columns engineered as hyperbolic paraboloids to mimic towering forest trees.", x: 38, y: 65 },
+      { id: "pt-4", label: "Passion Facade Angular Statues", featureType: "relief", description: "Angular, bone-like stone sculptures by Josep Maria Subirachs recounting the Passion and crucifixion.", x: 70, y: 50 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1882", event: "Cornerstone Laid", description: "Initial construction began under diocesan architect Francisco de Paula del Villar before Antoni Gaudí took over in 1883." },
+      { yearOrEra: "1926", event: "Death of Antoni Gaudí", description: "Gaudí was buried in the crypt of the Sagrada Família after dedicating over four decades to its vision." },
+      { yearOrEra: "1984 & 2005", event: "UNESCO World Heritage Listing", description: "Gaudí's Nativity facade and crypt inscribed as a UNESCO World Heritage cultural masterpiece." },
+      { yearOrEra: "2010", event: "Consecration by Pope Benedict XVI", description: "Consecrated as a minor basilica, opening the forest-like nave to global worshippers." }
+    ],
+    architecturalSecrets: [
+      "Gaudí planned the height of the central Jesus tower (172.5m) to be exactly one meter lower than Montjuïc hill, believing human work should never exceed God's creation.",
+      "The interior columns are constructed from varying stones according to weight-bearing demand: red porphyry from Iran for the largest columns, basalt, granite, and soft sandstone.",
+      "The stained glass windows are arranged chromatically: cold blues and greens to the east capture morning light, while warm reds and oranges to the west catch the fiery setting sun."
+    ],
+    culturalSignificance: "The definitive symbol of Barcelona and an undisputed triumph of 20th-century religious architecture, fusing faith, nature, and pioneering mathematics.",
+    visitorTips: [
+      "Book entry tickets weeks in advance with tower access to the Nativity or Passion spires.",
+      "Visit between 3:00 PM and 5:00 PM when western afternoon sunlight sets the nave ablaze in ruby and amber hues.",
+      "Visit the underground museum to see Gaudí's inverted string-and-weight catenary models."
+    ],
+    narrationScript: "You are gazing upon the Sagrada Família in Barcelona, Antoni Gaudí's immortal architectural dream. Commenced in 1882 and crafted across generations, this cathedral is an engineered forest in stone. Look at the Nativity Facade on your left: its stones cascade with flowers, animals, and angels chiseled under Gaudí's personal touch. Step within, and tree-like stone trunks branch into hyperbolic canopies bathed in jewel-toned sunlight. Here, architecture leaves behind rigid dogma to become a living, breathing hymn to nature and the cosmos.",
+    chapters: [
+      { id: "ch-1", title: "A Temple of Living Stone", timestampHint: "0:00", script: "Antoni Gaudí transformed a traditional basilica into a biomimetic cathedral inspired by nature.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "Spires Reaching for the Sky", timestampHint: "0:30", script: "Eighteen spires will crown the basilica, the tallest honoring Jesus Christ at 172.5 meters.", focusPointId: "pt-2" },
+      { id: "ch-3", title: "Canopy of Light & Porphyry", timestampHint: "1:00", script: "Branching columns and kaleidoscopic stained glass turn the interior into an ethereal Mediterranean forest.", focusPointId: "pt-3" }
+    ],
+    unescoInfo: {
+      isWorldHeritage: true,
+      officialName: "Works of Antoni Gaudí - Nativity Façade and Crypt of La Sagrada Família",
+      inscriptionYear: 2005,
+      criteria: "(i)(ii)(iv)",
+      category: "Cultural",
+      unescoId: "320"
+    }
+  },
+
+  "hagia sophia": {
+    name: "Hagia Sophia",
+    localName: "Ayasofya-i Kebir Cami-i Şerifi",
+    city: "Istanbul",
+    country: "Turkey",
+    architecturalStyle: "Byzantine Imperial & Ottoman Classical",
+    periodEra: "Completed 537 AD (Emperor Justinian I) / Minarets 15th-16th Century",
+    confidence: 99,
+    summary: "Built in 537 AD as the imperial cathedral of Constantinople, Hagia Sophia ('Holy Wisdom') revolutionized world architecture with its monumental 32-meter pendentive dome suspended seemingly by a golden chain from heaven, later crowned by four Ottoman minarets by master architect Mimar Sinan.",
+    coordinatesEstimate: { lat: 41.0086, lng: 28.9802 },
+    arKeypoints: [
+      { id: "pt-1", label: "Monumental Pendentive Central Dome", featureType: "dome", description: "32-meter diameter dome supported by four spherical triangular pendentives, pierced by 40 radiating arched windows.", x: 50, y: 22 },
+      { id: "pt-2", label: "Golden Deësis Mosaic Gallery", featureType: "relief", description: "Masterpiece 13th-century Byzantine mosaic in the upper southern gallery depicting Christ Pantocrator flanked by the Virgin Mary and John the Baptist.", x: 42, y: 62 },
+      { id: "pt-3", label: "Mimar Sinan Reinforcement Minarets", featureType: "spire", description: "Four majestic stone minarets added following the 1453 conquest of Constantinople.", x: 78, y: 35 },
+      { id: "pt-4", label: "Imperial Marble Porphyry Columns", featureType: "column", description: "Ancient green marble columns brought from the Temple of Artemis at Ephesus and Baalbek.", x: 30, y: 75 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "537 AD", event: "Consecration by Justinian I", description: "Inaugurated on December 27, 537, with Emperor Justinian proclaiming: 'Solomon, I have surpassed thee!'" },
+      { yearOrEra: "1453", event: "Ottoman Conversion by Mehmed II", description: "Sultan Mehmed II preserved the structure and converted it to the principal imperial mosque of the Ottoman Empire." },
+      { yearOrEra: "1935–2020", event: "Museum Era to Mosque Reversion", description: "Transformed into a secular museum by Mustafa Kemal Atatürk in 1935, and restored as an active mosque in 2020." }
+    ],
+    architecturalSecrets: [
+      "The dome rests on four pendentives—spherical triangles that bridge a square ground plan to a circular dome, an engineering feat that changed global sacred architecture forever.",
+      "The 40 perimeter windows beneath the dome allow sunlight to flood the interior, creating the visual illusion that the dome floats weightlessly in the air.",
+      "Viking runic graffiti ('Halfdan carved these runes') is carved into the marble balustrade of the top southern gallery by an imperial Varangian guardsman from the 9th century."
+    ],
+    culturalSignificance: "For nearly a millennium the largest cathedral in the Christian world and for five centuries a flagship Ottoman mosque, Hagia Sophia is humanity's supreme crossroads between East and West.",
+    visitorTips: [
+      "Remove shoes before stepping onto the lush prayer carpets in the nave.",
+      "Look up at the pendentive seraphim mosaics where centuries of Christian iconography and monumental Arabic calligraphy medina medallions coexist."
+    ],
+    narrationScript: "Standing beneath the great dome of Hagia Sophia, you are at the physical and spiritual crossroads of world empires. Consecrated in 537 AD under Byzantine Emperor Justinian, its pendentive dome was described by contemporaries as hanging from heaven by a golden chain. When Ottoman Sultan Mehmed II entered in 1453, he fell to his knees in awe and ordered its preservation. Today, golden Byzantine mosaics of Christ and Mary shimmer alongside colossal gilded calligraphy medallions celebrating Allah and the Prophet Muhammad—a sanctuary where civilizations converge.",
+    chapters: [
+      { id: "ch-1", title: "Justinian's Heavenly Dome", timestampHint: "0:00", script: "Completed in just five years, the 32-meter dome defied gravity and defined Byzantine architecture.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "Mosaics of the Imperial Age", timestampHint: "0:30", script: "In the upper galleries, millions of gold glass cubes form breathtaking portraits of Christ Pantocrator.", focusPointId: "pt-2" },
+      { id: "ch-3", title: "Ottoman Imperial Grandeur", timestampHint: "1:00", script: "Minarets and calligraphy roundels by Kazasker Mustafa Izzet Effendi completed its majestic dual heritage.", focusPointId: "pt-3" }
+    ],
+    unescoInfo: {
+      isWorldHeritage: true,
+      officialName: "Historic Areas of Istanbul",
+      inscriptionYear: 1985,
+      criteria: "(i)(ii)(iii)(iv)",
+      category: "Cultural",
+      unescoId: "356"
+    }
+  },
+
+  "westminster abbey": {
+    name: "Westminster Abbey",
+    localName: "Collegiate Church of Saint Peter at Westminster",
+    city: "London",
+    country: "United Kingdom",
+    architecturalStyle: "Anglo-French High Gothic & Perpendicular Gothic",
+    periodEra: "Rebuilt 1245 by King Henry III (Origins 960 AD)",
+    confidence: 99,
+    summary: "The coronation church of British monarchs since 1066 and the final resting place of monarchs, poets, and world-shaping scientists, Westminster Abbey features Britain's highest Gothic vault and the breathtaking Henry VII Lady Chapel fan-vaulted ceiling.",
+    coordinatesEstimate: { lat: 51.4993, lng: -0.1273 },
+    arKeypoints: [
+      { id: "pt-1", label: "Coronation Theatre & Cosmati Pavement", featureType: "relief", description: "Rare 13th-century geometric marble and porphyry mosaic floor where every British monarch has been crowned since 1066.", x: 50, y: 70 },
+      { id: "pt-2", label: "Henry VII Lady Chapel Fan Vault", featureType: "dome", description: "Pendant fan vault ceiling completed in 1519, celebrated as a pinnacle of English Perpendicular stone masonry.", x: 65, y: 25 },
+      { id: "pt-3", label: "Western Twin Towers", featureType: "spire", description: "68-meter Gothic Revival Portland stone towers designed by Nicholas Hawksmoor and completed in 1745.", x: 50, y: 15 },
+      { id: "pt-4", label: "Poets' Corner", featureType: "facade", description: "South transept sanctuary enshrining memorials to Geoffrey Chaucer, William Shakespeare, Charles Dickens, and Jane Austen.", x: 30, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1066", event: "William the Conqueror's Coronation", description: "William the Conqueror was crowned king on Christmas Day 1066, beginning a near thousand-year unbroken coronation tradition." },
+      { yearOrEra: "1245", event: "Henry III's Gothic Rebuilding", description: "King Henry III demolished Edward the Confessor's Romanesque church to build the magnificent Anglo-French Gothic abbey we see today." },
+      { yearOrEra: "1987", event: "UNESCO World Heritage Inscription", description: "Inscribed as a World Heritage Site alongside the Palace of Westminster and St Margaret's Church." }
+    ],
+    architecturalSecrets: [
+      "The Cosmati Pavement before the High Altar contains an enigmatic riddle predicting the end of the world after 19,683 years.",
+      "The Coronation Chair, commissioned by King Edward I in 1296, incorporates the sacred Scottish 'Stone of Scone' enclosed beneath the wooden seat.",
+      "Sir Isaac Newton, Charles Darwin, and Stephen Hawking are buried side-by-side in the central nave."
+    ],
+    culturalSignificance: "The spiritual heart of British national identity, having hosted 40 royal coronations, 16 royal weddings, and enshrining over 3,300 notable figures in world history.",
+    visitorTips: [
+      "Stand before the High Altar to admire the Cosmati Pavement.",
+      "Attend Evensong at 5:00 PM to experience the Abbey's sublime choir acoustics."
+    ],
+    narrationScript: "Step into Westminster Abbey, where the history of the English-speaking world has been written in stone for over a millennium. Since William the Conqueror in 1066, forty British monarchs have been crowned right upon this sacred Cosmati pavement. Above you in the Henry VII Lady Chapel, stone hangs in gravity-defying fan vaults like carved lace. Around every pier lie kings and queens, while in Poets' Corner and the nave, Chaucer, Shakespeare, Isaac Newton, and Charles Darwin rest in eternal remembrance.",
+    chapters: [
+      { id: "ch-1", title: "Coronation of Kings", timestampHint: "0:00", script: "Since 1066, the Coronation Chair and ancient Cosmati floor have seen forty royal coronations.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "Stone Lacework of Henry VII", timestampHint: "0:30", script: "The pendant fan vaults of the Lady Chapel represent the peak of English Perpendicular Gothic art.", focusPointId: "pt-2" },
+      { id: "ch-3", title: "Sanctuary of Human Genius", timestampHint: "1:00", script: "From Newton and Darwin to Chaucer and Dickens, Britain's greatest minds rest within these aisles.", focusPointId: "pt-4" }
+    ],
+    unescoInfo: {
+      isWorldHeritage: true,
+      officialName: "Westminster Palace, Westminster Abbey and Saint Margaret's Church",
+      inscriptionYear: 1987,
+      criteria: "(i)(ii)(iv)",
+      category: "Cultural",
+      unescoId: "426"
+    }
+  },
+
+  "duomo di milano": {
+    name: "Milan Cathedral (Duomo di Milano)",
+    localName: "Duomo di Milano / Basilica Cattedrale Metropolitana di Santa Maria Nascente",
+    city: "Milan, Lombardy",
+    country: "Italy",
+    architecturalStyle: "Italian Flamboyant Gothic & Neoclassical",
+    periodEra: "Commenced 1386 (Took nearly six centuries to complete)",
+    confidence: 99,
+    summary: "One of the largest cathedrals in the world, Milan's Duomo is constructed from luminous pink-and-white Candoglia marble, featuring 135 delicate spires, 3,400 statues, and its golden Madonnina protecting the Lombard capital.",
+    coordinatesEstimate: { lat: 45.4641, lng: 9.1919 },
+    arKeypoints: [
+      { id: "pt-1", label: "La Madonnina Golden Spire", featureType: "spire", description: "Gilded copper statue of the Virgin Mary rising atop the central 108.5-meter lantern spire, protecting the city since 1774.", x: 50, y: 15 },
+      { id: "pt-2", label: "Forest of Marble Pinnacles & Spines", featureType: "spire", description: "135 soaring Candoglia marble spires and flying buttresses adorning the walkable rooftop terraces.", x: 60, y: 35 },
+      { id: "pt-3", label: "Flamboyant Marble Facade", featureType: "facade", description: "Intricately sculpted marble facade featuring Gothic portals, floral reliefs, and thousands of biblical figures.", x: 50, y: 65 },
+      { id: "pt-4", label: "Saint Bartholomew Flayed Statue", featureType: "statue", description: "Famed hyper-realistic 1562 marble sculpture by Marco d'Agrate showing Saint Bartholomew carrying his own flayed skin.", x: 30, y: 70 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1386", event: "Fabbrica del Duomo Founded", description: "Gian Galeazzo Visconti initiated construction, establishing dedicated quarries in Candoglia with free canal transport into Milan." },
+      { yearOrEra: "1805", event: "Napoleon's Coronation Order", description: "Napoleon Bonaparte ordered the completion of the facade prior to his coronation as King of Italy." },
+      { yearOrEra: "1965", event: "Final Bronze Door Inauguration", description: "The last portal door was dedicated, officially concluding nearly six centuries of continuous craftsmanship." }
+    ],
+    architecturalSecrets: [
+      "The cathedral is constructed from unique Candoglia marble containing pink feldspar veins, transported via the Navigli canals with special duty-free marks reading 'AUF' (Ad Usum Fabricae).",
+      "Visitors can walk directly across the entire open-air marble rooftop, threading between dozens of Gothic flying buttresses and gargoyles with views of the Alps.",
+      "A red light bulb high in the apse vault marks the location of a Holy Nail from the True Cross, lowered once a year via a 16th-century wooden elevator basket."
+    ],
+    culturalSignificance: "The beating heart of Milan and an enduring marvel of European stonemasonry, uniting centuries of Italian, French, and German craftsmen under the Veneranda Fabbrica.",
+    visitorTips: [
+      "Take the rooftop terrace elevator or stairs at sunset for panoramic vistas of Milan and the snowcapped Alps.",
+      "Look for the famous sundial meridian line on the marble floor near the main entrance."
+    ],
+    narrationScript: "Welcome to the Duomo di Milano, an immense marble mountain rising in the heart of Lombardy. Commissioned in 1386, it took nearly six centuries to bring this Flamboyant Gothic dream into reality. More than three thousand statues and one hundred and thirty-five delicate spires crown its pink Candoglia marble terraces. High above the central spire, the golden Madonnina gleams against the Alpine horizon, guarding the city below. Walk its marble roof to discover one of the most sublime architectural panoramas on Earth.",
+    chapters: [
+      { id: "ch-1", title: "Six Centuries of Devotion", timestampHint: "0:00", script: "Begun in 1386, the Duomo took 579 years to complete, uniting European Gothic traditions.", focusPointId: "pt-3" },
+      { id: "ch-2", title: "Walkway of the Spire Forest", timestampHint: "0:30", script: "On the rooftop terraces, visitors stroll among 135 marble spires and intricate flying buttresses.", focusPointId: "pt-2" },
+      { id: "ch-3", title: "The Golden Madonnina", timestampHint: "1:00", script: "Shining at 108 meters, the golden statue of the Virgin Mary is the beloved protector of Milan.", focusPointId: "pt-1" }
+    ]
+  },
+
+  "cologne cathedral": {
+    name: "Cologne Cathedral (Kölner Dom)",
+    localName: "Hohe Domkirche Sankt Petrus",
+    city: "Cologne, North Rhine-Westphalia",
+    country: "Germany",
+    architecturalStyle: "High Gothic & German Neo-Gothic",
+    periodEra: "Commenced 1248 / Completed 1880",
+    confidence: 99,
+    summary: "Standing 157 meters high beside the Rhine, Cologne Cathedral is Germany's most visited monument and a masterwork of High Gothic architecture, housing the gilded Shrine of the Three Kings and featuring the largest Gothic church facade in the world.",
+    coordinatesEstimate: { lat: 50.9413, lng: 6.9583 },
+    arKeypoints: [
+      { id: "pt-1", label: "Twin 157-Meter Gothic Spires", featureType: "spire", description: "Monumental twin perforated stone spires that were the tallest structures in the world from 1880 to 1884.", x: 50, y: 15 },
+      { id: "pt-2", label: "Shrine of the Three Holy Kings", featureType: "relief", description: "Nicholas of Verdun's colossal 12th-century gilded triple-sarcophagus containing the venerated relics of the Magi.", x: 50, y: 70 },
+      { id: "pt-3", label: "Flying Buttress Skeletal System", featureType: "arch", description: "Soaring double flying buttresses and pinnacles transferring the tremendous weight of the 43-meter high central vault.", x: 75, y: 40 },
+      { id: "pt-4", label: "Gerhard Richter Pixel Stained Glass", featureType: "facade", description: "Breathtaking 106-square-meter modern window composed of 11,263 hand-blown glass squares in 72 colors.", x: 30, y: 55 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1248", event: "Foundation Stone Laid", description: "Archbishop Konrad von Hochstaden laid the foundation stone to build a worthy home for the relics of the Three Kings." },
+      { yearOrEra: "1560–1842", event: "Three-Century Construction Halt", description: "Building ceased for nearly 300 years with a wooden medieval crane famously remaining atop the south tower." },
+      { yearOrEra: "1880", event: "Grand Imperial Completion", description: "Completed under Prussian patronage, celebrated nationwide as a symbol of German national unity." },
+      { yearOrEra: "1996", event: "UNESCO World Heritage Recognition", description: "Inscribed as an exceptional work of human creative genius and a testament to European Gothic faith." }
+    ],
+    architecturalSecrets: [
+      "The cathedral survived 14 direct aerial bomb hits during World War II while the surrounding city of Cologne was leveled to the ground, serving as an essential navigation beacon for pilots.",
+      "The Shrine of the Three Kings is the largest reliquary in the Western world, crafted from gilded copper and silver and set with over 1,000 precious jewels and ancient cameos.",
+      "St. Peter's Bell ('Decke Pitter'), weighing 24,000 kg, is the largest free-swinging bell in the world hung on straight yokes."
+    ],
+    culturalSignificance: "A paramount pilgrimage site of the Middle Ages that fundamentally shaped the European tradition of Gothic cathedral building and sacred German heritage.",
+    visitorTips: [
+      "Climb the 533 stone steps of the South Tower for an unforgettable panoramic view across the Rhine.",
+      "Marvel at the Shrine of the Magi behind the high altar, glowing with medieval gold and enamel."
+    ],
+    narrationScript: "Standing before Cologne Cathedral, you are looking at one of humanity's most breathtaking Gothic achievements. Begun in 1248 to house the sacred relics of the Three Magi, its construction spanned over six hundred years. Its twin perforated stone spires pierce the German sky at 157 meters. During the devastation of World War II, this cathedral miraculously endured fourteen direct bomb strikes while the city crumbled around it—standing today as an immortal monument to human resilience and devotion.",
+    chapters: [
+      { id: "ch-1", title: "Twin Towers of the Rhine", timestampHint: "0:00", script: "Soaring 157 meters above Cologne, these twin spires formed the tallest building on Earth in 1880.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "Golden Reliquary of the Magi", timestampHint: "0:30", script: "The gilded triple-sarcophagus of the Three Kings made Cologne a premier medieval pilgrimage capital.", focusPointId: "pt-2" },
+      { id: "ch-3", title: "Miracle of Survival", timestampHint: "1:00", script: "Surviving fourteen bomb hits in World War II, the Dom remains a beacon of hope and heritage.", focusPointId: "pt-3" }
+    ],
+    unescoInfo: {
+      isWorldHeritage: true,
+      officialName: "Cologne Cathedral",
+      inscriptionYear: 1996,
+      criteria: "(i)(ii)(iv)",
+      category: "Cultural",
+      unescoId: "292"
+    }
+  },
+
+  "basilica of bom jesus": {
+    name: "Basilica of Bom Jesus",
+    localName: "Basílica do Bom Jesus",
+    city: "Old Goa, Goa",
+    country: "India",
+    architecturalStyle: "Portuguese Baroque & Mannerist Jesuit Architecture",
+    periodEra: "Consecrated 1605 (Built 1594–1605)",
+    confidence: 99,
+    summary: "A UNESCO World Heritage site and India's premier Catholic landmark, the Basilica of Bom Jesus holds the sacred incorrupt mortal remains of Saint Francis Xavier. Built from exposed reddish basalt and laterite stone, it is a peerless triumph of Baroque church design in Asia.",
+    coordinatesEstimate: { lat: 15.5009, lng: 73.9116 },
+    arKeypoints: [
+      { id: "pt-1", label: "Exposed Laterite Baroque Facade", featureType: "facade", description: "Three-tiered triangular pedimented facade sculpted with Jesuit IHS monogram and classical Doric and Corinthian orders.", x: 50, y: 35 },
+      { id: "pt-2", label: "Silver Casket of St. Francis Xavier", featureType: "relief", description: "Exquisite 17th-century Florentine marble mausoleum and silver reliquary casket holding the mortal remains of the patron saint.", x: 65, y: 65 },
+      { id: "pt-3", label: "Gilded Reredos & High Altar", featureType: "altar", description: "Monumental gilded wooden altar portraying the infant Jesus (Bom Jesus) surmounted by Saint Ignatius of Loyola.", x: 50, y: 55 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1594–1605", event: "Construction by the Jesuits", description: "Built by Jesuit brothers and consecrated on May 15, 1605, by Archbishop Dom Fr. Aleixo de Menezes." },
+      { yearOrEra: "1624", event: "Translation of Saint Francis Xavier", description: "The sacred body of Saint Francis Xavier was brought to the Basilica and enshrined in the Chapel of the Blessed Sacrament." },
+      { yearOrEra: "1986", event: "UNESCO World Heritage Inscription", description: "Designated as a World Heritage site under the 'Churches and Convents of Goa' landmark inscription." }
+    ],
+    architecturalSecrets: [
+      "The facade was originally plastered with lime, but the mortar was stripped away in the 1960s to reveal the rich reddish laterite stone beneath.",
+      "The silver casket holding St. Francis Xavier was crafted by Goan silversmiths between 1636 and 1637 and is lowered for public exposition once every decade.",
+      "The marble mausoleum base was carved in Florence by sculptor Giovanni Battista Foggini and shipped to Goa as a gift from the Grand Duke of Tuscany."
+    ],
+    culturalSignificance: "The foremost spiritual sanctuary of Christianity in India, drawing millions of pilgrims from every religion during the solemn Decennial Exposition.",
+    visitorTips: [
+      "Visit in the morning to quietly reflect in the side chapel of St. Francis Xavier.",
+      "Cross the street to visit the Se Cathedral—the largest church in Asia—for a comprehensive heritage experience."
+    ],
+    narrationScript: "You stand before the Basilica of Bom Jesus in Old Goa, India's most celebrated Baroque monument and a UNESCO World Heritage site. Consecrated in 1605 by the Jesuits, its bold, unplastered red laterite facade showcases Corinthian and Doric orders chiseled by Goan craftsmen. Inside beneath a soaring gilded altar rests the sacred silver casket of Saint Francis Xavier. For over four centuries, this sanctuary has stood as an enduring bridge between Europe and the Indian subcontinent.",
+    chapters: [
+      { id: "ch-1", title: "Baroque Heritage of Goa", timestampHint: "0:00", script: "Built in 1605, Bom Jesus introduced European Baroque church architecture to the Indian coast.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "The Gilded Sanctuary", timestampHint: "0:30", script: "The towering altar glorifies Bom Jesus—the Good Jesus—and Jesuit founder Ignatius of Loyola.", focusPointId: "pt-3" },
+      { id: "ch-3", title: "Resting Place of St. Francis Xavier", timestampHint: "1:00", script: "A masterpiece of Florentine marble and Goan silver enshrines the beloved patron saint.", focusPointId: "pt-2" }
+    ],
+    unescoInfo: {
+      isWorldHeritage: true,
+      officialName: "Churches and Convents of Goa",
+      inscriptionYear: 1986,
+      criteria: "(ii)(iv)(vi)",
+      category: "Cultural",
+      unescoId: "234"
+    }
+  },
+
+  "lalibela rock hewn churches": {
+    name: "Rock-Hewn Churches of Lalibela (Biete Ghiorgis)",
+    localName: "ቤተ ጊዮርጊስ / Bete Giyorgis (Church of Saint George)",
+    city: "Lalibela, Amhara Region",
+    country: "Ethiopia",
+    architecturalStyle: "Monolithic Rock-Hewn Aksumite & Ethiopian Orthodox Architecture",
+    periodEra: "Late 12th – Early 13th Century (Reign of King Gebre Mesqel Lalibela)",
+    confidence: 99,
+    summary: "Carved downwards out of solid red volcanic tuff as a single monolithic block in the shape of a Greek cross, Biete Ghiorgis is the crowning jewel of the eleven medieval rock-hewn churches of Lalibela, known as the 'New Jerusalem' of the Ethiopian Orthodox Christian faith.",
+    coordinatesEstimate: { lat: 12.0319, lng: 39.0411 },
+    arKeypoints: [
+      { id: "pt-1", label: "Monolithic Greek Cross Roof", featureType: "relief", description: "Equal-armed Greek cross roof carved directly out of living volcanic bedrock with three tiers of drainage relief carving.", x: 50, y: 35 },
+      { id: "pt-2", label: "25-Meter Deep Sunken Courtyard Pit", featureType: "facade", description: "Enormous trench chiseled into the rock, separating the freestanding church entirely from the bedrock mountain.", x: 50, y: 70 },
+      { id: "pt-3", label: "Ogive & Aksumite Window Frames", featureType: "arch", description: "Carved Aksumite-style windows adorned with ornate floral cross tracery, illuminating the hollowed-out interior sanctum.", x: 35, y: 55 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "c. 1181–1221 AD", event: "Reign of King Lalibela", description: "King Lalibela envisioned a pilgrimage capital after Muslim conquests halted Ethiopian pilgrimages to Jerusalem." },
+      { yearOrEra: "1978", event: "UNESCO World Heritage Pioneer", description: "Inscribed on the very first UNESCO World Heritage list in 1978 among the world's inaugural 12 heritage treasures." }
+    ],
+    architecturalSecrets: [
+      "The entire church was carved from the top down: masons chiseled a perimeter trench 25 meters into the basalt, then hollowed the interior through windows and doorways without a single joint, block, or brick.",
+      "The church is reached only via a subterranean trench system of stone tunnels, symbolizing the path of biblical trials and resurrection.",
+      "Local tradition recounts that heavenly angels worked alongside stonemasons at night, completing the monument in record time."
+    ],
+    culturalSignificance: "A vibrant living pilgrimage destination of Ethiopian Orthodox Tewahedo Christianity and an engineering miracle of subterranean monolithic stone carving.",
+    visitorTips: [
+      "Arrive at dawn on Sunday to hear traditional ge'ez liturgical chanting accompanied by prayer drums and sistra.",
+      "Wear slip-on shoes as footwear must be removed before entering every stone church."
+    ],
+    narrationScript: "Look down into the earth at Biete Ghiorgis—the Church of Saint George in Lalibela. Carved in the 12th century under King Lalibela, this is not a building assembled from stones, but a single colossal rock sculpted from the living crust of Ethiopia. Masons chiseled twenty-five meters downward into red volcanic tuff to create a freestanding Greek cross. Descend through dark subterranean tunnels into its cool interior sanctum, where candlelight illuminates centuries of unbroken Orthodox prayer.",
+    chapters: [
+      { id: "ch-1", title: "A Cathedral Carved Downward", timestampHint: "0:00", script: "Masons sculpted Biete Ghiorgis straight out of solid red basalt bedrock from the top down.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "The Cross of Saint George", timestampHint: "0:30", script: "Viewed from above, the three-tiered Greek cross roof stands as an immortal symbol of faith.", focusPointId: "pt-2" },
+      { id: "ch-3", title: "Subterranean Pilgrim Ways", timestampHint: "1:00", script: "Stone trenches and tunnels lead into a sacred sanctuary that has welcomed pilgrims for eight centuries.", focusPointId: "pt-3" }
+    ],
+    unescoInfo: {
+      isWorldHeritage: true,
+      officialName: "Rock-Hewn Churches, Lalibela",
+      inscriptionYear: 1978,
+      criteria: "(i)(ii)(iii)",
+      category: "Cultural",
+      unescoId: "18"
+    }
+  },
+
+  // ==========================================
+  // GLOBAL MOSQUES & ISLAMIC MASTERPIECES
+  // ==========================================
+  "dome of the rock": {
+    name: "Dome of the Rock (Qubbat al-Sakhrah)",
+    localName: "قبة الصخرة / Qubbat aṣ-Ṣakhra",
+    city: "Old City of Jerusalem",
+    country: "Jerusalem",
+    architecturalStyle: "Umayyad Islamic & Byzantine Octagonal Architecture",
+    periodEra: "Completed 691–692 AD (Reign of Caliph Abd al-Malik)",
+    confidence: 99,
+    summary: "One of the oldest surviving masterpieces of Islamic architecture, the Dome of the Rock crowns the Temple Mount / Haram al-Sharif with its dazzling 20-meter golden dome, vibrant Persian ceramic tilework, and octagonal arcade encircling the sacred Foundation Stone.",
+    coordinatesEstimate: { lat: 31.778, lng: 35.2354 },
+    arKeypoints: [
+      { id: "pt-1", label: "Golden Gilded Outer Dome", featureType: "dome", description: "20.4-meter gilded copper-aluminum dome gleaming across the Jerusalem skyline, commissioned by Caliph Abd al-Malik.", x: 50, y: 18 },
+      { id: "pt-2", label: "Suleiman Persian Tilework", featureType: "facade", description: "Intricate floral and geometric Iznik ceramic tiles commissioned by Ottoman Sultan Suleiman the Magnificent in 1545.", x: 50, y: 58 },
+      { id: "pt-3", label: "The Sacred Foundation Stone", featureType: "relief", description: "The holy rock (as-Sakhrah) beneath the dome associated with Abraham's sacrifice and the Prophet's Night Journey (Mi'raj).", x: 50, y: 80 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "691–692 AD", event: "Umayyad Construction", description: "Erected by Umayyad Caliph Abd al-Malik as an architectural landmark of Islamic faith in Jerusalem." },
+      { yearOrEra: "1545", event: "Ottoman Tile Renovation", description: "Sultan Suleiman the Magnificent replaced external mosaics with vibrant Iznik ceramic tiles." },
+      { yearOrEra: "1981", event: "UNESCO World Heritage Recognition", description: "Inscribed on the UNESCO World Heritage List under the Old City of Jerusalem and its Walls." }
+    ],
+    architecturalSecrets: [
+      "The building's geometry is based on a rotating square that creates an octagonal concentric arcade, mirroring the dimensions of the Church of the Holy Sepulchre rotunda.",
+      "Inside runs a 240-meter Quranic inscription band in gold mosaic Kufic script—the oldest surviving monumental Arabic inscription in existence.",
+      "The golden dome was gifted its distinctive 80 kilograms of gold foil through a collaborative restoration sponsored by King Hussein of Jordan in 1993."
+    ],
+    culturalSignificance: "A paramount holy site in Islam, Judaism, and Christianity, anchoring the celestial panorama of Jerusalem for over 1,300 years.",
+    visitorTips: [
+      "Non-Muslim visitors may access the Temple Mount via the Mughrabi Bridge next to the Western Wall during designated morning hours.",
+      "Dress conservatively with shoulders and legs fully covered."
+    ],
+    narrationScript: "You stand before the Dome of the Rock in Jerusalem, one of the oldest and most recognizable works of sacred architecture on Earth. Completed in 692 AD under Umayyad Caliph Abd al-Malik, its gleaming golden dome hovers over the historic Foundation Stone. Look closely at the octagonal exterior walls: thousands of brilliant turquoise and cobalt ceramic tiles wrap the building in flowing arabesques and sacred calligraphy. Here at the crossroads of monotheistic history, faith and mathematics combine in immortal harmony.",
+    chapters: [
+      { id: "ch-1", title: "Golden Crown of Jerusalem", timestampHint: "0:00", script: "Completed in 692 AD, the golden dome has anchored the Jerusalem skyline for over thirteen centuries.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "Tilework of the Ottomans", timestampHint: "0:30", script: "Vibrant Iznik tiles added by Suleiman the Magnificent envelop the octagonal stone arcade.", focusPointId: "pt-2" },
+      { id: "ch-3", title: "The Sacred Foundation Stone", timestampHint: "1:00", script: "Deep within lies the bedrock stone revered across millennia by prophets and pilgrims.", focusPointId: "pt-3" }
+    ],
+    unescoInfo: {
+      isWorldHeritage: true,
+      officialName: "Old City of Jerusalem and its Walls",
+      inscriptionYear: 1981,
+      criteria: "(ii)(iii)(vi)",
+      category: "Cultural",
+      unescoId: "148"
+    }
+  },
+
+  "badshahi mosque": {
+    name: "Badshahi Mosque",
+    localName: "بادشاہی مسجد / Badshahi Masjid",
+    city: "Lahore, Punjab",
+    country: "Pakistan",
+    architecturalStyle: "Mughal Monumental Architecture",
+    periodEra: "Completed 1673 (Commissioned by Emperor Aurangzeb)",
+    confidence: 99,
+    summary: "Built by Mughal Emperor Aurangzeb in 1673, the Badshahi Mosque in Lahore is an imperial masterpiece constructed from carved red sandstone from Rajasthan, featuring three bulbous white marble domes, four 54-meter minarets, and a vast courtyard capable of holding 100,000 worshippers.",
+    coordinatesEstimate: { lat: 31.588, lng: 74.3094 },
+    arKeypoints: [
+      { id: "pt-1", label: "Three Bulbous White Marble Domes", featureType: "dome", description: "Fluted white marble domes creating a dramatic contrast against the red sandstone facade.", x: 50, y: 22 },
+      { id: "pt-2", label: "54-Meter Octagonal Sandstone Minarets", featureType: "spire", description: "Four soaring corner minarets crowned with marble cupolas providing panoramic views of old Lahore.", x: 80, y: 20 },
+      { id: "pt-3", label: "Vast Imperial Courtyard (Sahn)", featureType: "facade", description: "Paved with red sandstone tiles, this monumental courtyard spans 276,000 square feet.", x: 50, y: 75 },
+      { id: "pt-4", label: "Central Pishtaq Archway", featureType: "arch", description: "Monumental arched entrance adorned with intricate floral stucco relief and Quranic calligraphy.", x: 50, y: 48 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1671–1673", event: "Built under Aurangzeb", description: "Constructed in just two years under the supervision of the Emperor's foster brother, Muzaffar Hussain (Fidai Khan Koka)." },
+      { yearOrEra: "1799–1849", event: "Sikh & British Military Use", description: "Used as a military garrison and stables during the Sikh Empire before being restored to Muslims in 1852." },
+      { yearOrEra: "1960", event: "Major National Restoration", description: "Extensive restoration using original sandstone quarry materials restored the mosque to pristine splendor." }
+    ],
+    architecturalSecrets: [
+      "The acoustic design allows the imam's voice from the central prayer niche (mihrab) to echo clearly across the immense prayer hall without electronic amplification.",
+      "The red sandstone was quarried from Bharatpur in Rajasthan and transported over 500 kilometers to Lahore.",
+      "It was the largest mosque in the world for 313 years from 1673 until the completion of Faisal Mosque in 1986."
+    ],
+    culturalSignificance: "The definitive symbol of Lahore and the supreme culmination of Mughal imperial mosque architecture.",
+    visitorTips: [
+      "Visit at dusk when the setting sun illuminates the red sandstone and floodlights highlight the marble domes.",
+      "Combine your visit with the Lahore Fort directly opposite across the Huzuri Bagh quadrangle."
+    ],
+    narrationScript: "Welcome to the Badshahi Mosque in Lahore, the crowning jewel of Mughal monumental architecture. Commissioned by Emperor Aurangzeb in 1671, its red sandstone facade and three luminous white marble domes dominate the historic city. Step into its immense courtyard—a space so vast that a hundred thousand worshippers can bow in unison beneath four soaring fifty-four meter minarets. Here, imperial grandeur and spiritual serenity stand united across the centuries.",
+    chapters: [
+      { id: "ch-1", title: "Mughal Empire's Grandest Mosque", timestampHint: "0:00", script: "Completed in 1673, Badshahi was the world's largest mosque for over three centuries.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "The Great Red Courtyard", timestampHint: "0:30", script: "A vast sandstone courtyard accommodates one hundred thousand worshippers in prayer.", focusPointId: "pt-3" },
+      { id: "ch-3", title: "Four Spires of Lahore", timestampHint: "1:00", script: "Four octagonal minarets frame the skyline opposite the royal ramparts of Lahore Fort.", focusPointId: "pt-2" }
+    ]
+  },
+
+  "hassan ii mosque": {
+    name: "Hassan II Mosque",
+    localName: "مسجد الحسن الثاني / Grande Mosquée Hassan II",
+    city: "Casablanca",
+    country: "Morocco",
+    architecturalStyle: "Moroccan Moorish & Andalusian Islamic Architecture",
+    periodEra: "Completed 1993 (Designed by Michel Pinseau)",
+    confidence: 99,
+    summary: "Perched dramatically over the roaring Atlantic Ocean in Casablanca, the Hassan II Mosque features the second tallest minaret in the world at 210 meters, topped by a 30-kilometer laser beam pointing toward Mecca, with a retractable roof and glass floor overlooking the sea.",
+    coordinatesEstimate: { lat: 33.6086, lng: -7.6328 },
+    arKeypoints: [
+      { id: "pt-1", label: "210-Meter Soaring Minaret", featureType: "spire", description: "Sixty-story minaret crowned with a green ceramic-tiled lantern and laser pointing toward Mecca.", x: 50, y: 18 },
+      { id: "pt-2", label: "Oceanfront Promenade Arcade", featureType: "arch", description: "Horseshoe arches built over the Atlantic Ocean, inspired by the Quranic verse: 'His throne was over the water'.", x: 65, y: 70 },
+      { id: "pt-3", label: "Automated Retractable Roof", featureType: "dome", description: "A 1,100-ton titanium-clad roof that glides open in three minutes to turn the prayer hall into an open-air celestial temple.", x: 50, y: 40 },
+      { id: "pt-4", label: "Hand-Carved Zellij Tilework", featureType: "relief", description: "Millions of handcrafted ceramic zellij tiles cut and assembled by 6,000 Moroccan master artisans (maâlems).", x: 35, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1986", event: "Construction Commences", description: "King Hassan II initiated the project to provide Casablanca with a world-class spiritual and architectural beacon." },
+      { yearOrEra: "August 30, 1993", event: "Grand Inauguration", description: "Inaugurated on the eve of the Prophet's birthday after seven years of continuous day-and-night craftsmanship." }
+    ],
+    architecturalSecrets: [
+      "Over half of the mosque rests on a reinforced concrete platform cantilevered directly out over the waves of the Atlantic Ocean.",
+      "The prayer hall floor includes sections of high-strength glass allowing worshippers to look down directly into the crashing ocean waves below.",
+      "The minaret's nocturnal laser has a range of 30 kilometers, aligning precisely along the Great Circle route towards the Kaaba in Mecca."
+    ],
+    culturalSignificance: "Morocco's greatest contemporary architectural achievement, showcasing the enduring genius of traditional Moroccan zellij, carved plaster, and cedarwood craftsmanship.",
+    visitorTips: [
+      "It is one of the few active mosques in Morocco open to non-Muslims via guided educational tours.",
+      "Stroll the coastal Corniche at dusk to photograph the dramatic silhouette against the breaking Atlantic surf."
+    ],
+    narrationScript: "You are looking at the Hassan II Mosque in Casablanca, where Moorish architecture meets the Atlantic Ocean. Inspired by the verse 'God's throne was over the water,' this sanctuary stands on a promontory jutting into the sea. At two hundred and ten meters, its minaret rises higher than any other in Africa, casting a thirty-kilometer laser beam toward Mecca every night. Inside, six thousand master artisans hand-carved cedarwood, marble, and millions of zellij tiles, while an automated roof glides open to let prayers rise directly to the stars.",
+    chapters: [
+      { id: "ch-1", title: "Throne Over the Waters", timestampHint: "0:00", script: "Built out over the Atlantic Ocean, the mosque fulfills a vision of sacred oceanic grandeur.", focusPointId: "pt-2" },
+      { id: "ch-2", title: "Beacon of Casablanca", timestampHint: "0:30", script: "The 210-meter minaret projects a nocturnal laser pointing precisely toward Mecca.", focusPointId: "pt-1" },
+      { id: "ch-3", title: "Zellij & Cedar Masterpiece", timestampHint: "1:00", script: "Six thousand Moroccan artisans chiseled stone, plaster, and cedar into exquisite sacred patterns.", focusPointId: "pt-4" }
+    ]
+  },
+
+  "jama masjid delhi": {
+    name: "Jama Masjid, Delhi",
+    localName: "مسجدِ جہاں نما / Masjid-i Jehan-Numa",
+    city: "Old Delhi",
+    country: "India",
+    architecturalStyle: "Mughal Classical Red Sandstone & White Marble",
+    periodEra: "Completed 1656 (Commissioned by Emperor Shah Jahan)",
+    confidence: 99,
+    summary: "Commissioned by Mughal Emperor Shah Jahan—the builder of the Taj Mahal—Jama Masjid ('World-Reflecting Mosque') is one of India's grandest and most historic mosques, constructed from alternating bands of red sandstone and white marble with two 40-meter minarets overlooking Chandni Chowk and the Red Fort.",
+    coordinatesEstimate: { lat: 28.6507, lng: 77.2334 },
+    arKeypoints: [
+      { id: "pt-1", label: "Three Black-and-White Marble Domes", featureType: "dome", description: "Striped bulbous marble domes crowned with gilded brass finials rising above the central prayer hall.", x: 50, y: 22 },
+      { id: "pt-2", label: "40-Meter Striped Red Sandstone Minarets", featureType: "spire", description: "Four-tiered minarets providing an unbroken aerial vista across Old Delhi, Chandni Chowk, and the Red Fort.", x: 78, y: 30 },
+      { id: "pt-3", label: "Elevated Monumental Gateway Stairs", featureType: "entrance", description: "Dramatic 35-step red sandstone flight of stairs elevating the mosque courtyard 30 feet above Old Delhi's bustling streets.", x: 50, y: 78 },
+      { id: "pt-4", label: "Great Ablution Hawz & Courtyard", featureType: "facade", description: "Red sandstone courtyard holding up to 25,000 worshippers surrounding a central marble ablution fountain.", x: 45, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1650–1656", event: "Constructed by Shah Jahan", description: "Built at a cost of one million rupees by 5,000 artisans and inaugurated by Syed Abdul Ghafoor Shah Bukhari of Bukhara." },
+      { yearOrEra: "1857", event: "The Indian Uprising", description: "Occupied by British forces following the 1857 Revolt; spared from demolition due to intense public reverence." }
+    ],
+    architecturalSecrets: [
+      "The mosque was built on an elevated natural rocky outcrop called Bhojla Pahari, ensuring it towered over the surrounding Mughal capital of Shahjahanabad.",
+      "The central prayer archway contains an inlay inscription with the date of construction and praises of Shah Jahan's reign written in flowing Persian Naskh script.",
+      "The courtyard was designed to hold exactly 25,000 people, with each prayer space marked out by black and white marble floor outlines."
+    ],
+    culturalSignificance: "The epic focal point of Islamic culture and heritage in the historic heart of Old Delhi.",
+    visitorTips: [
+      "Climb the southern minaret for a sweeping 360-degree panorama of Old Delhi and the Red Fort.",
+      "Remove your shoes at the monumental gateway; robes are available for visitors wearing sleeveless attire or shorts."
+    ],
+    narrationScript: "You stand at the monumental gates of Jama Masjid in Old Delhi, built by Emperor Shah Jahan in 1656. Ascend its thirty-five broad red sandstone steps into a courtyard capable of holding twenty-five thousand worshippers. Ahead, three black-and-white striped marble domes gleam above the central prayer hall, flanked by twin forty-meter minarets. From here across the bustling alleys of Chandni Chowk stands the Red Fort—a panorama of imperial Mughal architecture preserved in the living heart of Delhi.",
+    chapters: [
+      { id: "ch-1", title: "Shah Jahan's World-Reflecting Mosque", timestampHint: "0:00", script: "Inaugurated in 1656, Jama Masjid crowned the Mughal capital of Shahjahanabad.", focusPointId: "pt-3" },
+      { id: "ch-2", title: "Domes of Striped Marble", timestampHint: "0:30", script: "Three fluted domes of white and black marble reflect light across the red sandstone prayer hall.", focusPointId: "pt-1" },
+      { id: "ch-3", title: "Panorama of Old Delhi", timestampHint: "1:00", script: "Twin minarets offer sweeping views across Chandni Chowk and the walls of the Red Fort.", focusPointId: "pt-2" }
+    ]
+  },
+
+  "taj-ul-masajid": {
+    name: "Taj-ul-Masajid",
+    localName: "تاج المساجد / Crown of Mosques",
+    city: "Bhopal, Madhya Pradesh",
+    country: "India",
+    architecturalStyle: "Late Mughal & Indo-Islamic Architecture",
+    periodEra: "Commenced 1868 (Nawab Shah Jahan Begum) / Completed 1985",
+    confidence: 99,
+    summary: "Known as the 'Crown of Mosques', Taj-ul-Masajid in Bhopal is one of the largest mosques in Asia. Commissioned by the legendary female ruler Nawab Shah Jahan Begum, it features a pink facade, three bulbous white domes, and two 18-story minarets with an expansive courtyard.",
+    coordinatesEstimate: { lat: 23.2625, lng: 77.3931 },
+    arKeypoints: [
+      { id: "pt-1", label: "Twin 18-Story Octagonal Minarets", featureType: "spire", description: "62-meter soaring pink sandstone minarets crowned with marble cupolas dominating Bhopal's skyline.", x: 75, y: 25 },
+      { id: "pt-2", label: "Three Mammoth Marble Domes", featureType: "dome", description: "Fluted white marble domes rising majestically over the central high-ceilinged prayer hall.", x: 50, y: 20 },
+      { id: "pt-3", label: "Massive Pink Sandstone Courtyard", featureType: "facade", description: "Expansive pink courtyard with a central ablution tank holding up to 175,000 worshippers during gatherings.", x: 50, y: 70 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1868", event: "Initiated by Shah Jahan Begum", description: "The Begum of Bhopal began construction, envisioning the grandest mosque on the subcontinent." },
+      { yearOrEra: "1971–1985", event: "Final Completion", description: "Allama Mohammad Imran Khan Nadwi Azhari spearheaded the final construction and historic opening." }
+    ],
+    architecturalSecrets: [
+      "The mosque features a natural lake named Motia Talab connected to the complex, historically providing cool air and fresh water for ablution.",
+      "The monumental entrance gate is an architectural tribute to the Buland Darwaza of Fatehpur Sikri."
+    ],
+    culturalSignificance: "A triumphant tribute to the visionary female Begums of Bhopal who ruled and nurtured the arts and architecture of central India for over a century.",
+    visitorTips: [
+      "Visit during non-prayer hours to admire the peaceful reflection of the pink minarets in the courtyard pool.",
+      "Dress conservatively with respectful clothing covering shoulders and knees."
+    ],
+    narrationScript: "Welcome to Taj-ul-Masajid in Bhopal—the 'Crown of Mosques' and one of the largest Islamic monuments in Asia. Initiated in 1868 by Nawab Shah Jahan Begum, one of Bhopal's visionary female rulers, its pink sandstone facade and three soaring white marble domes command the central Indian landscape. Flanked by twin eighteen-story minarets, this courtyard can welcome over one hundred and seventy-five thousand worshippers. It stands as an enduring testament to the cultural renaissance of Bhopal.",
+    chapters: [
+      { id: "ch-1", title: "Crown of Mosques", timestampHint: "0:00", script: "Initiated by the Begum of Bhopal in 1868, this monument lives up to its name as the Crown of Mosques.", focusPointId: "pt-2" },
+      { id: "ch-2", title: "Eighteen-Story Minarets", timestampHint: "0:30", script: "Twin pink sandstone towers soar 62 meters into the sky over central Bhopal.", focusPointId: "pt-1" },
+      { id: "ch-3", title: "Imperial Gathering Courtyard", timestampHint: "1:00", script: "Surrounding the central pool, this immense courtyard hosts thousands in peaceful prayer.", focusPointId: "pt-3" }
+    ]
   }
 };
+
 
 /**
  * Normalized alias dictionary for instant backend resolution of religious structures
@@ -903,6 +2488,120 @@ export const RELIGIOUS_ALIASES: Record<string, string> = {
   "kashi vishwanath temple": "kashi vishwanath",
   "vishwanath temple": "kashi vishwanath",
   "varanasi temple": "kashi vishwanath",
+  "prem mandir": "prem mandir",
+  "prem mandir vrindavan": "prem mandir",
+  "prem temple": "prem mandir",
+  "vrindavan prem mandir": "prem mandir",
+  "radha krishna mandir vrindavan": "prem mandir",
+
+  // Additional Indian Temples (Char Dham, Jyotirlingas, South Indian, Shakti Peethas)
+  "tirupati": "tirupati venkateswara temple",
+  "tirupati balaji": "tirupati venkateswara temple",
+  "tirumala": "tirupati venkateswara temple",
+  "tirumala venkateswara": "tirupati venkateswara temple",
+  "sri venkateswara temple": "tirupati venkateswara temple",
+  "venkateswara temple": "tirupati venkateswara temple",
+  "tirupati temple": "tirupati venkateswara temple",
+  "somnath": "somnath temple",
+  "somnath temple": "somnath temple",
+  "somnath jyotirlinga": "somnath temple",
+  "shree somnath": "somnath temple",
+  "kedarnath": "kedarnath temple",
+  "kedarnath temple": "kedarnath temple",
+  "kedarnath dham": "kedarnath temple",
+  "shri kedarnath": "kedarnath temple",
+  "badrinath": "badrinath temple",
+  "badrinath temple": "badrinath temple",
+  "badrinath dham": "badrinath temple",
+  "badri vishal": "badrinath temple",
+  "badrinarayan": "badrinath temple",
+  "jagannath": "jagannath temple puri",
+  "jagannath puri": "jagannath temple puri",
+  "jagannath temple": "jagannath temple puri",
+  "puri temple": "jagannath temple puri",
+  "shri jagannath": "jagannath temple puri",
+  "puri jagannath": "jagannath temple puri",
+  "rameswaram": "ramanathaswamy temple",
+  "rameshwaram": "ramanathaswamy temple",
+  "ramanathaswamy": "ramanathaswamy temple",
+  "ramanathaswamy temple": "ramanathaswamy temple",
+  "rameshwaram temple": "ramanathaswamy temple",
+  "konark": "konark sun temple",
+  "konark temple": "konark sun temple",
+  "sun temple konark": "konark sun temple",
+  "konark sun temple": "konark sun temple",
+  "black pagoda": "konark sun temple",
+  "akshardham": "akshardham temple",
+  "akshardham temple": "akshardham temple",
+  "akshardham delhi": "akshardham temple",
+  "swaminarayan akshardham": "akshardham temple",
+  "mahakaleshwar": "mahakaleshwar temple",
+  "mahakaleshwar temple": "mahakaleshwar temple",
+  "mahakal": "mahakaleshwar temple",
+  "mahakal ujjain": "mahakaleshwar temple",
+  "ujjain temple": "mahakaleshwar temple",
+  "kailasa temple": "kailasa temple",
+  "kailash temple": "kailasa temple",
+  "ellora cave 16": "kailasa temple",
+  "kailasa ellora": "kailasa temple",
+  "cave 16 ellora": "kailasa temple",
+  "kandariya mahadeva": "kandariya mahadeva temple",
+  "kandariya mahadev": "kandariya mahadeva temple",
+  "kandariya mahadeva temple": "kandariya mahadeva temple",
+  "khajuraho temple": "kandariya mahadeva temple",
+  "khajuraho": "kandariya mahadeva temple",
+  "virupaksha": "virupaksha temple",
+  "virupaksha temple": "virupaksha temple",
+  "hampi temple": "virupaksha temple",
+  "virupaksha hampi": "virupaksha temple",
+  "padmanabhaswamy": "padmanabhaswamy temple",
+  "padmanabhaswamy temple": "padmanabhaswamy temple",
+  "sree padmanabhaswamy": "padmanabhaswamy temple",
+  "trivandrum temple": "padmanabhaswamy temple",
+  "anantha padmanabha": "padmanabhaswamy temple",
+  "ranganathaswamy": "ranganathaswamy temple",
+  "ranganathaswamy temple": "ranganathaswamy temple",
+  "srirangam": "ranganathaswamy temple",
+  "srirangam temple": "ranganathaswamy temple",
+  "sri ranganathaswamy": "ranganathaswamy temple",
+  "shore temple": "shore temple",
+  "mahabalipuram shore temple": "shore temple",
+  "mamallapuram shore temple": "shore temple",
+  "shore temple mahabalipuram": "shore temple",
+  "kamakhya": "kamakhya temple",
+  "kamakhya temple": "kamakhya temple",
+  "maa kamakhya": "kamakhya temple",
+  "kamakhya guwahati": "kamakhya temple",
+  "ram mandir": "ram mandir ayodhya",
+  "ram mandir ayodhya": "ram mandir ayodhya",
+  "ayodhya ram mandir": "ram mandir ayodhya",
+  "shri ram janmabhoomi": "ram mandir ayodhya",
+  "ram janmabhoomi": "ram mandir ayodhya",
+  "ram janmabhoomi mandir": "ram mandir ayodhya",
+  "batu caves": "batu caves temple",
+  "batu caves temple": "batu caves temple",
+  "murugan batu caves": "batu caves temple",
+  "tanah lot": "tanah lot temple",
+  "tanah lot temple": "tanah lot temple",
+  "pura tanah lot": "tanah lot temple",
+  "ulun danu": "pura ulun danu beratan",
+  "ulun danu beratan": "pura ulun danu beratan",
+  "pura ulun danu beratan": "pura ulun danu beratan",
+  "lake beratan temple": "pura ulun danu beratan",
+  "pashupatinath": "pashupatinath temple",
+  "pashupatinath temple": "pashupatinath temple",
+  "shri pashupatinath": "pashupatinath temple",
+  "wat arun": "wat arun",
+  "temple of dawn": "wat arun",
+  "wat rong khun": "wat rong khun",
+  "white temple chiang rai": "wat rong khun",
+  "akshardham usa": "baps akshardham usa",
+  "akshardham new jersey": "baps akshardham usa",
+  "baps robbinsville": "baps akshardham usa",
+  "baps akshardham usa": "baps akshardham usa",
+  "baps abu dhabi": "baps abu dhabi",
+  "baps hindu mandir abu dhabi": "baps abu dhabi",
+  "abu dhabi mandir": "baps abu dhabi",
 
   // Islam
   "masjid al-haram": "masjid al-haram",
@@ -998,4 +2697,60 @@ export const RELIGIOUS_ALIASES: Record<string, string> = {
   "fire temple of yazd": "yazd atash behram",
   "atashkadeh yazd": "yazd atash behram",
   "yazd fire temple": "yazd atash behram",
+
+  // Cathedrals & Churches Worldwide
+  "sagrada familia": "sagrada familia",
+  "basilica de la sagrada familia": "sagrada familia",
+  "la sagrada familia": "sagrada familia",
+  "gaudi cathedral": "sagrada familia",
+  "sagrada familia barcelona": "sagrada familia",
+  "hagia sophia": "hagia sophia",
+  "ayasofya": "hagia sophia",
+  "ayasofya camii": "hagia sophia",
+  "saint sophia istanbul": "hagia sophia",
+  "westminster abbey": "westminster abbey",
+  "westminster abbey london": "westminster abbey",
+  "collegiate church of st peter": "westminster abbey",
+  "duomo di milano": "duomo di milano",
+  "milan cathedral": "duomo di milano",
+  "duomo milan": "duomo di milano",
+  "cologne cathedral": "cologne cathedral",
+  "kolner dom": "cologne cathedral",
+  "dom zu koln": "cologne cathedral",
+  "basilica of bom jesus": "basilica of bom jesus",
+  "bom jesus goa": "basilica of bom jesus",
+  "bom jesus church": "basilica of bom jesus",
+  "basilica of bom jesus goa": "basilica of bom jesus",
+  "old goa church": "basilica of bom jesus",
+  "lalibela": "lalibela rock hewn churches",
+  "lalibela churches": "lalibela rock hewn churches",
+  "biete ghiorgis": "lalibela rock hewn churches",
+  "church of saint george lalibela": "lalibela rock hewn churches",
+  "rock hewn churches of lalibela": "lalibela rock hewn churches",
+
+  // Mosques & Islamic Sacred Monuments
+  "dome of the rock": "dome of the rock",
+  "qubbat al-sakhrah": "dome of the rock",
+  "qubbat al sakhra": "dome of the rock",
+  "golden dome jerusalem": "dome of the rock",
+  "al aqsa dome": "dome of the rock",
+  "badshahi mosque": "badshahi mosque",
+  "badshahi masjid": "badshahi mosque",
+  "badshahi mosque lahore": "badshahi mosque",
+  "badshahi masjid lahore": "badshahi mosque",
+  "hassan ii mosque": "hassan ii mosque",
+  "mosquee hassan ii": "hassan ii mosque",
+  "hassan 2 mosque": "hassan ii mosque",
+  "casablanca mosque": "hassan ii mosque",
+  "jama masjid": "jama masjid delhi",
+  "jama masjid delhi": "jama masjid delhi",
+  "delhi jama masjid": "jama masjid delhi",
+  "masjid-i jehan-numa": "jama masjid delhi",
+  "old delhi mosque": "jama masjid delhi",
+  "taj-ul-masajid": "taj-ul-masajid",
+  "taj ul masajid": "taj-ul-masajid",
+  "taj ul masjid": "taj-ul-masajid",
+  "taj-ul-masjid": "taj-ul-masajid",
+  "bhopal mosque": "taj-ul-masajid",
+  "taj ul masajid bhopal": "taj-ul-masajid",
 };

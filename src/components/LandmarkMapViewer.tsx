@@ -13,6 +13,7 @@ import {
   Train
 } from "lucide-react";
 import { LandmarkRecognition } from "../types";
+import { useLanguage } from "../context/LanguageContext";
 
 interface LandmarkMapViewerProps {
   recognition: LandmarkRecognition;
@@ -37,6 +38,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
   className = "",
   onClose,
 }) => {
+  const { t } = useLanguage();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [userDistance, setUserDistance] = useState<number | null>(null);
   const [locatingUser, setLocatingUser] = useState<boolean>(false);
@@ -53,50 +55,61 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
     !cityName?.toLowerCase().includes("paris") &&
     !landmarkName?.toLowerCase().includes("eiffel");
 
+  const hasValidCoords =
+    coords &&
+    (Math.abs(coords.lat) > 0.001 || Math.abs(coords.lng) > 0.001) &&
+    !isDefaultParis;
+
   const effectiveQuery = [landmarkName, cityName, recognition.country].filter(Boolean).join(", ");
-  const mapQueryParam = isDefaultParis || (coords.lat === 0 && coords.lng === 0)
-    ? encodeURIComponent(effectiveQuery || "World Landmark")
-    : `${coords.lat},${coords.lng}`;
+  const mapQueryParam = hasValidCoords
+    ? `${coords.lat},${coords.lng}`
+    : encodeURIComponent(effectiveQuery || "World Landmark");
+
+  const destParam = hasValidCoords
+    ? `${coords.lat},${coords.lng}`
+    : encodeURIComponent(effectiveQuery || landmarkName);
 
   // Contextual nearby viewpoints and POIs around coordinates
-  const nearbySpots: NearbySpot[] = [
-    {
-      id: "spot-1",
-      name: `${landmarkName} - Prime Photo Vista`,
-      category: "photo",
-      lat: coords.lat + 0.0018,
-      lng: coords.lng + 0.0015,
-      description: "Optimal wide-angle viewpoint capturing the entire architectural facade with reflection pools.",
-      distanceMeters: 240,
-    },
-    {
-      id: "spot-2",
-      name: `${cityName} Heritage Walk Plaza`,
-      category: "square",
-      lat: coords.lat - 0.0019,
-      lng: coords.lng + 0.002,
-      description: "Historic cobblestone promenade with informational markers and pedestrian access.",
-      distanceMeters: 290,
-    },
-    {
-      id: "spot-3",
-      name: "Panoramic Audio Observation Point",
-      category: "viewpoint",
-      lat: coords.lat + 0.0025,
-      lng: coords.lng - 0.0018,
-      description: "Quiet elevated vantage point recommended for taking in the full skyline view.",
-      distanceMeters: 380,
-    },
-    {
-      id: "spot-4",
-      name: `${cityName} Transit & Tour Hub`,
-      category: "metro",
-      lat: coords.lat - 0.003,
-      lng: coords.lng - 0.0022,
-      description: "Direct transit connectivity serving the historical monument precinct.",
-      distanceMeters: 450,
-    },
-  ];
+  const nearbySpots: NearbySpot[] = hasValidCoords
+    ? [
+        {
+          id: "spot-1",
+          name: `${landmarkName} - Prime Photo Vista`,
+          category: "photo",
+          lat: coords.lat + 0.0018,
+          lng: coords.lng + 0.0015,
+          description: "Optimal wide-angle viewpoint capturing the entire architectural facade with reflection pools.",
+          distanceMeters: 240,
+        },
+        {
+          id: "spot-2",
+          name: `${cityName} Heritage Walk Plaza`,
+          category: "square",
+          lat: coords.lat - 0.0019,
+          lng: coords.lng + 0.002,
+          description: "Historic cobblestone promenade with informational markers and pedestrian access.",
+          distanceMeters: 290,
+        },
+        {
+          id: "spot-3",
+          name: "Panoramic Audio Observation Point",
+          category: "viewpoint",
+          lat: coords.lat + 0.0025,
+          lng: coords.lng - 0.0018,
+          description: "Quiet elevated vantage point recommended for taking in the full skyline view.",
+          distanceMeters: 380,
+        },
+        {
+          id: "spot-4",
+          name: `${cityName} Transit & Tour Hub`,
+          category: "metro",
+          lat: coords.lat - 0.003,
+          lng: coords.lng - 0.0022,
+          description: "Direct transit connectivity serving the historical monument precinct.",
+          distanceMeters: 450,
+        },
+      ]
+    : [];
 
   // Haversine formula for distance in meters
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -117,6 +130,10 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
       setGeoError("Geolocation is not supported by your browser.");
+      return;
+    }
+    if (!hasValidCoords) {
+      setGeoError("Exact GPS pin is being resolved for this city. Use 'Open in Maps' or 'Directions' for live routing.");
       return;
     }
     setLocatingUser(true);
@@ -150,9 +167,11 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
   // Direct links to Google Maps ecosystem
   const googleMapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${landmarkName} ${cityName} ${recognition.country}`)}`;
   const googleMapsDirectionsUrl = userLocation
-    ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${coords.lat},${coords.lng}`
-    : `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`;
-  const googleStreetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coords.lat},${coords.lng}`;
+    ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${destParam}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${destParam}`;
+  const googleStreetViewUrl = hasValidCoords
+    ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coords.lat},${coords.lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${landmarkName} ${cityName} 360`)}`;
   const googleEarthUrl = `https://earth.google.com/web/search/${encodeURIComponent(`${landmarkName} ${cityName}`)}`;
   const googleMapsEmbedUrl = `https://maps.google.com/maps?q=${mapQueryParam}&z=16&output=embed`;
 
@@ -181,14 +200,16 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
               <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
-                {landmarkName} Map Explorer
+                {landmarkName} {t("map_explorer_title", "Map Explorer")}
               </h2>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-cyan-300 font-mono">
-                {coords.lat.toFixed(4)}°N, {coords.lng.toFixed(4)}°E
+                {hasValidCoords
+                  ? `${Math.abs(coords.lat).toFixed(4)}°${coords.lat >= 0 ? "N" : "S"}, ${Math.abs(coords.lng).toFixed(4)}°${coords.lng >= 0 ? "E" : "W"}`
+                  : [cityName, recognition.country].filter(Boolean).join(", ") || "City Center"}
               </span>
             </div>
             <p className="text-xs text-slate-400 truncate sm:whitespace-normal">
-              Interactive Google Maps navigation, Street View 360°, and satellite views
+              {t("map_explorer_sub", "Interactive Google Maps navigation, Street View 360°, and satellite views")}
             </p>
           </div>
         </div>
@@ -202,7 +223,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
             className="py-1.5 px-3 bg-slate-800/90 hover:bg-slate-700 text-cyan-300 border border-slate-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer"
           >
             <Crosshair className={`w-3.5 h-3.5 ${locatingUser ? "animate-spin text-amber-400" : "text-cyan-400"}`} />
-            <span>{locatingUser ? "Locating..." : userDistance !== null ? `${userDistance > 1000 ? (userDistance / 1000).toFixed(1) + "km" : userDistance + "m"}` : "Calculate Distance"}</span>
+            <span>{locatingUser ? t("locating", "Locating...") : userDistance !== null ? `${userDistance > 1000 ? (userDistance / 1000).toFixed(1) + "km" : userDistance + "m"}` : t("calculate_distance", "Calculate Distance")}</span>
           </button>
 
           <a
@@ -213,7 +234,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
             className="py-1.5 px-3 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-semibold rounded-xl text-xs flex items-center space-x-1.5 transition shadow-sm"
           >
             <Globe className="w-3.5 h-3.5 shrink-0" />
-            <span>Open in Maps</span>
+            <span>{t("open_in_maps", "Open in Maps")}</span>
             <ExternalLink className="w-3 h-3 ml-0.5" />
           </a>
         </div>
@@ -234,7 +255,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
         {/* Overlay Telemetry Badge */}
         <div className="absolute top-3 left-3 bg-slate-950/85 backdrop-blur-md border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs text-slate-200 shadow-lg flex items-center space-x-2 pointer-events-none">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span className="font-semibold text-white">Google Maps Live View</span>
+          <span className="font-semibold text-white">{t("google_maps_live_view", "Google Maps Live View")}</span>
           <span className="text-slate-400 text-[11px] hidden sm:inline">({cityName}, {recognition.country})</span>
         </div>
 
@@ -262,73 +283,83 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
       )}
 
       {/* Nearby Architectural Viewpoints & Photo Spots */}
-      <div className="p-3 sm:p-4 bg-slate-950/90 border-t border-slate-800/80">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center space-x-2 text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            <Compass className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Recommended Viewing Points & Nearby Hubs</span>
+      {nearbySpots.length > 0 ? (
+        <div className="p-3 sm:p-4 bg-slate-950/90 border-t border-slate-800/80">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center space-x-2 text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <Compass className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{t("recommended_viewpoints", "Recommended Viewing Points & Nearby Hubs")}</span>
+            </div>
+            <span className="text-[11px] text-slate-400">{t("click_to_view_location", "Click to view location")}</span>
           </div>
-          <span className="text-[11px] text-slate-400">Click to view location</span>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {nearbySpots.map((spot) => {
-            const isSelected = selectedSpot?.id === spot.id;
-            const spotMapsUrl = `https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`;
-            return (
-              <div
-                key={spot.id}
-                onClick={() => setSelectedSpot(isSelected ? null : spot)}
-                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                  isSelected
-                    ? "bg-cyan-950/60 border-cyan-400/80 text-white shadow-md shadow-cyan-950"
-                    : "bg-slate-900/80 hover:bg-slate-850 border-slate-800 text-slate-300 hover:border-slate-700"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between text-xs font-bold mb-1">
-                    <span className="flex items-center space-x-1.5 truncate">
-                      {spot.category === "photo" && <Camera className="w-3 h-3 text-cyan-400 shrink-0" />}
-                      {spot.category === "square" && <Building className="w-3 h-3 text-blue-400 shrink-0" />}
-                      {spot.category === "viewpoint" && <Eye className="w-3 h-3 text-emerald-400 shrink-0" />}
-                      {spot.category === "metro" && <Train className="w-3 h-3 text-amber-400 shrink-0" />}
-                      <span className="truncate">{spot.name}</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-cyan-400/90 shrink-0 ml-1">
-                      ~{spot.distanceMeters}m
-                    </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {nearbySpots.map((spot) => {
+              const isSelected = selectedSpot?.id === spot.id;
+              const spotMapsUrl = `https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`;
+              return (
+                <div
+                  key={spot.id}
+                  onClick={() => setSelectedSpot(isSelected ? null : spot)}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                    isSelected
+                      ? "bg-cyan-950/60 border-cyan-400/80 text-white shadow-md shadow-cyan-950"
+                      : "bg-slate-900/80 hover:bg-slate-850 border-slate-800 text-slate-300 hover:border-slate-700"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-bold mb-1">
+                      <span className="flex items-center space-x-1.5 truncate">
+                        {spot.category === "photo" && <Camera className="w-3 h-3 text-cyan-400 shrink-0" />}
+                        {spot.category === "square" && <Building className="w-3 h-3 text-blue-400 shrink-0" />}
+                        {spot.category === "viewpoint" && <Eye className="w-3 h-3 text-emerald-400 shrink-0" />}
+                        {spot.category === "metro" && <Train className="w-3 h-3 text-amber-400 shrink-0" />}
+                        <span className="truncate">{spot.name}</span>
+                      </span>
+                      <span className="text-[10px] font-mono text-cyan-400/90 shrink-0 ml-1">
+                        ~{spot.distanceMeters}m
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                      {spot.description}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-                    {spot.description}
-                  </p>
-                </div>
 
-                <div className="mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {spot.lat.toFixed(4)}°, {spot.lng.toFixed(4)}°
-                  </span>
-                  <a
-                    href={spotMapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold flex items-center space-x-0.5"
-                  >
-                    <span>View</span>
-                    <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {spot.lat.toFixed(4)}°, {spot.lng.toFixed(4)}°
+                    </span>
+                    <a
+                      href={spotMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold flex items-center space-x-0.5"
+                    >
+                      <span>{t("view_in_maps", "View")}</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="p-3 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 px-4">
+          <div className="flex items-center space-x-2">
+            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Interactive Map & Turn-by-Turn Navigation for {landmarkName} in {cityName || "City"}</span>
+          </div>
+          <span className="text-slate-500 font-mono text-[11px]">Regional Geo-Mapping</span>
+        </div>
+      )}
 
       {/* Bottom Google Maps Action Bar */}
       <div className="p-3 sm:p-4 bg-slate-950 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center space-x-2">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Google Maps Actions:
+            {t("google_maps_actions", "Google Maps Actions:")}
           </span>
         </div>
 
@@ -342,7 +373,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
             className="h-11 sm:h-9 px-3.5 sm:px-3 bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-medium border border-slate-700 transition flex items-center justify-center space-x-1.5 shadow-sm"
           >
             <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-            <span className="truncate">Open in Google Maps</span>
+            <span className="truncate">{t("open_in_google_maps", "Open in Google Maps")}</span>
             <ExternalLink className="w-3 h-3 opacity-60 ml-0.5 shrink-0" />
           </a>
 
@@ -355,7 +386,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
             className="h-11 sm:h-9 px-3.5 sm:px-3 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-cyan-950"
           >
             <Navigation className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Turn-by-Turn Directions</span>
+            <span className="truncate">{t("turn_by_turn_directions", "Turn-by-Turn Directions")}</span>
             <ExternalLink className="w-3 h-3 ml-0.5 shrink-0" />
           </a>
 
@@ -368,7 +399,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
             className="h-11 sm:h-9 px-3.5 sm:px-3 bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-medium border border-slate-700 transition flex items-center justify-center space-x-1.5 shadow-sm"
           >
             <Eye className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <span className="truncate">360° Street View</span>
+            <span className="truncate">{t("street_view_360", "360° Street View")}</span>
             <ExternalLink className="w-3 h-3 opacity-60 ml-0.5 shrink-0" />
           </a>
 
@@ -381,7 +412,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
             className="h-11 sm:h-9 px-3.5 sm:px-3 bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-medium border border-slate-700 transition flex items-center justify-center space-x-1.5 shadow-sm"
           >
             <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="truncate">Google Earth 3D</span>
+            <span className="truncate">{t("google_earth_3d", "Google Earth 3D")}</span>
             <ExternalLink className="w-3 h-3 opacity-60 ml-0.5 shrink-0" />
           </a>
         </div>

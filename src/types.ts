@@ -37,6 +37,44 @@ export interface HistoricCollegeInfo {
   famousAlumniOrScholars?: string[];
 }
 
+export interface LocationReferencePhoto {
+  id: string;
+  title: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  source: 'google' | 'wikimedia' | 'curated' | 'streetview';
+  sourceUrl?: string;
+  author?: string;
+  license?: string;
+  description?: string;
+}
+
+export interface GeoClue {
+  category: 'architecture' | 'vegetation' | 'signage' | 'terrain' | 'infrastructure' | 'climate';
+  observation: string;
+  inferredLocation: string;
+}
+
+export interface LocationGuessInfo {
+  isGuessMode?: boolean;
+  estimatedCountry: string;
+  estimatedCity?: string;
+  estimatedRegion?: string;
+  estimatedSite?: string;
+  confidenceScore: number;
+  clues: GeoClue[];
+  candidateLocations: Array<{
+    name: string;
+    region: string;
+    confidence: number;
+  }>;
+  googleSearchPhotosQuery: string;
+  googleImagesUrl: string;
+  googleLensSearchUrl: string;
+  googleMapsUrl: string;
+  referencePhotos: LocationReferencePhoto[];
+}
+
 export interface LandmarkRecognition {
   name: string;
   localName?: string;
@@ -54,13 +92,17 @@ export interface LandmarkRecognition {
   arKeypoints: ARKeypoint[];
   modelUsed?: string;
   isLandmark?: boolean;
-  detectedCategory?: 'landmark' | 'person' | 'animal' | 'nature' | 'food' | 'object' | 'indoor' | 'other';
+  detectedCategory?: 'landmark' | 'person' | 'animal' | 'nature' | 'food' | 'object' | 'indoor' | 'other' | 'architecture' | 'sacred' | 'urban' | 'campus' | 'landscape';
   notLandmarkReason?: string;
   unescoInfo?: UnescoHeritageInfo;
   collegeInfo?: HistoricCollegeInfo;
   needsUserIdentification?: boolean;
   creditsDepleted?: boolean;
   candidateMatches?: string[];
+  locationGuess?: LocationGuessInfo;
+  referencePhotos?: LocationReferencePhoto[];
+  googleImagesUrl?: string;
+  googleLensSearchUrl?: string;
 }
 
 export interface GroundingSource {

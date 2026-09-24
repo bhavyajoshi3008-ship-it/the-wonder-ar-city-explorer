@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Glasses,
   Volume2,
@@ -14,6 +14,7 @@ import { motion } from "motion/react";
 import { LandmarkRecognition, LandmarkHistory } from "../types";
 import { useAccessibility } from "../context/AccessibilityContext";
 import { useLanguage } from "../context/LanguageContext";
+import { translateText, translateUIBatch } from "../services/api";
 
 interface SeniorFriendlySummaryCardProps {
   recognition: LandmarkRecognition;
@@ -26,20 +27,61 @@ export const SeniorFriendlySummaryCard: React.FC<SeniorFriendlySummaryCardProps>
 }) => {
   const { isSeniorMode, speechRate, speakText, stopSpeaking, isSpeaking } = useAccessibility();
   const { currentLanguage, t } = useLanguage();
+  const [translatedData, setTranslatedData] = useState<{
+    name?: string;
+    location?: string;
+    yearBuilt?: string;
+    significance?: string;
+  }>({});
 
-  const landmarkName = recognition.landmarkName || "Historic Landmark";
-  const location = recognition.location || "City Landmark";
-  const yearBuilt = history.yearBuilt || history.historicalTimeline?.[0]?.yearOrEra || "Historic Era";
+  const landmarkName = recognition.name || "Historic Landmark";
+  const location = [recognition.city, recognition.country].filter(Boolean).join(", ") || "City Landmark";
+  const yearBuilt = recognition.periodEra || history.historicalTimeline?.[0]?.yearOrEra || "Historic Era";
   const significance =
     history.culturalSignificance ||
-    recognition.description ||
+    recognition.summary ||
     "A world-renowned cultural and historical monument admired by travelers across generations.";
+
+  useEffect(() => {
+    if (currentLanguage.code === "en") {
+      setTranslatedData({});
+      return;
+    }
+
+    const batchKeys: Record<string, string> = {
+      name: landmarkName,
+      location: location,
+      yearBuilt: yearBuilt,
+      significance: significance,
+    };
+
+    let isMounted = true;
+    translateUIBatch(batchKeys, currentLanguage.code, currentLanguage.name)
+      .then((res) => {
+        if (isMounted && res) {
+          setTranslatedData(res);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentLanguage.code, currentLanguage.name, landmarkName, location, yearBuilt, significance]);
+
+  const effectiveName = translatedData.name || landmarkName;
+  const effectiveLocation = translatedData.location || location;
+  const effectiveYearBuilt = translatedData.yearBuilt || yearBuilt;
+  const effectiveSignificance = translatedData.significance || significance;
 
   const handleReadAloud = () => {
     if (isSpeaking) {
       stopSpeaking();
     } else {
-      const speechScript = `${landmarkName}, located in ${location}. Built in ${yearBuilt}. ${significance}`;
+      const speechScript =
+        currentLanguage.code === "en"
+          ? `${effectiveName}, located in ${effectiveLocation}. Built in ${effectiveYearBuilt}. ${effectiveSignificance}`
+          : `${effectiveName}। ${effectiveLocation}। ${effectiveYearBuilt}। ${effectiveSignificance}`;
       speakText(speechScript, currentLanguage.code);
     }
   };
@@ -112,7 +154,7 @@ export const SeniorFriendlySummaryCard: React.FC<SeniorFriendlySummaryCardProps>
             <Landmark className="w-3.5 h-3.5 text-amber-400" />
             <span>{t("monument", "Monument")}</span>
           </div>
-          <p className="text-sm font-bold text-white leading-snug">{landmarkName}</p>
+          <p className="text-sm font-bold text-white leading-snug" dir={currentLanguage.dir || "ltr"}>{effectiveName}</p>
         </div>
 
         <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
@@ -120,7 +162,7 @@ export const SeniorFriendlySummaryCard: React.FC<SeniorFriendlySummaryCardProps>
             <MapPin className="w-3.5 h-3.5 text-cyan-400" />
             <span>{t("location", "Location")}</span>
           </div>
-          <p className="text-sm font-bold text-white leading-snug">{location}</p>
+          <p className="text-sm font-bold text-white leading-snug" dir={currentLanguage.dir || "ltr"}>{effectiveLocation}</p>
         </div>
 
         <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
@@ -128,7 +170,7 @@ export const SeniorFriendlySummaryCard: React.FC<SeniorFriendlySummaryCardProps>
             <Calendar className="w-3.5 h-3.5 text-emerald-400" />
             <span>{t("built_in", "Built In")}</span>
           </div>
-          <p className="text-sm font-bold text-white leading-snug">{yearBuilt}</p>
+          <p className="text-sm font-bold text-white leading-snug" dir={currentLanguage.dir || "ltr"}>{effectiveYearBuilt}</p>
         </div>
       </div>
 
@@ -137,7 +179,7 @@ export const SeniorFriendlySummaryCard: React.FC<SeniorFriendlySummaryCardProps>
         <span className="font-bold text-amber-300 mr-1.5">
           {t("what_makes_it_special", "Why it is famous:")}
         </span>
-        <span dir={currentLanguage.dir || "ltr"}>{significance}</span>
+        <span dir={currentLanguage.dir || "ltr"}>{effectiveSignificance}</span>
       </div>
 
       {/* Senior Citizen Accessibility & Comfort Tips */}

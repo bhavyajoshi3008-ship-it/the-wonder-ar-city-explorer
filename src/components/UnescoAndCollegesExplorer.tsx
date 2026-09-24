@@ -100,7 +100,7 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
         const matchCity = site.city?.toLowerCase().includes(query);
         const matchStyle = site.architecturalStyle?.toLowerCase().includes(query);
         const matchSummary = site.summary.toLowerCase().includes(query);
-        const matchYear = site.year.toString().includes(query);
+        const matchYear = site.year != null ? site.year.toString().includes(query) : false;
         const matchUnescoId = site.unescoId?.toString().includes(query);
         const matchMotto = (site as any).famousMotto?.toLowerCase().includes(query);
         const matchFounded = (site as any).foundedYear?.toString().toLowerCase().includes(query);

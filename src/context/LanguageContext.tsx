@@ -84,7 +84,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const missingKeysMap: Record<string, string> = {};
     Object.keys(CORE_TRANSLATIONS).forEach((k) => {
       const hasStatic = Boolean(CORE_TRANSLATIONS[k]?.[langCode] || CORE_TRANSLATIONS[k]?.[langCode.split("-")[0]]);
-      const hasDynamic = Boolean(existingDynamic[k]);
+      const hasDynamic = Boolean(existingDynamic[k] && existingDynamic[k] !== CORE_TRANSLATIONS[k]?.["en"]);
       if (!hasStatic && !hasDynamic) {
         missingKeysMap[k] = CORE_TRANSLATIONS[k]?.["en"] || k;
       }

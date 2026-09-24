@@ -1,5 +1,6 @@
 import { RELIGIOUS_STRUCTURE_DOSSIERS, RELIGIOUS_ALIASES } from "./religiousStructuresKnowledge";
 import { HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS, HISTORIC_COLLEGES_AND_UNESCO_ALIASES } from "./historicCollegesAndUnescoDossiers";
+import { INDIAN_COLLEGES_DOSSIERS, INDIAN_COLLEGES_ALIASES } from "./indianCollegesDossiers";
 
 export interface FallbackLandmarkData {
   name: string;
@@ -496,7 +497,7 @@ export function normalizeLookupKey(str?: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/['’`]/g, "")
-    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/[^\p{L}\p{M}\p{N} ]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -558,6 +559,7 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     "basilica de la sagrada familia": "sagrada familia",
     ...RELIGIOUS_ALIASES,
     ...HISTORIC_COLLEGES_AND_UNESCO_ALIASES,
+    ...INDIAN_COLLEGES_ALIASES,
   };
 
   // Combined dossiers map
@@ -565,7 +567,28 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     ...KNOWN_LANDMARK_DOSSIERS,
     ...RELIGIOUS_STRUCTURE_DOSSIERS,
     ...HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS,
+    ...INDIAN_COLLEGES_DOSSIERS,
   };
+
+  // Words that are too generic to ever match a specific dossier
+  const GENERIC_EXCLUSIONS = new Set([
+    "bridge", "bridges", "tower", "towers", "church", "churches", "cathedral", "cathedrals",
+    "temple", "temples", "shrine", "shrines", "mosque", "mosques", "gate", "gates",
+    "palace", "palaces", "castle", "castles", "fort", "forts", "hall", "halls",
+    "house", "houses", "building", "buildings", "park", "parks", "garden", "gardens",
+    "monument", "monuments", "statue", "statues", "ruin", "ruins", "street", "streets",
+    "square", "squares", "road", "roads", "college", "colleges", "school", "schools",
+    "university", "universities", "campus", "campuses", "arch", "arches", "dome", "domes",
+    "wall", "walls", "city", "cities", "state", "states", "place", "places", "center", "centre",
+    "hill", "hills", "mountain", "mountains", "river", "rivers", "lake", "lakes", "ocean",
+    "valley", "valleys", "view", "views", "photo", "image", "picture", "nature",
+    "heritage", "history", "ancient", "historic", "architecture", "structure", "structures",
+    "site", "sites", "wonder", "wonders", "world", "global", "national", "unknown", "subject"
+  ]);
+
+  if (GENERIC_EXCLUSIONS.has(norm)) {
+    return null;
+  }
 
   // 1. Direct exact match in allDossiers keys or dossier names
   if (allDossiers[norm]) {
@@ -585,26 +608,27 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     return allDossiers[canonicalAliases[norm]];
   }
 
-  // 3. Substring & word boundary match sorted by alias length descending (longest / most specific match first)
+  // 3. Match when the query contains a full canonical alias (e.g. query: "photo of the eiffel tower in paris" contains alias "eiffel tower")
+  // NOTE: NEVER check alias.includes(norm) — that causes short words like "bridge" to falsely match "bridge of sighs" or "cambridge"!
   const sortedAliases = Object.entries(canonicalAliases).sort((a, b) => b[0].length - a[0].length);
   for (const [alias, dossierKey] of sortedAliases) {
     if (!allDossiers[dossierKey]) continue;
-    if (alias.length < 3) {
-      // Require word boundary for short abbreviations like 'tcd', 'ust', 'uva'
-      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const boundaryRegex = new RegExp(`(^|\\b)${escaped}(\\b|$)`, "i");
-      if (boundaryRegex.test(norm)) {
-        return allDossiers[dossierKey];
-      }
-    } else if (norm.includes(alias) || alias.includes(norm)) {
+    if (GENERIC_EXCLUSIONS.has(alias) || alias.length < 3) continue;
+
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const boundaryRegex = new RegExp(`(^|\\b)${escaped}(\\b|$)`, "i");
+    if (boundaryRegex.test(norm)) {
       return allDossiers[dossierKey];
     }
   }
 
-  // 4. Secondary token overlap match
+  // 4. Secondary match when the query contains the full dossier name as a distinct word boundary phrase
   for (const [key, dossier] of Object.entries(allDossiers)) {
     const dName = dossier.name.toLowerCase();
-    if (dName.includes(norm) || norm.includes(dName)) {
+    if (GENERIC_EXCLUSIONS.has(dName) || dName.length < 6) continue;
+    const escaped = dName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const boundaryRegex = new RegExp(`(^|\\b)${escaped}(\\b|$)`, "i");
+    if (boundaryRegex.test(norm)) {
       return dossier;
     }
   }

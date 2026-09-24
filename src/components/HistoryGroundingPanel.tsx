@@ -47,7 +47,7 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
       return;
     }
 
-    const cacheKey = `${currentLanguage.code}:${recognition.landmarkName || "landmark"}`;
+    const cacheKey = `${currentLanguage.code}:${recognition.name || "landmark"}`;
     if (cacheRef.current[cacheKey]) {
       setTranslatedData(cacheRef.current[cacheKey]);
       return;
@@ -55,6 +55,18 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
 
     const batchKeys: Record<string, string> = {};
 
+    if (recognition.name) {
+      batchKeys["landmarkName"] = recognition.name;
+    }
+    if (recognition.architecturalStyle) {
+      batchKeys["architecturalStyle"] = recognition.architecturalStyle;
+    }
+    if (recognition.periodEra) {
+      batchKeys["periodEra"] = recognition.periodEra;
+    }
+    if (recognition.summary) {
+      batchKeys["summary"] = recognition.summary;
+    }
     if (history.culturalSignificance) {
       batchKeys["culturalSignificance"] = history.culturalSignificance;
     }
@@ -121,7 +133,10 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
   }, [
     currentLanguage.code,
     currentLanguage.name,
-    recognition.landmarkName,
+    recognition.name,
+    recognition.architecturalStyle,
+    recognition.periodEra,
+    recognition.summary,
     recognition.photoAnalysis,
     recognition.arKeypoints,
     history.culturalSignificance,
@@ -185,37 +200,41 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
               <div>
                 <div className="flex items-center space-x-2 text-xs font-mono text-cyan-400 mb-1">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>ARCHITECTURAL PROFILE & VISUAL IDENTIFIERS</span>
+                  <span>{t("arch_profile_title", "ARCHITECTURAL PROFILE & VISUAL IDENTIFIERS")}</span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                  {recognition.name}
+                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight" dir={currentLanguage.dir || "ltr"}>
+                  {translatedData.landmarkName || recognition.name}
                 </h2>
                 <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-400">
-                  <span className="text-cyan-300 font-medium">{recognition.architecturalStyle || "Classical Architecture"}</span>
+                  <span className="text-cyan-300 font-medium" dir={currentLanguage.dir || "ltr"}>
+                    {translatedData.architecturalStyle || recognition.architecturalStyle || "Classical Architecture"}
+                  </span>
                   <span>•</span>
-                  <span>{history.yearBuilt || history.historicalTimeline?.[0]?.yearOrEra || "Historic Era"}</span>
+                  <span dir={currentLanguage.dir || "ltr"}>
+                    {translatedData.periodEra || history.yearBuilt || history.historicalTimeline?.[0]?.yearOrEra || "Historic Era"}
+                  </span>
                 </div>
 
                 {/* Perspective & Atmospheric Context from AI photo analysis */}
                 <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {recognition.photoAnalysis?.perspectiveAndAngle && (
                     <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
-                      <span className="text-[10px] uppercase font-mono text-slate-400 block mb-0.5">Camera Perspective</span>
-                      <span className="text-slate-200">{recognition.photoAnalysis.perspectiveAndAngle}</span>
+                      <span className="text-[10px] uppercase font-mono text-slate-400 block mb-0.5">{t("camera_perspective", "Camera Perspective")}</span>
+                      <span className="text-slate-200" dir={currentLanguage.dir || "ltr"}>{translatedData.perspectiveAndAngle || recognition.photoAnalysis.perspectiveAndAngle}</span>
                     </div>
                   )}
                   {recognition.photoAnalysis?.lightingAndAtmosphere && (
                     <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
-                      <span className="text-[10px] uppercase font-mono text-slate-400 block mb-0.5">Lighting & Atmosphere</span>
-                      <span className="text-slate-200">{recognition.photoAnalysis.lightingAndAtmosphere}</span>
+                      <span className="text-[10px] uppercase font-mono text-slate-400 block mb-0.5">{t("lighting_atmosphere", "Lighting & Atmosphere")}</span>
+                      <span className="text-slate-200" dir={currentLanguage.dir || "ltr"}>{translatedData.lightingAndAtmosphere || recognition.photoAnalysis.lightingAndAtmosphere}</span>
                     </div>
                   )}
                 </div>
 
                 {recognition.photoAnalysis?.visibleMaterialsAndTextures && (
                   <div className="mt-2.5 text-xs text-slate-400">
-                    <span className="font-semibold text-slate-300">Visible Materials: </span>
-                    <span>{recognition.photoAnalysis.visibleMaterialsAndTextures}</span>
+                    <span className="font-semibold text-slate-300">{t("visible_materials_label", "Visible Materials:")} </span>
+                    <span dir={currentLanguage.dir || "ltr"}>{translatedData.visibleMaterialsAndTextures || recognition.photoAnalysis.visibleMaterialsAndTextures}</span>
                   </div>
                 )}
               </div>
@@ -225,7 +244,7 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
                   <span>GPS: {recognition.coordinatesEstimate.lat.toFixed(4)}°N, {recognition.coordinatesEstimate.lng.toFixed(4)}°E</span>
                   <span className="text-emerald-400 flex items-center space-x-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Visually Verified</span>
+                    <span>{t("visually_verified", "Visually Verified")}</span>
                   </span>
                 </div>
               )}
@@ -617,6 +636,91 @@ export const HistoryGroundingPanel: React.FC<HistoryGroundingPanelProps> = ({
                   );
                 })}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Verified Reference Photos on Google & Wikimedia Showcase */}
+      {((recognition.referencePhotos && recognition.referencePhotos.length > 0) ||
+        (recognition.locationGuess?.referencePhotos && recognition.locationGuess.referencePhotos.length > 0) ||
+        recognition.googleImagesUrl) && (
+        <div
+          id="verified-google-photos-card"
+          className="bg-slate-900/90 rounded-2xl border border-indigo-500/30 p-4 sm:p-5 shadow-xl relative overflow-hidden"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-4">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                <Globe className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                  <span>Verified Photos on Google & Wikimedia</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-500/30">
+                    Live Verified
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Cross-reference your photo with high-resolution reference photographs and explore Google Visual Search
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {recognition.googleImagesUrl && (
+                <a
+                  href={recognition.googleImagesUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-cyan-500/30 text-cyan-300 hover:text-white text-xs flex items-center space-x-1.5 transition"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Google Images</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+              {recognition.googleLensSearchUrl && (
+                <a
+                  href={recognition.googleLensSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-indigo-500/30 text-indigo-300 hover:text-white text-xs flex items-center space-x-1.5 transition"
+                >
+                  <span>Google Lens</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Reference Photo Strip */}
+          {((recognition.referencePhotos && recognition.referencePhotos.length > 0) ||
+            (recognition.locationGuess?.referencePhotos && recognition.locationGuess.referencePhotos.length > 0)) && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(recognition.referencePhotos || recognition.locationGuess?.referencePhotos || []).slice(0, 4).map((photo, pIdx) => (
+                <a
+                  key={photo.id || pIdx}
+                  href={photo.sourceUrl || photo.imageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative rounded-xl overflow-hidden border border-slate-800 hover:border-cyan-400/50 aspect-[4/3] bg-black block"
+                >
+                  <img
+                    src={photo.thumbnailUrl || photo.imageUrl}
+                    alt={photo.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    crossOrigin="anonymous"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2">
+                    <span className="text-[11px] font-semibold text-white truncate">{photo.title}</span>
+                    <span className="text-[9px] text-slate-400 truncate">
+                      {photo.author ? `Photo: ${photo.author}` : "Wikimedia / Public Domain"}
+                    </span>
+                  </div>
+                </a>
+              ))}
             </div>
           )}
         </div>

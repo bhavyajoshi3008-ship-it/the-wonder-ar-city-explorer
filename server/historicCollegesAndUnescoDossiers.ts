@@ -1346,6 +1346,155 @@ export const HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS: Record<string, FallbackLandm
       tradition: "South American Viceregal & Republican Humanism",
       notableAlumni: ["Mario Vargas Llosa", "César Vallejo", "Daniel Alcides Carrión", "Jorge Basadre", "José María Arguedas"]
     }
+  },
+
+  // ==========================================
+  // STANFORD UNIVERSITY
+  // ==========================================
+  "stanford university": {
+    name: "Stanford University (Main Quad & Memorial Church)",
+    localName: "Leland Stanford Junior University",
+    city: "Stanford, California",
+    country: "United States",
+    architecturalStyle: "Richardsonan Romanesque & Mission Revival",
+    periodEra: "Founded 1885 / Opened 1891 (Designed by Frederick Law Olmsted & Shepley, Rutan and Coolidge)",
+    confidence: 99,
+    summary: "Set amidst the rolling foothills of Silicon Valley, Stanford University's historic Main Quad features arcaded covered walkways, red-tile roofs, buff sandstone arches, and the world-famous mosaic facade of Stanford Memorial Church, anchoring global innovation in technology and human inquiry.",
+    coordinatesEstimate: { lat: 37.4275, lng: -122.1697 },
+    arKeypoints: [
+      { id: "pt-1", label: "Stanford Memorial Church Mosaic Facade", featureType: "facade", description: "Breathtaking Venetian glass mosaic facade depicting Christ welcoming all believers, restored after the 1906 and 1989 earthquakes.", x: 50, y: 35 },
+      { id: "pt-2", label: "Hoover Tower Landmark", featureType: "spire", description: "87-meter tower housing the Hoover Institution Library and Archives, offering sweeping views of the Bay Area.", x: 75, y: 20 },
+      { id: "pt-3", label: "Richardson Romanesque Main Quad Arcade", featureType: "arch", description: "Covered arcades built of native San Jose buff sandstone connecting historic departmental courtyards.", x: 50, y: 70 },
+      { id: "pt-4", label: "Memorial Court & Rodin Burghers of Calais", featureType: "statue", description: "Original bronze casts of Auguste Rodin's masterpiece sculptures greeting scholars at the Main Quad entrance.", x: 30, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1885–1891", event: "Founded by Leland & Jane Stanford", description: "Built in loving memory of their only child, Leland Stanford Jr., establishing a co-educational, non-sectarian university." },
+      { yearOrEra: "1906", event: "The Great San Francisco Earthquake", description: "Major damage to Memorial Church's steeple; heroically restored by Jane Stanford using Venetian mosaic masters." },
+      { yearOrEra: "Mid-20th Century", event: "Birth of Silicon Valley", description: "Dean Frederick Terman encouraged graduates (Hewlett, Packard, Varian) to found tech ventures, birthing Silicon Valley." }
+    ],
+    architecturalSecrets: [
+      "The campus was master-planned by legendary landscape architect Frederick Law Olmsted, creator of New York's Central Park.",
+      "The Venetian mosaics on Memorial Church contain over 20,000 distinct colors produced by the Salviati studios in Murano, Italy.",
+      "Stanford has educated the founders of Google (Larry Page & Sergey Brin), Hewlett-Packard, Sun Microsystems, Yahoo, Cisco, Netflix, and OpenAI."
+    ],
+    culturalSignificance: "The foremost academic powerhouse of the Pacific Rim and the intellectual birthplace of modern internet, computing, and biotechnology revolutions.",
+    visitorTips: [
+      "Take the elevator up Hoover Tower for views across the Stanford campus and the Santa Cruz Mountains.",
+      "Step inside Memorial Church to admire the Fisk-Nanney pipe organ and stained glass clerestory windows."
+    ],
+    narrationScript: "Welcome to Stanford University, heart of Silicon Valley and one of the world's preeminent universities. Conceived by Leland and Jane Stanford in 1885 in memory of their son, its distinctive Mission Revival arcades and buff sandstone courtyards were designed with Frederick Law Olmsted. Rising before you is Stanford Memorial Church, adorned with glowing Venetian glass mosaics celebrating universal faith and learning. From these sun-drenched cloisters, Stanford students and faculty sparked the personal computer, the internet, and modern artificial intelligence.",
+    chapters: [
+      { id: "ch-1", title: "Olmsted's California Vision", timestampHint: "0:00", script: "Built in 1885, Stanford's red-tile roofs and sandstone arcades pioneered California collegiate architecture.", focusPointId: "pt-3" },
+      { id: "ch-2", title: "The Jewel of Memorial Church", timestampHint: "0:30", script: "Venetian glass mosaics illuminate the non-denominational church at the center of the Main Quad.", focusPointId: "pt-1" },
+      { id: "ch-3", title: "Forge of Silicon Valley", timestampHint: "1:00", script: "From Hoover Tower to research labs, Stanford's campus fueled the global technology revolution.", focusPointId: "pt-2" }
+    ],
+    collegeInfo: {
+      isHistoricCollege: true,
+      institutionName: "Stanford University",
+      foundationYear: 1885,
+      tradition: "American Scientific & Entrepreneurial Vanguard",
+      notableAlumni: ["Larry Page", "Sergey Brin", "Herbert Hoover", "Sally Ride", "John F. Kennedy (attended)", "Sundar Pichai"]
+    }
+  },
+
+  // ==========================================
+  // MIT (MASSACHUSETTS INSTITUTE OF TECHNOLOGY)
+  // ==========================================
+  "mit": {
+    name: "MIT (Building 10 & The Great Dome)",
+    localName: "Massachusetts Institute of Technology",
+    city: "Cambridge, Massachusetts",
+    country: "United States",
+    architecturalStyle: "Neoclassical & High Modernist Architecture",
+    periodEra: "Founded 1861 / Cambridge Campus Dedicated 1916 (Architect William Welles Bosworth)",
+    confidence: 99,
+    summary: "Fronting the Charles River across from Boston, MIT's Building 10 and its iconic limestone Great Dome symbolize global preeminence in science, technology, mathematics, and architectural ingenuity, flanked by Killian Court and Frank Gehry's deconstructivist Stata Center.",
+    coordinatesEstimate: { lat: 42.3598, lng: -71.0921 },
+    arKeypoints: [
+      { id: "pt-1", label: "The Great Dome & Ionic Colonnade", featureType: "dome", description: "Monumental Indiana limestone dome and pedimented portico supported by colossal fluted Ionic columns overlooking Killian Court.", x: 50, y: 28 },
+      { id: "pt-2", label: "Killian Court Riverfront Lawn", featureType: "facade", description: "Expansive green academic court where annual commencement exercises take place facing the Charles River.", x: 50, y: 75 },
+      { id: "pt-3", label: "Ray and Maria Stata Center", featureType: "facade", description: "Frank Gehry's radical deconstructivist computing and cognitive science building featuring tilting towers and angular brick forms.", x: 80, y: 40 },
+      { id: "pt-4", label: "Infinite Corridor", featureType: "entrance", description: "251-meter-long interior pedestrian spine linking the original Maclaurin buildings, aligned with the setting sun during 'MIThenge'.", x: 30, y: 65 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1861", event: "Incorporation by William Barton Rogers", description: "Founded in response to the industrialization of the United States under the motto 'Mens et Manus' (Mind and Hand)." },
+      { yearOrEra: "1916", event: "Move to Cambridge Campus", description: "Moved from Boston to its monumental Neoclassical campus designed by William Welles Bosworth." },
+      { yearOrEra: "Present", event: "World's Top Technical University", description: "Affiliated with 101 Nobel laureates, 26 Turing Award winners, and 8 Fields Medalists." }
+    ],
+    architecturalSecrets: [
+      "Twice a year (around November 11 and January 31), the setting sun shines directly down the exact 251-meter length of the Infinite Corridor in a phenomenon celebrated as 'MIThenge'.",
+      "MIT students are famous for 'hacks'—elaborate, harmless technical pranks that have placed police cars, Apollo lunar modules, and R2-D2 on top of the Great Dome.",
+      "The Great Dome is engineered as a concrete thin-shell structure inspired by the Pantheon in Rome."
+    ],
+    culturalSignificance: "The world's leading university for STEM, having pioneered radar, nuclear energy, modern computing, artificial intelligence, and genomics.",
+    visitorTips: [
+      "Walk the Infinite Corridor from 77 Massachusetts Avenue straight into the central Barker Engineering Library beneath the Great Dome.",
+      "Explore the MIT Museum in Kendall Square and admire the outdoor sculpture collection by Alexander Calder and Henry Moore."
+    ],
+    narrationScript: "You stand in Killian Court before the Great Dome of the Massachusetts Institute of Technology, on the banks of the Charles River. Founded in 1861 with the motto 'Mens et Manus'—Mind and Hand—MIT is the world's temple of science, engineering, and discovery. Look up at the Neoclassical Indiana limestone dome and towering Ionic columns designed by William Welles Bosworth. Down the 250-meter Infinite Corridor, generations of researchers pioneered modern computing, radar, and artificial intelligence, transforming the trajectory of human civilization.",
+    chapters: [
+      { id: "ch-1", title: "Mind and Hand in Stone", timestampHint: "0:00", script: "Dedicated in 1916, Bosworth's Neoclassical Great Dome anchors MIT's scientific mission.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "The Infinite Corridor", timestampHint: "0:30", script: "A 250-meter central hall connects the campus, aligning with the setting sun in the annual MIThenge.", focusPointId: "pt-4" },
+      { id: "ch-3", title: "Vanguard of Discovery", timestampHint: "1:00", script: "Over one hundred Nobel laureates and generations of innovators have called this campus home.", focusPointId: "pt-2" }
+    ],
+    collegeInfo: {
+      isHistoricCollege: true,
+      institutionName: "Massachusetts Institute of Technology",
+      foundationYear: 1861,
+      tradition: "Global Scientific, Computational & Engineering Innovation",
+      notableAlumni: ["Buzz Aldrin", "Kofi Annan", "Richard Feynman", "Tim Berners-Lee (faculty)", "Noam Chomsky (faculty)"]
+    }
+  },
+
+
+
+  // ==========================================
+  // OSMANIA UNIVERSITY ARTS COLLEGE, HYDERABAD
+  // ==========================================
+  "osmania university arts college": {
+    name: "Osmania University (College of Arts)",
+    localName: "عثمانیہ یونیورسٹی / ఉస్మానియా విశ్వవిద్యాలయం",
+    city: "Hyderabad, Telangana",
+    country: "India",
+    architecturalStyle: "Indo-Saracenic & Neo-Deccani Architecture",
+    periodEra: "University Founded 1918 (Mir Osman Ali Khan) / Arts College 1939",
+    confidence: 99,
+    summary: "Commissioned by the 7th Nizam of Hyderabad, Mir Osman Ali Khan, and designed by Belgian architect Ernest Jasper, the monumental College of Arts building at Osmania University is a breathtaking fusion of Islamic Saracenic domes, Hindu Kakatiya pillar carvings, and Deccani granite grandeur.",
+    coordinatesEstimate: { lat: 17.4184, lng: 78.5284 },
+    arKeypoints: [
+      { id: "pt-1", label: "Monumental Indo-Saracenic Central Portal", featureType: "arch", description: "Colossal multi-story arched entrance built of hand-dressed pinkish-grey Deccani granite, blending Mughal arches and Kakatiya lotus motifs.", x: 50, y: 35 },
+      { id: "pt-2", label: "Central Heritage Dome & Chhatris", featureType: "dome", description: "Fluted granite dome and ornamental octagonal chhatris crowning the majestic central auditorium.", x: 50, y: 15 },
+      { id: "pt-3", label: "Kakatiya Lotus-Carved Granite Pillars", featureType: "column", description: "Carved stone columns inside the foyer drawing direct artistic inspiration from the 12th-century Thousand Pillar Temple of Warangal.", x: 35, y: 65 },
+      { id: "pt-4", label: "Formal Reflecting Boulevard & Gardens", featureType: "facade", description: "Grand landscaped approach boulevard framing the 240-foot-wide symmetrical heritage stone facade.", x: 50, y: 80 }
+    ],
+    historicalTimeline: [
+      { yearOrEra: "1918", event: "Founded by Royal Firman of Nizam VII", description: "Mir Osman Ali Khan established Osmania University as the first Indian university to adopt an Indian regional language (Urdu) as a medium of higher learning." },
+      { yearOrEra: "1934–1939", event: "Arts College Construction", description: "Constructed at a cost of 3.6 million rupees; inaugurated on December 4, 1939." },
+      { yearOrEra: "Present", event: "Centenary of Heritage", description: "Celebrated its centenary as one of India's largest and most historic collegiate universities." }
+    ],
+    architecturalSecrets: [
+      "Belgian architect Ernest Jasper intentionally incorporated Ajanta and Ellora cave motifs alongside Kakatiya temple brackets to symbolize the syncretic Hindu-Muslim heritage of the Deccan.",
+      "The entire superstructure was constructed from solid blocks of native pink and grey granite quarried directly from the hills of Hyderabad without facing veneer.",
+      "The university library holds over half a million volumes, including rare palm-leaf manuscripts and ancient Sanskrit and Arabic treatises."
+    ],
+    culturalSignificance: "A premier symbol of Deccani syncretic culture (Ganga-Jamuni Tehzeeb) and the institutional engine of modern education across Telangana and the Deccan plateau.",
+    visitorTips: [
+      "Stand at the base of the grand driveway for the classic photograph of the Arts College facade reflecting in the morning light.",
+      "Walk through the central foyer to admire the Kakatiya-inspired stone pillars and soaring ceiling dome."
+    ],
+    narrationScript: "You stand before the magnificent Arts College of Osmania University in Hyderabad. Established in 1918 by the seventh Nizam, Mir Osman Ali Khan, and designed by Belgian architect Ernest Jasper, this building is a masterwork of Indo-Saracenic design. Look at its pink Deccani granite facade: monumental Islamic arches blend seamlessly with intricate lotus pillars inspired by the medieval Kakatiya temples of Warangal. For generations, this building has stood as an immortal symbol of the syncretic heritage and intellectual soul of the Deccan.",
+    chapters: [
+      { id: "ch-1", title: "The Nizam's Grand Vision", timestampHint: "0:00", script: "Founded in 1918, Osmania University pioneered modern collegiate higher education in the Deccan.", focusPointId: "pt-1" },
+      { id: "ch-2", title: "Syncretic Deccani Architecture", timestampHint: "0:30", script: "Belgian architect Ernest Jasper fused Islamic arches with Kakatiya temple carvings in solid granite.", focusPointId: "pt-3" },
+      { id: "ch-3", title: "Crown of Osmania", timestampHint: "1:00", script: "The central dome and chhatris have anchored Telangana's academic aspirations for nearly a century.", focusPointId: "pt-2" }
+    ],
+    collegeInfo: {
+      isHistoricCollege: true,
+      institutionName: "Osmania University (College of Arts)",
+      foundationYear: 1918,
+      tradition: "Deccani Indo-Saracenic Heritage & Modern Higher Learning",
+      notableAlumni: ["P. V. Narasimha Rao (former Prime Minister of India)", "Dr. Manmohan Singh (faculty)", "Shantanu Narayen (Adobe CEO)", "Shivraj Patil"]
+    }
   }
 };
 
@@ -1470,6 +1619,8 @@ export const HISTORIC_COLLEGES_AND_UNESCO_ALIASES: Record<string, string> = {
   "trinity college dublin": "trinity college dublin",
   "trinity college": "trinity college dublin",
   "long room dublin": "trinity college dublin",
+  "the long room dublin": "trinity college dublin",
+  "the long room trinity": "trinity college dublin",
   "book of kells library": "trinity college dublin",
   "tcd": "trinity college dublin",
 
@@ -1526,8 +1677,28 @@ export const HISTORIC_COLLEGES_AND_UNESCO_ALIASES: Record<string, string> = {
   // San Marcos
   "san marcos": "national university of san marcos",
   "universidad de san marcos": "national university of san marcos",
-  "casona de san marcos": "national university of san marcos",
-  "national university of san marcos": "national university of san marcos",
+  // Stanford University
+  "stanford": "stanford university",
+  "stanford university": "stanford university",
+  "stanford main quad": "stanford university",
+  "stanford memorial church": "stanford university",
+  "hoover tower": "stanford university",
+
+  // MIT
+  "mit": "mit",
+  "massachusetts institute of technology": "mit",
+  "mit building 10": "mit",
+  "mit great dome": "mit",
+  "the great dome mit": "mit",
+  "killian court mit": "mit",
+
+
+  // Osmania University
+  "osmania university": "osmania university arts college",
+  "osmania arts college": "osmania university arts college",
+  "arts college hyderabad": "osmania university arts college",
+  "arts college osmania": "osmania university arts college",
+  "osmania university hyderabad": "osmania university arts college",
 
   // UNESCO World Wonders
   "machu picchu": "machu picchu",

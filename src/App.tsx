@@ -23,6 +23,7 @@ import {
   WifiOff,
   Menu,
   Glasses,
+  Image as ImageIcon,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "motion/react";
@@ -37,6 +38,7 @@ import { recognizeLandmark, fetchLandmarkHistory, generateNarration, translateTe
 import { CameraCapture } from "./components/CameraCapture";
 import { ARNarratedClip } from "./components/ARNarratedClip";
 import { HistoryGroundingPanel } from "./components/HistoryGroundingPanel";
+import { LocationGuessComparePanel } from "./components/LocationGuessComparePanel";
 import { LandmarkMapViewer } from "./components/LandmarkMapViewer";
 import { AnalysisProgressModal, AnalysisStage } from "./components/AnalysisProgressModal";
 import { TourJournal } from "./components/TourJournal";
@@ -78,7 +80,7 @@ export default function App() {
   const { isSeniorMode } = useAccessibility();
   const { isOnline } = useOnlineStatus();
   const [viewMode, setViewMode] = useState<AppViewMode>("capture");
-  const [activeTab, setActiveTab] = useState<"ar_tour" | "map" | "history">("ar_tour");
+  const [activeTab, setActiveTab] = useState<"ar_tour" | "photos_compare" | "map" | "history">("ar_tour");
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
   const [activePreset, setActivePreset] = useState<SampleLandmark | undefined>(undefined);
   const [recognition, setRecognition] = useState<LandmarkRecognition | null>(null);
@@ -263,10 +265,15 @@ export default function App() {
     }
   };
 
-  const handlePhotoSelected = async (imageDataUrl: string, samplePreset?: SampleLandmark, explicitHint?: string) => {
+  const handlePhotoSelected = async (
+    imageDataUrl: string,
+    samplePreset?: SampleLandmark,
+    explicitHint?: string,
+    mode: "landmark_tour" | "guess_location" = "landmark_tour"
+  ) => {
     setActivePhoto(imageDataUrl);
     // If the user picked a curated sample card, retain it; otherwise clear preset so uploaded photos are analyzed fresh by AI
-    setActivePreset(samplePreset || null);
+    setActivePreset(samplePreset || undefined);
     const effectiveHint = explicitHint || samplePreset?.name || undefined;
     setAnalysisError(null);
 
@@ -291,15 +298,37 @@ export default function App() {
         effectiveHint,
         currentLanguage.code,
         currentLanguage.name,
-        visualSig
+        visualSig,
+        undefined,
+        Boolean(samplePreset),
+        mode
       );
 
-      // Guarantee authentic landmark name is always populated
-      if (!recResult.name || recResult.name === "Select Monument to Tour" || recResult.name.toLowerCase().includes("select monument")) {
-        recResult.name = recResult.candidateMatches?.[0] || "St. Xavier's College, Mumbai";
-        recResult.city = recResult.city && recResult.city !== "Global Heritage Sites" ? recResult.city : "Mumbai";
-        recResult.country = recResult.country && recResult.country !== "World Heritage" ? recResult.country : "India";
-        recResult.needsUserIdentification = false;
+      // Guarantee authentic landmark name is cleanly handled without fictitious defaults
+      if (
+        !recResult.name ||
+        recResult.name === "Select Monument to Tour" ||
+        recResult.name.toLowerCase().includes("select monument") ||
+        recResult.name === "Unidentified Landmark" ||
+        recResult.name.toLowerCase().includes("unidentified")
+      ) {
+        const candidate = recResult.candidateMatches?.find(
+          (c) => c && !c.toLowerCase().includes("select monument") && !c.toLowerCase().includes("unidentified")
+        );
+        if (candidate) {
+          recResult.name = candidate;
+        } else {
+          recResult.name = recResult.detectedCategory && recResult.detectedCategory !== "architecture" && recResult.detectedCategory !== "landmark"
+            ? `${recResult.detectedCategory.charAt(0).toUpperCase() + recResult.detectedCategory.slice(1)} Structure`
+            : "Architectural Subject";
+        }
+        if (!recResult.city || recResult.city === "Global Heritage Sites") {
+          recResult.city = "Global";
+        }
+        if (!recResult.country || recResult.country === "World Heritage") {
+          recResult.country = "Global";
+        }
+        recResult.needsUserIdentification = true;
       }
 
       setRecognition(recResult);
@@ -321,103 +350,160 @@ export default function App() {
           isLandmark: recResult.isLandmark,
           detectedCategory: recResult.detectedCategory,
           notLandmarkReason: recResult.notLandmarkReason,
+          targetLanguage: currentLanguage.code,
+          targetLanguageName: currentLanguage.name,
         });
       } catch (histErr) {
         console.warn("History fetch notice, generating bespoke photo-grounded history:", histErr);
+        const safeKeypoints = Array.isArray(recResult.arKeypoints) && recResult.arKeypoints.length > 0
+          ? recResult.arKeypoints
+          : [
+              { id: "pt-1", label: recResult.name || "Main Facade", featureType: "facade", description: `Primary focal view of ${recResult.name || "the site"}.`, x: 50, y: 50 }
+            ];
         const photoFeatures = recResult.photoAnalysis?.prominentVisualFeatures || [];
-        const featureHighlight = photoFeatures.length > 0 ? photoFeatures.join(", ") : recResult.arKeypoints.map((k) => k.label).join(", ");
+        const featureHighlight = photoFeatures.length > 0 ? photoFeatures.join(", ") : safeKeypoints.map((k) => k.label).join(", ");
         const vantage = recResult.photoAnalysis?.perspectiveAndAngle || "framing view";
         const materials = recResult.photoAnalysis?.visibleMaterialsAndTextures || "authentic textures";
-        const isPerson = recResult.detectedCategory === "person" || recResult.isLandmark === false;
+        const isPerson = recResult.detectedCategory === "person";
+        const isNature = recResult.detectedCategory === "nature" || recResult.detectedCategory === "landscape";
 
-        histResult = isPerson
-          ? {
-              historicalTimeline: [
-                {
-                  yearOrEra: recResult.periodEra && recResult.periodEra !== "N/A" ? recResult.periodEra : "Career Milestone",
-                  event: "Emergence & Public Distinction",
-                  description: `${recResult.name} rose to prominence through signature achievements, dedication, and iconic public presence.`
-                },
-                {
-                  yearOrEra: "Career Highlights",
-                  event: "Signature Accolades & Leadership",
-                  description: `Recognized for high-impact performances, clutch leadership, and unforgettable career moments celebrated worldwide.`
-                },
-                {
-                  yearOrEra: "Modern Legacy",
-                  event: "Enduring Cultural Impact",
-                  description: `A celebrated figure inspiring fans and peers across global sports and contemporary culture.`
-                }
-              ],
-              architecturalSecrets: [
-                `Observable features highlighted in this capture: ${featureHighlight}.`,
-                `Framed from a ${vantage}, accentuating authentic character and presence.`,
-                `Renowned for high-stakes resilience and charisma.`
-              ],
-              culturalSignificance: recResult.summary || `${recResult.name} holds a celebrated place in modern culture and athletics.`,
-              visitorTips: [
-                "Tap on the AR keypoint pins on your photo to inspect specific visual details.",
-                "Listen to the synchronized narration audio highlighting career and visual elements.",
-                "Tap the World Monuments buttons if you wish to tour famous architectural wonders."
-              ],
-              photoGroundedNotes: `Captured from a ${vantage}, highlighting ${featureHighlight}.`,
-              narrationScript: `Welcome to this special visual feature on ${recResult.name}. Looking closely at this photograph captured from a ${vantage}, we can see ${featureHighlight}. Celebrated as one of the most compelling figures in modern culture, their career is defined by determination, clutch moments, and leadership. Let's explore the visual details and story behind this capture.`,
-              chapters: recResult.arKeypoints.slice(0, 4).map((kp, idx) => ({
-                id: `chap-${idx + 1}`,
-                title: kp.label,
-                timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
-                script: kp.description,
-                focusPointId: kp.id
-              })),
-              groundingQueries: [`${recResult.name} biography`, `${recResult.name} career milestones`],
-              groundingSources: [
-                {
-                  title: `${recResult.name} — Profile & Milestones`,
-                  url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name)}`
-                }
-              ]
-            }
-          : {
-              historicalTimeline: [
-                {
-                  yearOrEra: recResult.periodEra || "Historic Era",
-                  event: "Monument Construction",
-                  description: `Conceived and built in the ${recResult.architecturalStyle} architectural style, featuring ${materials}.`
-                },
-                {
-                  yearOrEra: "Modern Era",
-                  event: "World Heritage & Cultural Icon",
-                  description: `Recognized as a premier cultural wonder of ${recResult.city}, attracting visitors and architectural historians worldwide.`
-                }
-              ],
-              architecturalSecrets: [
-                `Distinguished by classic ${recResult.architecturalStyle} geometry and structural proportions.`,
-                `Key visual features spotted in your photograph: ${featureHighlight}.`,
-                `Architecturally engineered to harmonize with the urban landscape of ${recResult.city}.`
-              ],
-              culturalSignificance: recResult.summary || "A monumental landmark steeped in cultural and architectural identity.",
-              visitorTips: [
-                "Best visited early morning or at golden hour for striking architectural illumination.",
-                "Tap on AR keypoint pins directly on your photo to examine intricate architectural facets.",
-                "Use the Google Maps tab below for real-time walking directions and 360° Street View."
-              ],
-              photoGroundedNotes: `Captured from a ${vantage}, highlighting ${featureHighlight}.`,
-              narrationScript: `Welcome to ${recResult.name} in ${recResult.city}, ${recResult.country}. Standing before this remarkable ${recResult.architecturalStyle} monument, captured here from a ${vantage}, let's examine its handcrafted masonry and structural details. Notice ${featureHighlight}, showcasing centuries of human ingenuity and cultural pride.`,
-              chapters: recResult.arKeypoints.slice(0, 4).map((kp, idx) => ({
-                id: `chap-${idx + 1}`,
-                title: kp.label,
-                timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
-                script: kp.description,
-                focusPointId: kp.id
-              })),
-              groundingQueries: [`${recResult.name} ${recResult.city} architecture history`, `${recResult.name} visitor guide`],
-              groundingSources: [
-                {
-                  title: `${recResult.name} - Architectural Heritage Dossier`,
-                  url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name + " " + recResult.city)}`
-                }
-              ]
-            };
+        if (isPerson) {
+          histResult = {
+            historicalTimeline: [
+              {
+                yearOrEra: recResult.periodEra && recResult.periodEra !== "N/A" ? recResult.periodEra : "Career Milestone",
+                event: "Emergence & Public Distinction",
+                description: `${recResult.name} rose to prominence through signature achievements, dedication, and iconic public presence.`
+              },
+              {
+                yearOrEra: "Career Highlights",
+                event: "Signature Accolades & Leadership",
+                description: `Recognized for high-impact performances, clutch leadership, and unforgettable career moments celebrated worldwide.`
+              },
+              {
+                yearOrEra: "Modern Legacy",
+                event: "Enduring Cultural Impact",
+                description: `A celebrated figure inspiring fans and peers across global sports and contemporary culture.`
+              }
+            ],
+            architecturalSecrets: [
+              `Observable features highlighted in this capture: ${featureHighlight}.`,
+              `Framed from a ${vantage}, accentuating authentic character and presence.`,
+              `Renowned for high-stakes resilience and charisma.`
+            ],
+            culturalSignificance: recResult.summary || `${recResult.name} holds a celebrated place in modern culture and athletics.`,
+            visitorTips: [
+              "Tap on the AR keypoint pins on your photo to inspect specific visual details.",
+              "Listen to the synchronized narration audio highlighting career and visual elements.",
+              "Tap the World Monuments buttons if you wish to tour famous architectural wonders."
+            ],
+            photoGroundedNotes: `Captured from a ${vantage}, highlighting ${featureHighlight}.`,
+            narrationScript: `Welcome to this special visual feature on ${recResult.name}. Looking closely at this photograph captured from a ${vantage}, we can see ${featureHighlight}. Celebrated as one of the most compelling figures in modern culture, their career is defined by determination, clutch moments, and leadership. Let's explore the visual details and story behind this capture.`,
+            chapters: safeKeypoints.slice(0, 4).map((kp, idx) => ({
+              id: `chap-${idx + 1}`,
+              title: kp.label,
+              timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
+              script: kp.description,
+              focusPointId: kp.id
+            })),
+            groundingQueries: [`${recResult.name} biography`, `${recResult.name} career milestones`],
+            groundingSources: [
+              {
+                title: `${recResult.name} — Profile & Milestones`,
+                url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name)}`
+              }
+            ]
+          };
+        } else if (isNature) {
+          histResult = {
+            historicalTimeline: [
+              {
+                yearOrEra: recResult.periodEra || "Ancient Epoch",
+                event: "Geological Genesis & Formation",
+                description: `${recResult.name} was shaped over millennia through profound natural forces, erosion, tectonic movements, and mineral weathering.`
+              },
+              {
+                yearOrEra: "Historic Heritage",
+                event: "Cultural & Indigenous Reverence",
+                description: `Long revered by local peoples and early explorers as a sacred natural sanctuary and awe-inspiring geographic wonder.`
+              },
+              {
+                yearOrEra: "Modern Preservation",
+                event: "Protected Global Natural Heritage",
+                description: `Celebrated as one of the world's most iconic natural landmarks, attracting travelers, geologists, and nature enthusiasts from across the globe.`
+              }
+            ],
+            architecturalSecrets: [
+              `Features unique geological stratification and terrain: ${materials}.`,
+              `Key natural focal elements highlighted in this capture: ${featureHighlight}.`,
+              `Supports a delicate native ecosystem and unique microclimate shaped by the surrounding topography.`
+            ],
+            culturalSignificance: recResult.summary || `${recResult.name} is globally renowned as one of nature's greatest masterpieces.`,
+            visitorTips: [
+              "Visit at sunrise or golden hour when changing light dramatically illuminates the natural contours.",
+              "Tap on AR keypoint pins directly on your photo to examine distinctive geological formations.",
+              "Always stay on designated scenic overlooks and trails to protect the natural ecosystem."
+            ],
+            photoGroundedNotes: `Captured from a ${vantage}, showcasing ${featureHighlight}.`,
+            narrationScript: `Welcome to ${recResult.name} in ${recResult.city ? recResult.city + ", " : ""}${recResult.country || "the natural world"}. Gazing out at this breathtaking natural wonder captured here from a ${vantage}, we can witness millions of years of Earth's geological majesty. Notice ${featureHighlight}, carved and sculpted by the timeless elements of wind, water, and stone.`,
+            chapters: safeKeypoints.slice(0, 4).map((kp, idx) => ({
+              id: `chap-${idx + 1}`,
+              title: kp.label,
+              timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
+              script: kp.description,
+              focusPointId: kp.id
+            })),
+            groundingQueries: [`${recResult.name} natural history geology`, `${recResult.name} travel guide`],
+            groundingSources: [
+              {
+                title: `${recResult.name} - Natural Heritage & Geography`,
+                url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name + " geology history")}`
+              }
+            ]
+          };
+        } else {
+          histResult = {
+            historicalTimeline: [
+              {
+                yearOrEra: recResult.periodEra || "Historic Era",
+                event: "Monument Construction",
+                description: `Conceived and built in the ${recResult.architecturalStyle || "authentic"} architectural style, featuring ${materials}.`
+              },
+              {
+                yearOrEra: "Modern Era",
+                event: "World Heritage & Cultural Icon",
+                description: `Recognized as a premier cultural wonder of ${recResult.city}, attracting visitors and architectural historians worldwide.`
+              }
+            ],
+            architecturalSecrets: [
+              `Distinguished by classic ${recResult.architecturalStyle || "monumental"} geometry and structural proportions.`,
+              `Key visual features spotted in your photograph: ${featureHighlight}.`,
+              `Architecturally engineered to harmonize with the urban landscape of ${recResult.city}.`
+            ],
+            culturalSignificance: recResult.summary || "A monumental landmark steeped in cultural and architectural identity.",
+            visitorTips: [
+              "Best visited early morning or at golden hour for striking architectural illumination.",
+              "Tap on AR keypoint pins directly on your photo to examine intricate architectural facets.",
+              "Use the Google Maps tab below for real-time walking directions and 360° Street View."
+            ],
+            photoGroundedNotes: `Captured from a ${vantage}, highlighting ${featureHighlight}.`,
+            narrationScript: `Welcome to ${recResult.name} in ${recResult.city}, ${recResult.country}. Standing before this remarkable ${recResult.architecturalStyle || "historic"} monument, captured here from a ${vantage}, let's examine its handcrafted masonry and structural details. Notice ${featureHighlight}, showcasing centuries of human ingenuity and cultural pride.`,
+            chapters: safeKeypoints.slice(0, 4).map((kp, idx) => ({
+              id: `chap-${idx + 1}`,
+              title: kp.label,
+              timestampHint: `0:${(idx * 20).toString().padStart(2, "0")}`,
+              script: kp.description,
+              focusPointId: kp.id
+            })),
+            groundingQueries: [`${recResult.name} ${recResult.city} architecture history`, `${recResult.name} visitor guide`],
+            groundingSources: [
+              {
+                title: `${recResult.name} - Architectural Heritage Dossier`,
+                url: `https://www.google.com/search?q=${encodeURIComponent(recResult.name + " " + recResult.city)}`
+              }
+            ]
+          };
+        }
       }
       setHistory(histResult);
 
@@ -432,7 +518,7 @@ export default function App() {
             scriptForAudio = trans.translatedText;
           }
         }
-        audioResult = await generateNarration(scriptForAudio, "Kore", currentLanguage.name);
+        audioResult = await generateNarration(scriptForAudio, "Kore", currentLanguage.name, currentLanguage.code);
         setNarration(audioResult);
       } catch (ttsErr: any) {
         console.warn("TTS synthesis notice (browser speech synthesis will be used):", ttsErr);
@@ -462,7 +548,11 @@ export default function App() {
 
       setAnalysisStage("complete");
       setViewMode("ar_tour");
-      setActiveTab("ar_tour");
+      if (mode === "guess_location" || recResult.locationGuess?.isGuessMode) {
+        setActiveTab("photos_compare");
+      } else {
+        setActiveTab("ar_tour");
+      }
     } catch (err: any) {
       console.warn("Landmark analysis notice:", err?.message || err);
       setAnalysisError(err?.message || "Failed to complete visual analysis. Please try again.");
@@ -475,7 +565,7 @@ export default function App() {
     setIsRegeneratingVoice(true);
     try {
       const scriptToNarrate = customScript || history.narrationScript;
-      const result = await generateNarration(scriptToNarrate, voiceName, currentLanguage.name);
+      const result = await generateNarration(scriptToNarrate, voiceName, currentLanguage.name, currentLanguage.code);
       setNarration(result);
     } catch (err) {
       console.error("Failed to switch tour guide voice:", err);
@@ -810,12 +900,31 @@ export default function App() {
                   title="Scan Another Landmark"
                 >
                   <RotateCcw className="w-3 h-3 text-cyan-400" />
-                  <span className="text-[11px] whitespace-nowrap">Scan New</span>
+                  <span className="text-[11px] whitespace-nowrap">{t("scan_new", "Scan New")}</span>
                 </motion.button>
               </div>
 
               {/* Navigation Tabs - Grid on Mobile, Flex on Desktop */}
-              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800">
+              <div className="grid grid-cols-2 xs:grid-cols-4 sm:flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  id="tab-photos-compare"
+                  onClick={() => setActiveTab("photos_compare")}
+                  className={`py-1.5 px-2 sm:px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+                    activeTab === "photos_compare"
+                      ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm font-bold"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <ImageIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="hidden sm:inline">{t("tab_google_images", "Google Images & Photos")}</span>
+                  <span className="sm:hidden">{t("tab_google_images_short", "Google Images")}</span>
+                  {recognition.locationGuess?.confidenceScore && (
+                    <span className="hidden md:inline text-[10px] px-1 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/30">
+                      {recognition.locationGuess.confidenceScore}%
+                    </span>
+                  )}
+                </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   id="tab-ar-tour"
@@ -828,7 +937,7 @@ export default function App() {
                 >
                   <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                   <span className="hidden sm:inline">{t("voice_narration", "AR Tour")}</span>
-                  <span className="sm:hidden">AR Tour</span>
+                  <span className="sm:hidden">{t("voice_narration", "AR Tour")}</span>
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.97 }}
@@ -842,7 +951,7 @@ export default function App() {
                 >
                   <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                   <span className="hidden sm:inline">{t("google_maps", "Google Maps")}</span>
-                  <span className="sm:hidden">Maps</span>
+                  <span className="sm:hidden">{t("maps_tab_short", "Maps")}</span>
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.97 }}
@@ -856,7 +965,7 @@ export default function App() {
                 >
                   <Layers className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                   <span className="hidden sm:inline">{t("historical_context", "History")}</span>
-                  <span className="sm:hidden">History</span>
+                  <span className="sm:hidden">{t("history_tab_short", "History")}</span>
                 </motion.button>
               </div>
 
@@ -874,6 +983,18 @@ export default function App() {
                 </motion.button>
               </div>
             </div>
+
+            {/* Tab 0: AI Geo-Detective Location Guess & Google Reference Photos Compare */}
+            {activeTab === "photos_compare" && (
+              <section id="location-guess-photos-section">
+                <LocationGuessComparePanel
+                  userPhotoUrl={activePhoto}
+                  recognition={recognition}
+                  onConfirmAndTour={() => setActiveTab("ar_tour")}
+                  onRescan={resetToCapture}
+                />
+              </section>
+            )}
 
             {/* Tab 1: AR-Style Narrated Clip Viewport */}
             {activeTab === "ar_tour" && (
@@ -924,7 +1045,11 @@ export default function App() {
                   <div>
                     <div className="text-xs font-bold text-white">Location & Google Maps Navigation</div>
                     <div className="text-[11px] text-slate-400">
-                      Coordinates: {recognition.coordinatesEstimate?.lat.toFixed(4) || "48.8584"}°N, {recognition.coordinatesEstimate?.lng.toFixed(4) || "2.2945"}°E • {recognition.city}, {recognition.country}
+                      {recognition.coordinatesEstimate && (recognition.coordinatesEstimate.lat !== 0 || recognition.coordinatesEstimate.lng !== 0)
+                        ? `GPS: ${recognition.coordinatesEstimate.lat.toFixed(4)}°, ${recognition.coordinatesEstimate.lng.toFixed(4)}° • `
+                        : ""}
+                      {recognition.city && recognition.city !== "Global" ? `${recognition.city}, ` : ""}
+                      {recognition.country || "Earth"}
                     </div>
                   </div>
                 </div>
