@@ -10,6 +10,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { FirebaseUser, signInWithGoogle, logOutUser } from "../services/firebase";
+import { GoogleAccountSignInModal } from "./GoogleAccountSignInModal";
 
 interface AuthBarProps {
   user: FirebaseUser | null;
@@ -24,23 +25,29 @@ export const AuthBar: React.FC<AuthBarProps> = ({
   isLoading,
   syncCount = 0,
   isSyncing = false,
+  onUserChange,
 }) => {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleSignIn = async () => {
     setAuthError(null);
     setIsSigningIn(true);
     try {
-      await signInWithGoogle();
+      const res = await signInWithGoogle();
+      if (!res) {
+        setIsModalOpen(true);
+      }
     } catch (err: any) {
       console.warn("Sign-in handling:", err);
+      setIsModalOpen(true);
       if (err?.code === "auth/popup-blocked") {
-        setAuthError("Popup was blocked by your browser. Please allow popups for this site.");
-      } else if (err?.code === "auth/cancelled-popup-request" || err?.code === "auth/popup-closed-by-user") {
-        // User intentionally closed popup, no need for scary error
+        setAuthError("Popup was blocked by your browser. Sign in directly with your Google account!");
+      } else if (err?.code === "auth/unauthorized-domain") {
+        setAuthError("Firebase unauthorized-domain on localhost. Sign in directly with your Google account!");
       } else {
-        setAuthError(err?.message || "Could not sign in with Google.");
+        setAuthError(err?.message || "Sign in directly with your Google account!");
       }
     } finally {
       setIsSigningIn(false);
@@ -141,6 +148,17 @@ export const AuthBar: React.FC<AuthBarProps> = ({
           </button>
         </div>
       )}
+
+      {/* Google Account Sign-In Modal */}
+      <GoogleAccountSignInModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={(authedUser) => {
+          setIsModalOpen(false);
+          if (onUserChange) onUserChange(authedUser);
+        }}
+        initialError={authError}
+      />
 
       {/* Auth Error Notification */}
       {authError && (

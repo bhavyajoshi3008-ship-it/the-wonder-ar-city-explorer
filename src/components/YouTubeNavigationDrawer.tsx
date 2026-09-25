@@ -24,11 +24,11 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { User as FirebaseUser } from "firebase/auth";
+import { FirebaseUser, auth, logOutUser, signInWithGoogle } from "../services/firebase";
 import { useAccessibility, TextSize } from "../context/AccessibilityContext";
 import { useLanguage } from "../context/LanguageContext";
 import { WORLD_LANGUAGES, LanguageOption } from "../data/languages";
-import { auth, logOutUser, signInWithGoogle } from "../services/firebase";
+import { GoogleAccountSignInModal } from "./GoogleAccountSignInModal";
 
 interface YouTubeNavigationDrawerProps {
   isOpen: boolean;
@@ -112,11 +112,17 @@ export const YouTubeNavigationDrawer: React.FC<YouTubeNavigationDrawerProps> = (
     }
   };
 
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+
   const handleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      const res = await signInWithGoogle();
+      if (!res) {
+        setIsGoogleModalOpen(true);
+      }
     } catch (err) {
       console.warn("Sign-in notice:", err);
+      setIsGoogleModalOpen(true);
     }
   };
 
@@ -577,6 +583,16 @@ export const YouTubeNavigationDrawer: React.FC<YouTubeNavigationDrawerProps> = (
               <span className="text-cyan-500/70">Powered by Gemini</span>
             </div>
           </motion.div>
+
+          {/* Google Account Sign-In Modal */}
+          <GoogleAccountSignInModal
+            isOpen={isGoogleModalOpen}
+            onClose={() => setIsGoogleModalOpen(false)}
+            onSuccess={() => {
+              setIsGoogleModalOpen(false);
+              onClose();
+            }}
+          />
         </div>
       )}
     </AnimatePresence>

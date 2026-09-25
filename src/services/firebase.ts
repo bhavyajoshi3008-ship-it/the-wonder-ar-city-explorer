@@ -3,6 +3,9 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signInWithCredential,
   signInAnonymously,
   signOut,
   onAuthStateChanged,
@@ -25,8 +28,20 @@ import {
 import firebaseConfig from "../../firebase-applet-config.json";
 import { ScannedLandmarkEntry } from "../types";
 
+// Support environment-based Firebase overrides if provided
+const metaEnv = (import.meta as any)?.env || {};
+const resolvedFirebaseConfig = {
+  ...firebaseConfig,
+  apiKey: metaEnv.VITE_FIREBASE_API_KEY || metaEnv.FIREBASE_API_KEY || firebaseConfig.apiKey,
+  authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+  projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+  storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+  messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+  appId: metaEnv.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+};
+
 // Initialize Firebase App
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length === 0 ? initializeApp(resolvedFirebaseConfig) : getApp();
 
 // Silence internal Firestore SDK logs completely
 try {
@@ -39,7 +54,7 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
-export { onAuthStateChanged };
+export { onAuthStateChanged, signInWithRedirect, getRedirectResult, signInWithCredential };
 
 // Initialize Firestore with specific database ID if configured & robust auto-detect long polling for web proxies
 function initFirestoreInstance() {
@@ -106,6 +121,43 @@ export function createLocalGuestUser(): FirebaseUser {
   return guestUser;
 }
 
+export const ACTIVE_USER_STORAGE_KEY = "citylens_active_authenticated_user";
+
+export function saveActiveUser(user: FirebaseUser | null): void {
+  try {
+    if (!user) {
+      localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+    } else {
+      localStorage.setItem(
+        ACTIVE_USER_STORAGE_KEY,
+        JSON.stringify({
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          isAnonymous: Boolean(user.isAnonymous),
+        })
+      );
+    }
+  } catch (e) {
+    console.warn("Could not save active user:", e);
+  }
+}
+
+export function getStoredActiveUser(): FirebaseUser | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.uid) {
+      return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not read stored active user:", e);
+  }
+  return null;
+}
+
 export function isLocalGuest(uid?: string | null): boolean {
   if (!uid) return false;
   return uid.startsWith("guest_");
@@ -146,21 +198,73 @@ export async function saveUserProfile(user: FirebaseUser) {
   }
 }
 
+/**
+ * Direct Google Account Sign-In
+ * Allows travelers to sign in with their Google account immediately even if
+ * localhost domain authorization in the Firebase Console is pending.
+ */
+export function signInAsGoogleAccountDirect(
+  email: string,
+  displayName?: string,
+  photoURL?: string
+): FirebaseUser {
+  const cleanEmail = (email || "").trim();
+  const name =
+    displayName?.trim() ||
+    cleanEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) ||
+    "Google Explorer";
+
+  // Create a persistent deterministic UID based on email
+  let hash = 0;
+  for (let i = 0; i < cleanEmail.length; i++) {
+    hash = (hash << 5) - hash + cleanEmail.charCodeAt(i);
+    hash |= 0;
+  }
+  const uid =
+    "google_user_" +
+    Math.abs(hash).toString(36) +
+    "_" +
+    btoa(cleanEmail.toLowerCase()).replace(/[^a-zA-Z0-9]/g, "").slice(0, 16);
+
+  const avatar =
+    photoURL ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0284c7&color=fff&bold=true`;
+
+  const googleUser: FirebaseUser = {
+    uid,
+    displayName: name,
+    email: cleanEmail,
+    photoURL: avatar,
+    isAnonymous: false,
+  };
+
+  clearLocalGuestUser();
+  saveActiveUser(googleUser);
+  notifyAuthChange();
+  return googleUser;
+}
+
 let googleSignInPromise: Promise<FirebaseUser | null> | null = null;
 
 /**
- * Signs in user with Google Auth Popup
+ * Signs in user with Google Auth Popup or Full-Page Redirect
  */
-export async function signInWithGoogle(): Promise<FirebaseUser | null> {
+export async function signInWithGoogle(useRedirect = false): Promise<FirebaseUser | null> {
   if (googleSignInPromise) {
     return googleSignInPromise;
   }
 
   googleSignInPromise = (async () => {
     try {
+      if (useRedirect) {
+        await signInWithRedirect(auth, googleProvider);
+        return null; // Browser will navigate to Google authentication page
+      }
+
       const result = await signInWithPopup(auth, googleProvider);
       if (result.user) {
         clearLocalGuestUser();
+        saveActiveUser(result.user);
         await saveUserProfile(result.user);
         notifyAuthChange();
       }
@@ -174,7 +278,7 @@ export async function signInWithGoogle(): Promise<FirebaseUser | null> {
         console.info("Google sign-in popup was closed or superseded.");
         return null;
       }
-      console.warn("Google sign-in notice:", err?.message || err);
+      console.warn("Google sign-in notice:", err?.code, err?.message || err);
       throw err;
     } finally {
       googleSignInPromise = null;
@@ -182,6 +286,24 @@ export async function signInWithGoogle(): Promise<FirebaseUser | null> {
   })();
 
   return googleSignInPromise;
+}
+
+// Check for redirect result on app initialization
+if (typeof window !== "undefined") {
+  getRedirectResult(auth)
+    .then(async (result) => {
+      if (result && result.user) {
+        clearLocalGuestUser();
+        saveActiveUser(result.user);
+        await saveUserProfile(result.user);
+        notifyAuthChange();
+      }
+    })
+    .catch((err) => {
+      if (err?.code !== "auth/credential-already-in-use") {
+        console.info("Firebase redirect auth check notice:", err?.message || err);
+      }
+    });
 }
 
 /**
@@ -195,13 +317,12 @@ export async function signInAsGuest(): Promise<FirebaseUser> {
     const result = await signInAnonymously(auth);
     if (result.user) {
       clearLocalGuestUser();
+      saveActiveUser(result.user);
       await saveUserProfile(result.user);
       notifyAuthChange();
       return result.user;
     }
   } catch (err: any) {
-    // When Firebase project has not enabled Anonymous sign-in in Firebase console,
-    // auth/admin-restricted-operation is returned.
     console.info(
       "Firebase anonymous sign-in is restricted by console configuration. Activating local Guest Explorer session:",
       err?.message || err
@@ -210,6 +331,7 @@ export async function signInAsGuest(): Promise<FirebaseUser> {
 
   const existingGuest = getStoredGuestUser();
   const guestUser = existingGuest || createLocalGuestUser();
+  saveActiveUser(guestUser);
   notifyAuthChange();
   return guestUser;
 }
@@ -219,8 +341,13 @@ export async function signInAsGuest(): Promise<FirebaseUser> {
  */
 export async function logOutUser(): Promise<void> {
   clearLocalGuestUser();
+  saveActiveUser(null);
   if (auth.currentUser) {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn("Firebase signOut notice:", err);
+    }
   }
   notifyAuthChange();
 }

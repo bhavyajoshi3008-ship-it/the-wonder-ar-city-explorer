@@ -70,6 +70,8 @@ import {
   subscribeToUserScans,
   syncLocalScansToFirestore,
   getStoredGuestUser,
+  getStoredActiveUser,
+  saveActiveUser,
   clearLocalGuestUser,
 } from "./services/firebase";
 
@@ -166,6 +168,12 @@ export default function App() {
           console.warn("Local-to-cloud scan sync notice:", syncErr);
         }
       } else {
+        const storedActive = getStoredActiveUser();
+        if (storedActive) {
+          setUser(storedActive);
+          setIsAuthLoading(false);
+          return;
+        }
         const storedGuest = getStoredGuestUser();
         setUser(storedGuest);
         setIsAuthLoading(false);
@@ -180,6 +188,12 @@ export default function App() {
       if (auth.currentUser) {
         handleAuthSync(auth.currentUser);
       } else {
+        const storedActive = getStoredActiveUser();
+        if (storedActive) {
+          setUser(storedActive);
+          setIsAuthLoading(false);
+          return;
+        }
         const storedGuest = getStoredGuestUser();
         setUser(storedGuest);
         setIsAuthLoading(false);

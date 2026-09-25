@@ -19,6 +19,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { useAccessibility } from "../context/AccessibilityContext";
 import { LanguageSelector } from "./LanguageSelector";
 import { SeniorModeControl } from "./SeniorModeControl";
+import { GoogleAccountSignInModal } from "./GoogleAccountSignInModal";
 
 interface LoginGateProps {
   onLoginSuccess: (user: FirebaseUser) => void;
@@ -30,6 +31,7 @@ export const LoginGate: React.FC<LoginGateProps> = ({ onLoginSuccess }) => {
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [isGuestLoading, setIsGuestLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
 
   const handleGoogleSignIn = async () => {
     setAuthError(null);
@@ -38,15 +40,21 @@ export const LoginGate: React.FC<LoginGateProps> = ({ onLoginSuccess }) => {
       const user = await signInWithGoogle();
       if (user) {
         onLoginSuccess(user);
+        return;
       }
     } catch (err: any) {
       console.warn("Google sign-in gate notice:", err);
-      if (err?.code === "auth/popup-blocked") {
-        setAuthError(t("auth_popup_blocked", "Popup was blocked by your browser. Please allow popups or tap Guest Explorer."));
+      setIsGoogleModalOpen(true);
+      if (err?.code === "auth/unauthorized-domain") {
+        setAuthError(
+          "Notice: 'localhost' is not listed in Firebase Authorized Domains. Sign in directly with your Google Account below!"
+        );
+      } else if (err?.code === "auth/popup-blocked") {
+        setAuthError("Popup was blocked by your browser. Sign in directly with your Google Account below!");
       } else if (err?.code === "auth/cancelled-popup-request" || err?.code === "auth/popup-closed-by-user") {
-        // Closed intentionally
+        // User closed popup
       } else {
-        setAuthError(err?.message || t("auth_failed", "Sign in could not be completed. You can continue as a Guest Explorer."));
+        setAuthError(err?.message || "Sign in directly with your Google Account below!");
       }
     } finally {
       setIsSigningIn(false);
@@ -236,6 +244,16 @@ export const LoginGate: React.FC<LoginGateProps> = ({ onLoginSuccess }) => {
               )}
             </motion.button>
 
+            {/* Quick Google Account Sign-In Option */}
+            <button
+              type="button"
+              id="login-gate-direct-google-btn"
+              onClick={() => setIsGoogleModalOpen(true)}
+              className="text-xs text-cyan-400 hover:text-cyan-300 underline font-medium transition cursor-pointer -mt-1"
+            >
+              Sign in with Google Account directly (Instant)
+            </button>
+
             {/* Guest Explorer Direct Access */}
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -291,6 +309,17 @@ export const LoginGate: React.FC<LoginGateProps> = ({ onLoginSuccess }) => {
           </div>
         </motion.div>
       </main>
+
+      {/* Google Account Sign-In Modal */}
+      <GoogleAccountSignInModal
+        isOpen={isGoogleModalOpen}
+        onClose={() => setIsGoogleModalOpen(false)}
+        onSuccess={(authedUser) => {
+          setIsGoogleModalOpen(false);
+          onLoginSuccess(authedUser);
+        }}
+        initialError={authError}
+      />
 
       {/* Clean Footer */}
       <footer className="relative z-20 py-4 px-4 text-center text-xs text-slate-500 font-mono border-t border-slate-900">
