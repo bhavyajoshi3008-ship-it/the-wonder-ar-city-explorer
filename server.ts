@@ -2854,7 +2854,6 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
       }
 
       const ttsModels = [
-        "gemini-2.5-flash-preview-tts",
         "gemini-3.1-flash-tts-preview",
         "gemini-3.8-flash-tts",
         "gemini-3.8-flash-lite-tts",
@@ -3163,7 +3162,26 @@ ${JSON.stringify(keys, null, 2)}`;
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[CityLens AR Server] Running on http://0.0.0.0:${PORT}`);
+    console.log(`[CityLens AR Server] Localhost: http://localhost:${PORT}`);
   });
+
+  // Seamlessly redirect from Vite default port 5173 to 3000
+  if (PORT === 3000) {
+    try {
+      const redirectApp = express();
+      redirectApp.all("*", (req, res) => {
+        res.redirect(`http://localhost:3000${req.url}`);
+      });
+      const redirectServer = redirectApp.listen(5173, "0.0.0.0", () => {
+        console.log(`[CityLens AR Server] Port 5173 redirecting to http://localhost:3000`);
+      });
+      redirectServer.on("error", () => {
+        // Port 5173 occupied, ignore
+      });
+    } catch {
+      // Ignore
+    }
+  }
 }
 
 startServer();
