@@ -84,7 +84,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const missingKeysMap: Record<string, string> = {};
     Object.keys(CORE_TRANSLATIONS).forEach((k) => {
       const hasStatic = Boolean(CORE_TRANSLATIONS[k]?.[langCode] || CORE_TRANSLATIONS[k]?.[langCode.split("-")[0]]);
-      const hasDynamic = Boolean(existingDynamic[k] && existingDynamic[k] !== CORE_TRANSLATIONS[k]?.["en"]);
+      const hasDynamic = existingDynamic[k] !== undefined;
       if (!hasStatic && !hasDynamic) {
         missingKeysMap[k] = CORE_TRANSLATIONS[k]?.["en"] || k;
       }
@@ -96,24 +96,36 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       translateUIBatch(missingKeysMap, currentLanguage.code, currentLanguage.name)
         .then((translatedMap) => {
-          if (translatedMap && Object.keys(translatedMap).length > 0) {
-            setDynamicTranslations((prev) => {
-              const updated = {
-                ...prev,
-                [langCode]: {
-                  ...(prev[langCode] || {}),
-                  ...translatedMap,
-                },
-              };
-              try {
-                localStorage.setItem(`citylens_ui_translations_${langCode}`, JSON.stringify(updated[langCode]));
-              } catch {}
-              return updated;
+          setDynamicTranslations((prev) => {
+            // Merge translated keys, and for any keys that failed to translate, store their default to prevent re-fetch loops
+            const resolvedMap: Record<string, string> = {};
+            Object.keys(missingKeysMap).forEach((k) => {
+              resolvedMap[k] = translatedMap?.[k] || missingKeysMap[k];
             });
-          }
+
+            const updated = {
+              ...prev,
+              [langCode]: {
+                ...(prev[langCode] || {}),
+                ...resolvedMap,
+              },
+            };
+            try {
+              localStorage.setItem(`citylens_ui_translations_${langCode}`, JSON.stringify(updated[langCode]));
+            } catch {}
+            return updated;
+          });
         })
         .catch((err) => {
           console.warn(`Dynamic UI translation notice for ${currentLanguage.name}:`, err);
+          // On network/API failure, mark keys with fallback to prevent hammering the server in an infinite loop
+          setDynamicTranslations((prev) => ({
+            ...prev,
+            [langCode]: {
+              ...(prev[langCode] || {}),
+              ...missingKeysMap,
+            },
+          }));
         })
         .finally(() => {
           fetchingLangsRef.current.delete(langCode);

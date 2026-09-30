@@ -43,6 +43,8 @@ type WorldRegion =
 
 type ViewStyle = "detailed" | "photo_gallery";
 
+const GENERIC_LANDMARK_FALLBACK = "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1200&q=80";
+
 export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps> = ({
   onSelectSite,
   isLoading,
@@ -393,9 +395,12 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
                     referrerPolicy="no-referrer"
                     onError={(e) => {
                       const target = e.currentTarget;
-                      if (!target.dataset.triedFallback) {
+                      if (!target.dataset.triedFallback && site.thumbnailUrl) {
                         target.dataset.triedFallback = "true";
                         target.src = site.thumbnailUrl;
+                      } else if (!target.dataset.triedGeneric) {
+                        target.dataset.triedGeneric = "true";
+                        target.src = GENERIC_LANDMARK_FALLBACK;
                       }
                     }}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -496,9 +501,12 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
                       referrerPolicy="no-referrer"
                       onError={(e) => {
                         const target = e.currentTarget;
-                        if (!target.dataset.triedFallback) {
+                        if (!target.dataset.triedFallback && site.imageUrl) {
                           target.dataset.triedFallback = "true";
                           target.src = site.imageUrl;
+                        } else if (!target.dataset.triedGeneric) {
+                          target.dataset.triedGeneric = "true";
+                          target.src = GENERIC_LANDMARK_FALLBACK;
                         }
                       }}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -624,6 +632,16 @@ export const UnescoAndCollegesExplorer: React.FC<UnescoAndCollegesExplorerProps>
                   src={lightboxSite.imageUrl}
                   alt={lightboxSite.name}
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.dataset.triedFallback && lightboxSite.thumbnailUrl) {
+                      target.dataset.triedFallback = "true";
+                      target.src = lightboxSite.thumbnailUrl;
+                    } else if (!target.dataset.triedGeneric) {
+                      target.dataset.triedGeneric = "true";
+                      target.src = GENERIC_LANDMARK_FALLBACK;
+                    }
+                  }}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />

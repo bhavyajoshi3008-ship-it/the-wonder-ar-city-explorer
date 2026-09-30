@@ -1232,12 +1232,23 @@ export const INDIAN_COLLEGES_ALIASES: Record<string, string> = {
 
   // Gujarat College Ahmedabad
   "gujarat arts and science college": "gujarat arts and science college",
+  "gujarat arts science college": "gujarat arts and science college",
+  "gujarat arts & science college": "gujarat arts and science college",
+  "gujarat arts & science college ahmedabad": "gujarat arts and science college",
   "gujarat college": "gujarat arts and science college",
   "gujarat college ahmedabad": "gujarat arts and science college",
   "gujarat arts and science college ahmedabad": "gujarat arts and science college",
   "gujarat arts college": "gujarat arts and science college",
   "gujarat science college": "gujarat arts and science college",
+  "gujarat science and arts college": "gujarat arts and science college",
+  "gujarat college of arts and science": "gujarat arts and science college",
+  "gujarat arts and science": "gujarat arts and science college",
+  "gasc": "gujarat arts and science college",
+  "gasc ahmedabad": "gujarat arts and science college",
+  "gujarat college ellisbridge": "gujarat arts and science college",
   "ellisbridge college": "gujarat arts and science college",
+  "ellisbridge college ahmedabad": "gujarat arts and science college",
+  "ellis bridge college": "gujarat arts and science college",
   "veer vinod kinariwala college": "gujarat arts and science college",
   "ગુજરાત કોલેજ": "gujarat arts and science college",
   "ગુજરાત આર્ટ્સ એન્ડ સાયન્સ કોલેજ": "gujarat arts and science college"

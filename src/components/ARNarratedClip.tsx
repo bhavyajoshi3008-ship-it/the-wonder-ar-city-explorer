@@ -613,7 +613,17 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       }
     }
 
+    // Watchdog and safety timers to prevent Chromium speech synthesis stalling
+    let watchdogTimer: any = null;
+    let safetyTimeout: any = null;
+
+    const cleanupTimers = () => {
+      if (watchdogTimer) clearInterval(watchdogTimer);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
+    };
+
     utterance.onend = () => {
+      cleanupTimers();
       activeUtteranceRef.current = null;
       (window as any).__activeTourUtterance = null;
       if (speechSessionIdRef.current !== sessionId) return;
@@ -627,6 +637,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
     };
 
     utterance.onerror = (e) => {
+      cleanupTimers();
       activeUtteranceRef.current = null;
       (window as any).__activeTourUtterance = null;
       if (speechSessionIdRef.current !== sessionId) return;
@@ -646,6 +657,29 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
       }
     };
 
+    // Keep Chromium engine awake during speech
+    watchdogTimer = setInterval(() => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      }
+    }, 3500);
+
+    // Hard safety timeout in case onend never fires (Chromium garbage collection bug)
+    const maxDurationMs = Math.max(14000, Math.round((sentenceText.length * 150) / playbackRateRef.current) + 4000);
+    safetyTimeout = setTimeout(() => {
+      cleanupTimers();
+      if (speechSessionIdRef.current === sessionId && activeUtteranceRef.current === utterance) {
+        activeUtteranceRef.current = null;
+        (window as any).__activeTourUtterance = null;
+        sentenceIndexRef.current = idx + 1;
+        if (isPlayingRef.current && activePlaybackModeRef.current === "speech") {
+          speakNextSentence();
+        }
+      }
+    }, maxDurationMs);
+
     activeUtteranceRef.current = utterance;
     (window as any).__activeTourUtterance = utterance;
     try {
@@ -657,6 +691,7 @@ export const ARNarratedClip: React.FC<ARNarratedClipProps> = ({
         window.speechSynthesis.resume();
       }
     } catch {
+      cleanupTimers();
       // Graceful fallback to teleprompter timer
       const readingDelayMs = Math.min(5500, Math.max(2200, Math.round((sentenceText.length * 60) / playbackRateRef.current)));
       sentenceIndexRef.current = idx + 1;

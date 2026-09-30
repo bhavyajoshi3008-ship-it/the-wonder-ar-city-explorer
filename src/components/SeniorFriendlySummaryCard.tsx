@@ -78,10 +78,12 @@ export const SeniorFriendlySummaryCard: React.FC<SeniorFriendlySummaryCardProps>
     if (isSpeaking) {
       stopSpeaking();
     } else {
+      const isIndic = ["hi", "bn", "mr", "gu", "pa", "ne", "sa", "mai", "bho", "awa"].includes(currentLanguage.code.split("-")[0]);
+      const sep = isIndic ? "। " : ". ";
       const speechScript =
         currentLanguage.code === "en"
           ? `${effectiveName}, located in ${effectiveLocation}. Built in ${effectiveYearBuilt}. ${effectiveSignificance}`
-          : `${effectiveName}। ${effectiveLocation}। ${effectiveYearBuilt}। ${effectiveSignificance}`;
+          : `${effectiveName}${sep}${effectiveLocation}${sep}${effectiveYearBuilt}${sep}${effectiveSignificance}`;
       speakText(speechScript, currentLanguage.code);
     }
   };

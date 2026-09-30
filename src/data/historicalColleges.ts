@@ -1059,6 +1059,32 @@ export const HISTORICAL_COLLEGES_CATALOG: HistoricalCollegeEntry[] = [
     imageUrl: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1200&q=80",
     thumbnailUrl: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400&q=80",
     badge: "Alma Mater of Ambedkar & Tilak (1835 AD)",
+  },
+  {
+    id: "univ-gujarat-college-ahmedabad",
+    name: "Gujarat Arts and Science College (Gujarat College)",
+    localName: "ગુજરાત આર્ટ્સ એન્ડ સાયન્સ કોલેજ, અમદાવાદ",
+    country: "India",
+    city: "Ahmedabad, Gujarat",
+    region: "Asia and the Pacific",
+    category: "Cultural",
+    year: 1860,
+    foundedYear: "1860 AD",
+    isCollegeOrUniversity: true,
+    criteria: "(ii)(iv)",
+    architecturalStyle: "Victorian Gothic, Colonial British & Indo-Saracenic Brickwork",
+    periodEra: "Founded 1860 AD / Ellisbridge Campus 1897",
+    famousMotto: "Light, Knowledge, Integrity",
+    notableHistoricBuildings: [
+      "Victorian Gothic Main Arts College Red-Brick Building (1897)",
+      "Historic Science Faculty Laboratories & Herbarium",
+      "Mahatma Gandhi Satyagraha & 1942 Quit India Student Assembly Quadrangle",
+      "Heritage Ellisbridge Archways & Colonnaded Verandahs"
+    ],
+    summary: "Established in 1860, Gujarat Arts and Science College (Gujarat College) is one of the oldest modern educational institutions in Western India. Situated near Ellisbridge on the Sabarmati, its Victorian Gothic red-brick heritage halls served as a pivotal epicenter of the Indian Independence Movement, attended and addressed by Mahatma Gandhi, Sardar Vallabhbhai Patel, and Vikram Sarabhai.",
+    imageUrl: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&q=80",
+    thumbnailUrl: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=400&q=80",
+    badge: "Gujarat's Oldest Modern College (1860 AD)",
   }
 ];
 

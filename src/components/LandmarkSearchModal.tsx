@@ -15,13 +15,18 @@ interface LandmarkSearchModalProps {
 
 const POPULAR_LANDMARKS = [
   { name: "Taj Mahal", city: "Agra, India", flag: "🇮🇳" },
+  { name: "Pashupatinath Temple", city: "Kathmandu, Nepal", flag: "🇳🇵" },
+  { name: "Gujarat Arts and Science College", city: "Ahmedabad, India", flag: "🇮🇳" },
+  { name: "Dwarkadhish Temple", city: "Dwarka, India", flag: "🇮🇳" },
   { name: "Colosseum", city: "Rome, Italy", flag: "🇮🇹" },
   { name: "Big Ben", city: "London, UK", flag: "🇬🇧" },
   { name: "Eiffel Tower", city: "Paris, France", flag: "🇫🇷" },
   { name: "Petra", city: "Ma'an, Jordan", flag: "🇯🇴" },
+  { name: "Pura Besakih", city: "Bali, Indonesia", flag: "🇮🇩" },
   { name: "Golden Temple", city: "Amritsar, India", flag: "🇮🇳" },
   { name: "Pyramids of Giza", city: "Giza, Egypt", flag: "🇪🇬" },
   { name: "Machu Picchu", city: "Cusco, Peru", flag: "🇵🇪" },
+  { name: "Swaminarayan Akshardham", city: "New Delhi, India", flag: "🇮🇳" },
   { name: "Sagrada Família", city: "Barcelona, Spain", flag: "🇪🇸" },
   { name: "Angkor Wat", city: "Siem Reap, Cambodia", flag: "🇰🇭" },
   { name: "Hagia Sophia", city: "Istanbul, Turkey", flag: "🇹🇷" },

@@ -9,12 +9,14 @@ import { KNOWN_LANDMARK_DOSSIERS, getLandmarkDossier, findLandmarkDossier, Fallb
 import { RELIGIOUS_STRUCTURE_DOSSIERS } from "./server/religiousStructuresKnowledge";
 import { HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS } from "./server/historicCollegesAndUnescoDossiers";
 import { INDIAN_COLLEGES_DOSSIERS } from "./server/indianCollegesDossiers";
+import { HINDU_TEMPLES_GLOBAL_DOSSIERS } from "./server/hinduTemplesGlobalDossiers";
 
 const ALL_HERITAGE_DOSSIERS: Record<string, FallbackLandmarkData> = {
   ...KNOWN_LANDMARK_DOSSIERS,
   ...RELIGIOUS_STRUCTURE_DOSSIERS,
   ...HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS,
   ...INDIAN_COLLEGES_DOSSIERS,
+  ...HINDU_TEMPLES_GLOBAL_DOSSIERS,
 };
 
 function getGenAIClient(): GoogleGenAI {
@@ -327,6 +329,28 @@ export const GLOBAL_CITY_COORDINATES: Record<string, { lat: number; lng: number 
   "deoghar": { lat: 24.4826, lng: 86.7001 },
   "mayapur": { lat: 23.4233, lng: 88.3894 },
   "ellora": { lat: 20.0238, lng: 75.1793 },
+  "gandhinagar": { lat: 23.2323, lng: 72.6738 },
+  "modhera": { lat: 23.5835, lng: 72.1332 },
+  "ambaji": { lat: 24.3312, lng: 72.8529 },
+  "belur": { lat: 13.1623, lng: 75.8643 },
+  "halebidu": { lat: 13.2162, lng: 75.9936 },
+  "srikalahasti": { lat: 13.7498, lng: 79.7036 },
+  "tiruvannamalai": { lat: 12.2312, lng: 79.0677 },
+  // Nepal & South Asia
+  "kathmandu": { lat: 27.7104, lng: 85.3487 },
+  "bhaktapur": { lat: 27.6710, lng: 85.4298 },
+  "janakpur": { lat: 26.7288, lng: 85.9244 },
+  "mustang": { lat: 28.8169, lng: 83.8717 },
+  "trincomalee": { lat: 8.5786, lng: 81.2421 },
+  "jaffna": { lat: 9.6744, lng: 80.0294 },
+  // Southeast Asia & Global Temples
+  "tabanan": { lat: -8.6212, lng: 115.0868 },
+  "bedugul": { lat: -8.2751, lng: 115.1664 },
+  "karangasem": { lat: -8.3739, lng: 115.4522 },
+  "pecatu": { lat: -8.8291, lng: 115.0849 },
+  "robbinsville": { lat: 40.2198, lng: -74.5218 },
+  "nadi": { lat: -17.8065, lng: 177.4150 },
+  "grand bassin": { lat: -20.4182, lng: 57.4919 },
   // Europe
   "rome": { lat: 41.8902, lng: 12.4922 },
   "vatican": { lat: 41.9029, lng: 12.4534 },
@@ -514,8 +538,10 @@ async function fetchGoogleMapsGrounding(
     `${landmarkName} ${city || ""} ${country || ""}`.trim()
   )}`;
 
-  // If prepayment credits are depleted or model is cooling down, return direct Google Maps navigation immediately
-  if (isPrepaymentDepleted() || !isModelAvailable("gemini-3.8-flash")) {
+  const mapModels = ["gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.8-flash"];
+
+  // If prepayment credits are depleted or all map candidate models are cooling down, return direct Google Maps navigation immediately
+  if (isPrepaymentDepleted() || !mapModels.some(isModelAvailable)) {
     return {
       placeSummary: "",
       primaryMapsUri: fallbackUri,
@@ -555,7 +581,6 @@ async function fetchGoogleMapsGrounding(
     }
 
     let response: any = null;
-    const mapModels = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.8-flash"];
     for (const m of mapModels) {
       if (!isModelAvailable(m)) continue;
       try {
@@ -1119,12 +1144,14 @@ async function startServer() {
     try {
       const query = String(req.query.q || "").trim().toLowerCase();
       if (!query || query.length < 2) {
-        // Return popular global landmarks & historic Indian colleges
+        // Return popular global landmarks, historic Indian colleges & iconic Hindu temples
         const popularKeys = [
-          "taj mahal", "presidency college kolkata", "st xaviers mumbai", "university of mumbai", "iit roorkee",
+          "taj mahal", "pashupatinath temple", "gujarat arts and science college", "dwarkadhish temple", "akshardham new delhi",
+          "presidency college kolkata", "st xaviers mumbai", "university of mumbai", "iit roorkee",
           "eiffel tower", "colosseum", "big ben", "petra", 
           "machu picchu", "pyramids of giza", "sagrada familia", "golden temple",
           "hagia sophia", "statue of liberty", "great wall of china", "angkor wat",
+          "pura besakih", "baps shri swaminarayan mandir neasden london",
           "leaning tower of pisa", "christ the redeemer", "qutub minar", "fergusson college",
           "aligarh muslim university", "banaras hindu university", "st stephens college delhi"
         ];
@@ -1148,14 +1175,46 @@ async function startServer() {
       const matches: any[] = [];
       const seenNames = new Set<string>();
 
-      for (const dossier of Object.values(ALL_HERITAGE_DOSSIERS)) {
-        const nameMatch = dossier.name.toLowerCase().includes(query);
-        const localMatch = (dossier.localName || "").toLowerCase().includes(query);
-        const cityMatch = dossier.city.toLowerCase().includes(query);
-        const countryMatch = dossier.country.toLowerCase().includes(query);
-        const styleMatch = dossier.architecturalStyle.toLowerCase().includes(query);
+      // Check direct dossier match first (handles aliases, typos, multi-keyword phrases like "kathmandu temple", "gujarat arts & science college", "nepal temple")
+      const directDossier = findLandmarkDossier(query);
+      if (directDossier) {
+        seenNames.add(directDossier.name.toLowerCase());
+        matches.push({
+          name: directDossier.name,
+          localName: directDossier.localName,
+          city: directDossier.city,
+          country: directDossier.country,
+          architecturalStyle: directDossier.architecturalStyle,
+          summary: directDossier.summary,
+          coordinatesEstimate: directDossier.coordinatesEstimate,
+          source: "verified",
+        });
+      }
 
-        if ((nameMatch || localMatch || cityMatch || countryMatch || styleMatch) && !seenNames.has(dossier.name.toLowerCase())) {
+      const queryTokens = query.split(/[\s,.-]+/).filter((t) => t.length >= 2);
+
+      for (const dossier of Object.values(ALL_HERITAGE_DOSSIERS)) {
+        if (seenNames.has(dossier.name.toLowerCase())) continue;
+
+        const nameLower = dossier.name.toLowerCase();
+        const localLower = (dossier.localName || "").toLowerCase();
+        const cityLower = dossier.city.toLowerCase();
+        const countryLower = dossier.country.toLowerCase();
+        const styleLower = dossier.architecturalStyle.toLowerCase();
+        const summaryLower = (dossier.summary || "").toLowerCase();
+
+        const fullSearchBlob = `${nameLower} ${localLower} ${cityLower} ${countryLower} ${styleLower} ${summaryLower}`;
+
+        const nameMatch = nameLower.includes(query);
+        const localMatch = localLower.includes(query);
+        const cityMatch = cityLower.includes(query);
+        const countryMatch = countryLower.includes(query);
+        const styleMatch = styleLower.includes(query);
+
+        // Multi-token match: all words in query must appear in the dossier's combined text
+        const tokenMatch = queryTokens.length > 1 && queryTokens.every((token) => fullSearchBlob.includes(token));
+
+        if (nameMatch || localMatch || cityMatch || countryMatch || styleMatch || tokenMatch) {
           seenNames.add(dossier.name.toLowerCase());
           matches.push({
             name: dossier.name,
@@ -1167,7 +1226,7 @@ async function startServer() {
             coordinatesEstimate: dossier.coordinatesEstimate,
             source: "verified",
           });
-          if (matches.length >= 12) break;
+          if (matches.length >= 14) break;
         }
       }
 
@@ -1525,8 +1584,8 @@ async function startServer() {
 Carefully inspect this photograph and accurately identify the exact place, landmark, structure, landscape, or subject depicted.
 
 UNIVERSAL RECOGNITION COVERAGE:
-- Sacred Architecture & Religious Structures Worldwide: Recognize every church, cathedral, basilica, abbey, monastery, mosque, masjid, minaret, Hindu temple (mandir, jyotirlinga, gopuram, shikhara), Sikh gurdwara, Buddhist stupa/pagoda/monastery, Jain temple, Jewish synagogue, and Bahá'í temple. For any sacred place, set "detectedCategory": "sacred" and "isLandmark": true.
-- Academic Heritage & University Campuses Worldwide: Recognize historic colleges, universities, campus quads, iconic libraries, and halls across the world (e.g. Oxford, Cambridge, Harvard, Yale, Princeton, Bologna, Salamanca, Al-Qarawiyyin, Nalanda, Indian IITs and colleges, UNAM, Tokyo, etc.). For any academic campus or building, set "detectedCategory": "campus" and "isLandmark": true.
+- Sacred Architecture & Religious Structures Worldwide: Recognize every church, cathedral, basilica, abbey, monastery, mosque, masjid, minaret, Hindu temple (mandir, jyotirlinga, gopuram, shikhara, pura in Bali, kovil in Sri Lanka/Tamil Nadu, and major global Hindu temples like Pashupatinath & Changu Narayan in Kathmandu Nepal, Prambanan, Pura Besakih, Tanah Lot & Uluwatu in Indonesia, Angkor Wat & Banteay Srei in Cambodia, Batu Caves in Malaysia, BAPS Shri Swaminarayan Mandir Neasden London & Robbinsville NJ, Dwarkadhish Dwarka, Somnath, Kashi Vishwanath, Kedarnath, Badrinath, Meenakshi Madurai, Venkateswara Tirupati, Brihadisvara Thanjavur, Belur & Halebidu Hoysala temples, Akshardham, etc.), Sikh gurdwara, Buddhist stupa/pagoda/monastery, Jain temple, Jewish synagogue, and Bahá'í temple. For any sacred place, set "detectedCategory": "sacred" and "isLandmark": true.
+- Academic Heritage & University Campuses Worldwide: Recognize historic colleges, universities, campus quads, iconic libraries, and halls across the world (e.g. Oxford, Cambridge, Harvard, Yale, Princeton, Bologna, Salamanca, Al-Qarawiyyin, Nalanda, Indian IITs and historic colleges including Gujarat Arts and Science College / Gujarat College in Ellisbridge Ahmedabad, Presidency College Kolkata, St. Xavier's Mumbai, Fergusson College Pune, Madras Christian College, etc., UNAM, Tokyo, etc.). For any academic campus or building, set "detectedCategory": "campus" and "isLandmark": true.
 - Historic Monuments & Ancient Wonders: UNESCO World Heritage sites, pyramids, ancient ruins, castles, forts, palaces, amphitheatres, triumphal arches, statues, and memorials.
 - Natural Wonders & Landscapes: Mountains, volcanoes, canyons, waterfalls, national parks, rock formations, coastlines, and geological formations.
 - Modern & Civil Engineering Landmarks: Iconic bridges, towers, skyscrapers, stadiums, arenas, opera houses, and public squares.
@@ -1647,7 +1706,7 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
 
         // Secondary fallback models if gemini-3.5-flash-lite was unable to return
         if (!succeeded) {
-          const fallbackModels = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3-flash-preview", "gemini-flash-latest"].filter(isModelAvailable);
+          const fallbackModels = ["gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"].filter(isModelAvailable);
           for (const model of fallbackModels) {
             try {
               const response = await withTimeout(
@@ -1758,7 +1817,8 @@ Do NOT output them in English. Write natural, native ${targetLanguageName || tar
           // Intelligent category refinement based on authentic name vocabulary and religious dossier registry
           const isReligiousSite = Boolean(
             Object.values(RELIGIOUS_STRUCTURE_DOSSIERS).some((r) => r.name.toLowerCase() === (matchedDossier?.name || parsedData.name).toLowerCase()) ||
-            /\b(temple|church|cathedral|mosque|masjid|gurdwara|basilica|chapel|monastery|stupa|pagoda|synagogue|shrine|mandir|derasar|jyotirlinga|hagia sophia|pantheon|parthenon|kaaba|dome of the rock|bete giyorgis|lalibela)\b/i.test(parsedData.name)
+            Object.values(HINDU_TEMPLES_GLOBAL_DOSSIERS).some((r) => r.name.toLowerCase() === (matchedDossier?.name || parsedData.name).toLowerCase()) ||
+            /\b(temple|church|cathedral|mosque|masjid|gurdwara|basilica|chapel|monastery|stupa|pagoda|synagogue|shrine|mandir|derasar|jyotirlinga|kovil|pura|candi|hagia sophia|pantheon|parthenon|kaaba|dome of the rock|bete giyorgis|lalibela)\b/i.test(parsedData.name)
           );
           if (isReligiousSite && parsedData.detectedCategory !== "sacred") {
             parsedData.detectedCategory = "sacred";
@@ -2415,7 +2475,7 @@ Do NOT output them in English. Use native ${targetLanguageName || targetLanguage
       // Tier 1: Try Search Grounding with available models
       const shouldAttemptSearchGrounding = Date.now() >= searchGroundingExhaustedUntil;
       if (shouldAttemptSearchGrounding) {
-        for (const model of ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"]) {
+        for (const model of ["gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.8-flash"]) {
           if (!isModelAvailable(model)) continue;
           try {
             const response = await withTimeout(

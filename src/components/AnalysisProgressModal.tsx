@@ -324,12 +324,6 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
             </div>
           </div>
         )}
-
-        <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-slate-800 text-center">
-          <span className="text-[10px] font-mono text-slate-500 tracking-wider">
-            {t("powered_by_gemini", "Powered by Google DeepMind Gemini API & Google Search")}
-          </span>
-        </div>
       </motion.div>
     </div>
   );

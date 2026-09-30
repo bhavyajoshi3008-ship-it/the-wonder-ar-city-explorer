@@ -1,6 +1,7 @@
 import { RELIGIOUS_STRUCTURE_DOSSIERS, RELIGIOUS_ALIASES } from "./religiousStructuresKnowledge";
 import { HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS, HISTORIC_COLLEGES_AND_UNESCO_ALIASES } from "./historicCollegesAndUnescoDossiers";
 import { INDIAN_COLLEGES_DOSSIERS, INDIAN_COLLEGES_ALIASES } from "./indianCollegesDossiers";
+import { HINDU_TEMPLES_GLOBAL_DOSSIERS, HINDU_TEMPLES_GLOBAL_ALIASES } from "./hinduTemplesGlobalDossiers";
 
 export interface FallbackLandmarkData {
   name: string;
@@ -496,6 +497,7 @@ export function normalizeLookupKey(str?: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/&/g, " and ")
     .replace(/['’`]/g, "")
     .replace(/[^\p{L}\p{M}\p{N} ]/gu, " ")
     .replace(/\s+/g, " ")
@@ -560,6 +562,7 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     ...RELIGIOUS_ALIASES,
     ...HISTORIC_COLLEGES_AND_UNESCO_ALIASES,
     ...INDIAN_COLLEGES_ALIASES,
+    ...HINDU_TEMPLES_GLOBAL_ALIASES,
   };
 
   // Combined dossiers map
@@ -568,9 +571,10 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     ...RELIGIOUS_STRUCTURE_DOSSIERS,
     ...HISTORIC_COLLEGES_AND_UNESCO_DOSSIERS,
     ...INDIAN_COLLEGES_DOSSIERS,
+    ...HINDU_TEMPLES_GLOBAL_DOSSIERS,
   };
 
-  // Words that are too generic to ever match a specific dossier
+  // Words that are too generic to ever match a specific dossier on their own
   const GENERIC_EXCLUSIONS = new Set([
     "bridge", "bridges", "tower", "towers", "church", "churches", "cathedral", "cathedrals",
     "temple", "temples", "shrine", "shrines", "mosque", "mosques", "gate", "gates",
@@ -608,8 +612,7 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     return allDossiers[canonicalAliases[norm]];
   }
 
-  // 3. Match when the query contains a full canonical alias (e.g. query: "photo of the eiffel tower in paris" contains alias "eiffel tower")
-  // NOTE: NEVER check alias.includes(norm) — that causes short words like "bridge" to falsely match "bridge of sighs" or "cambridge"!
+  // 3. Match when the query contains a full canonical alias
   const sortedAliases = Object.entries(canonicalAliases).sort((a, b) => b[0].length - a[0].length);
   for (const [alias, dossierKey] of sortedAliases) {
     if (!allDossiers[dossierKey]) continue;
@@ -630,6 +633,44 @@ export function findLandmarkDossier(query?: string): FallbackLandmarkData | null
     const boundaryRegex = new RegExp(`(^|\\b)${escaped}(\\b|$)`, "i");
     if (boundaryRegex.test(norm)) {
       return dossier;
+    }
+  }
+
+  // 5. Intelligent Multi-Keyword Token Matching (e.g. "kathmandu temple", "gujarat college ahmedabad", "nepal temple")
+  const stopWords = new Set(["the", "a", "an", "of", "in", "at", "to", "for", "on", "and", "or", "is"]);
+  const queryTokens = norm.split(/\s+/).filter(t => t.length >= 3 && !stopWords.has(t));
+
+  if (queryTokens.length >= 1) {
+    // Check if any canonical alias contains all query tokens
+    for (const [alias, dossierKey] of sortedAliases) {
+      if (!allDossiers[dossierKey]) continue;
+      const aliasTokens = alias.split(/\s+/);
+      const allTokensMatch = queryTokens.every(q => aliasTokens.some(at => at === q || at.includes(q) || q.includes(at)));
+      if (allTokensMatch) {
+        return allDossiers[dossierKey];
+      }
+    }
+
+    // Check if a dossier's combined identity (name, city, country, localName) matches all query tokens
+    let bestMatch: FallbackLandmarkData | null = null;
+    let maxMatchCount = 0;
+
+    for (const dossier of Object.values(allDossiers)) {
+      const identityText = `${normalizeLookupKey(dossier.name)} ${normalizeLookupKey(dossier.localName)} ${normalizeLookupKey(dossier.city)} ${normalizeLookupKey(dossier.country)}`;
+      const identityTokens = identityText.split(/\s+/);
+
+      const matchCount = queryTokens.filter(q =>
+        identityTokens.some(it => it === q || (it.length >= 4 && (it.includes(q) || q.includes(it))))
+      ).length;
+
+      if (matchCount === queryTokens.length && matchCount > maxMatchCount) {
+        maxMatchCount = matchCount;
+        bestMatch = dossier;
+      }
+    }
+
+    if (bestMatch) {
+      return bestMatch;
     }
   }
 

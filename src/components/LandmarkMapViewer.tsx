@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import L from "leaflet";
 import {
   MapPin,
   Navigation,
@@ -10,7 +11,9 @@ import {
   Camera,
   Compass,
   Building,
-  Train
+  Train,
+  Layers,
+  Map as MapIcon
 } from "lucide-react";
 import { LandmarkRecognition } from "../types";
 import { useLanguage } from "../context/LanguageContext";
@@ -60,6 +63,14 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
     (Math.abs(coords.lat) > 0.001 || Math.abs(coords.lng) > 0.001) &&
     !isDefaultParis;
 
+  // Prefer interactive OpenStreetMap / Leaflet when valid GPS coordinates are available to avoid iframe ad-block / x-frame issues
+  const [mapMode, setMapMode] = useState<"interactive" | "google">(() => (hasValidCoords ? "interactive" : "google"));
+  const [iframeLoaded, setIframeLoaded] = useState<boolean>(false);
+
+  const leafletContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+
   const effectiveQuery = [landmarkName, cityName, recognition.country].filter(Boolean).join(", ");
   const mapQueryParam = hasValidCoords
     ? `${coords.lat},${coords.lng}`
@@ -83,25 +94,25 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
         },
         {
           id: "spot-2",
-          name: `${cityName} Heritage Walk Plaza`,
+          name: `${cityName || "City"} Heritage Walk Plaza`,
           category: "square",
           lat: coords.lat - 0.0019,
           lng: coords.lng + 0.002,
-          description: "Historic cobblestone promenade with informational markers and pedestrian access.",
+          description: "Historic promenade with informational markers and pedestrian access.",
           distanceMeters: 290,
         },
         {
           id: "spot-3",
-          name: "Panoramic Audio Observation Point",
+          name: "Panoramic Observation Vantage",
           category: "viewpoint",
           lat: coords.lat + 0.0025,
           lng: coords.lng - 0.0018,
-          description: "Quiet elevated vantage point recommended for taking in the full skyline view.",
+          description: "Elevated vantage point recommended for taking in the full skyline view.",
           distanceMeters: 380,
         },
         {
           id: "spot-4",
-          name: `${cityName} Transit & Tour Hub`,
+          name: `${cityName || "City"} Transit Hub`,
           category: "metro",
           lat: coords.lat - 0.003,
           lng: coords.lng - 0.0022,
@@ -126,6 +137,88 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
 
     return Math.round(R * c);
   };
+
+  // Initialize and update Leaflet Interactive Map
+  useEffect(() => {
+    if (mapMode !== "interactive" || !hasValidCoords || !leafletContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      const map = L.map(leafletContainerRef.current, {
+        center: [coords.lat, coords.lng],
+        zoom: 16,
+        zoomControl: false,
+      });
+
+      // Add zoom control at bottom right to avoid overlay header conflicts
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+
+      // CartoDB Voyager tiles (clean, high-resolution, global coverage)
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20,
+      }).addTo(map);
+
+      // Custom high-contrast Landmark Pin Icon with glowing cyan beacon
+      const landmarkIcon = L.divIcon({
+        className: "custom-leaflet-landmark",
+        html: `<div style="background: linear-gradient(135deg, #06b6d4, #0284c7); width: 36px; height: 36px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 0 16px rgba(6,182,212,0.9), 0 4px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer;">🏛️</div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18],
+      });
+
+      const marker = L.marker([coords.lat, coords.lng], { icon: landmarkIcon }).addTo(map);
+      marker.bindPopup(`
+        <div style="font-family: inherit; padding: 4px; min-width: 160px; color: #0f172a;">
+          <h4 style="font-weight: 700; margin: 0 0 4px 0; font-size: 13px; color: #0f172a;">${landmarkName}</h4>
+          <p style="margin: 0; color: #475569; font-size: 11px;">${cityName || ""} ${recognition.country || ""}</p>
+          <div style="margin-top: 6px; font-size: 10px; font-family: monospace; color: #0284c7;">
+            ${coords.lat.toFixed(4)}°, ${coords.lng.toFixed(4)}°
+          </div>
+        </div>
+      `).openPopup();
+
+      // Add nearby viewpoints markers
+      nearbySpots.forEach((spot) => {
+        const spotIcon = L.divIcon({
+          className: "custom-leaflet-spot",
+          html: `<div style="background: #0f172a; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #38bdf8; box-shadow: 0 2px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer;">${
+            spot.category === "photo" ? "📸" : spot.category === "viewpoint" ? "👁️" : spot.category === "metro" ? "🚆" : "🏛️"
+          }</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -14],
+        });
+
+        const spotMarker = L.marker([spot.lat, spot.lng], { icon: spotIcon }).addTo(map);
+        spotMarker.bindPopup(`
+          <div style="font-family: inherit; padding: 4px; max-width: 200px; color: #0f172a;">
+            <h5 style="font-weight: 700; margin: 0 0 3px 0; font-size: 12px; color: #0f172a;">${spot.name}</h5>
+            <p style="margin: 0 0 4px 0; color: #475569; font-size: 11px; line-height: 1.4;">${spot.description}</p>
+            <span style="font-size: 10px; color: #0284c7; font-weight: 600;">~${spot.distanceMeters}m from center</span>
+          </div>
+        `);
+      });
+
+      mapInstanceRef.current = map;
+    } else {
+      mapInstanceRef.current.setView([coords.lat, coords.lng], 16);
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 100);
+    }
+  }, [mapMode, coords.lat, coords.lng, hasValidCoords, landmarkName]);
+
+  // Clean up map instance on component unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
@@ -154,6 +247,30 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
         );
         setUserDistance(dist);
         setLocatingUser(false);
+
+        // Add user marker on interactive map if visible
+        if (mapInstanceRef.current) {
+          if (userMarkerRef.current) {
+            userMarkerRef.current.remove();
+          }
+          const userIcon = L.divIcon({
+            className: "custom-user-marker",
+            html: `<div style="background: #3b82f6; width: 22px; height: 22px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 0 14px rgba(59,130,246,0.9); display: flex; align-items: center; justify-content: center;"><div style="width: 6px; height: 6px; background: white; border-radius: 50%;"></div></div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+          });
+          const userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon }).addTo(mapInstanceRef.current);
+          userMarker.bindPopup("<b>Your Current Location</b>").openPopup();
+          userMarkerRef.current = userMarker;
+
+          mapInstanceRef.current.fitBounds(
+            [
+              [userCoords.lat, userCoords.lng],
+              [coords.lat, coords.lng],
+            ],
+            { padding: [50, 50], maxZoom: 17 }
+          );
+        }
       },
       (err) => {
         console.warn("Geolocation request error:", err);
@@ -164,15 +281,22 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
     );
   };
 
+  const handleSpotClick = (spot: NearbySpot) => {
+    setSelectedSpot(selectedSpot?.id === spot.id ? null : spot);
+    if (mapMode === "interactive" && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([spot.lat, spot.lng], 17, { duration: 1.2 });
+    }
+  };
+
   // Direct links to Google Maps ecosystem
-  const googleMapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${landmarkName} ${cityName} ${recognition.country}`)}`;
+  const googleMapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${landmarkName} ${cityName || ""} ${recognition.country || ""}`)}`;
   const googleMapsDirectionsUrl = userLocation
     ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${destParam}`
     : `https://www.google.com/maps/dir/?api=1&destination=${destParam}`;
   const googleStreetViewUrl = hasValidCoords
     ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coords.lat},${coords.lng}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${landmarkName} ${cityName} 360`)}`;
-  const googleEarthUrl = `https://earth.google.com/web/search/${encodeURIComponent(`${landmarkName} ${cityName}`)}`;
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${landmarkName} ${cityName || ""} 360`)}`;
+  const googleEarthUrl = `https://earth.google.com/web/search/${encodeURIComponent(`${landmarkName} ${cityName || ""}`)}`;
   const googleMapsEmbedUrl = `https://maps.google.com/maps?q=${mapQueryParam}&z=16&output=embed`;
 
   return (
@@ -209,13 +333,45 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400 truncate sm:whitespace-normal">
-              {t("map_explorer_sub", "Interactive Google Maps navigation, Street View 360°, and satellite views")}
+              {t("map_explorer_sub", "Interactive street map navigation, Street View 360°, and satellite views")}
             </p>
           </div>
         </div>
 
-        {/* Action button to open full Google Maps */}
-        <div className="flex items-center space-x-2 shrink-0">
+        {/* Action Controls: Mode Switcher, Distance & Maps Link */}
+        <div className="flex items-center space-x-2 shrink-0 flex-wrap gap-y-1">
+          {/* View Mode Toggle: Interactive Street Map vs Google Maps */}
+          {hasValidCoords && (
+            <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-xl">
+              <button
+                type="button"
+                id="btn-mode-interactive-map"
+                onClick={() => setMapMode("interactive")}
+                className={`py-1 px-2.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition cursor-pointer ${
+                  mapMode === "interactive"
+                    ? "bg-cyan-600 text-slate-950 shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>{t("interactive_map", "Street Map")}</span>
+              </button>
+              <button
+                type="button"
+                id="btn-mode-google-map"
+                onClick={() => setMapMode("google")}
+                className={`py-1 px-2.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition cursor-pointer ${
+                  mapMode === "google"
+                    ? "bg-cyan-600 text-slate-950 shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                <span>{t("google_embed", "Google Embed")}</span>
+              </button>
+            </div>
+          )}
+
           <button
             id="btn-calculate-walking-distance"
             onClick={handleLocateMe}
@@ -240,28 +396,58 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
         </div>
       </div>
 
-      {/* Main Google Maps Viewport */}
-      <div className="relative w-full h-[380px] sm:h-[440px] bg-slate-950 flex flex-col">
-        <iframe
-          id="google-maps-embed-frame"
-          title={`${landmarkName} Google Maps`}
-          src={googleMapsEmbedUrl}
-          className="w-full h-full border-0"
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
+      {/* Main Map Viewport */}
+      <div className="relative w-full h-[380px] sm:h-[440px] bg-slate-950 flex flex-col overflow-hidden">
+        {mapMode === "interactive" && hasValidCoords ? (
+          /* Interactive Leaflet OpenStreetMap View */
+          <div
+            id="leaflet-interactive-map-container"
+            ref={leafletContainerRef}
+            className="w-full h-full z-0"
+            style={{ minHeight: "100%" }}
+          />
+        ) : (
+          /* Google Maps Embed View */
+          <>
+            <iframe
+              id="google-maps-embed-frame"
+              title={`${landmarkName} Google Maps`}
+              src={googleMapsEmbedUrl}
+              onLoad={() => setIframeLoaded(true)}
+              className="w-full h-full border-0"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+            {!iframeLoaded && (
+              <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-4 text-center z-10">
+                <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin mb-3" />
+                <p className="text-xs text-slate-300 font-medium">Loading Google Maps view...</p>
+                {hasValidCoords && (
+                  <button
+                    onClick={() => setMapMode("interactive")}
+                    className="mt-3 text-xs text-cyan-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    Switch to Interactive Street Map
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
 
         {/* Overlay Telemetry Badge */}
-        <div className="absolute top-3 left-3 bg-slate-950/85 backdrop-blur-md border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs text-slate-200 shadow-lg flex items-center space-x-2 pointer-events-none">
+        <div className="absolute top-3 left-3 bg-slate-950/85 backdrop-blur-md border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs text-slate-200 shadow-lg flex items-center space-x-2 pointer-events-none z-10">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span className="font-semibold text-white">{t("google_maps_live_view", "Google Maps Live View")}</span>
-          <span className="text-slate-400 text-[11px] hidden sm:inline">({cityName}, {recognition.country})</span>
+          <span className="font-semibold text-white">
+            {mapMode === "interactive" ? "Interactive Street Map" : t("google_maps_live_view", "Google Maps Live View")}
+          </span>
+          <span className="text-slate-400 text-[11px] hidden sm:inline">({cityName || ""}, {recognition.country || ""})</span>
         </div>
 
         {/* Distance Badge if located */}
         {userDistance !== null && (
-          <div className="absolute top-3 right-3 bg-cyan-950/90 border border-cyan-500/40 text-cyan-200 px-3 py-1.5 rounded-xl text-xs font-mono shadow-xl backdrop-blur-md flex items-center space-x-2">
+          <div className="absolute top-3 right-3 bg-cyan-950/90 border border-cyan-500/40 text-cyan-200 px-3 py-1.5 rounded-xl text-xs font-mono shadow-xl backdrop-blur-md flex items-center space-x-2 z-10">
             <Route className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             <span>
               {userDistance > 1000
@@ -290,7 +476,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
               <Compass className="w-3.5 h-3.5 text-cyan-400" />
               <span>{t("recommended_viewpoints", "Recommended Viewing Points & Nearby Hubs")}</span>
             </div>
-            <span className="text-[11px] text-slate-400">{t("click_to_view_location", "Click to view location")}</span>
+            <span className="text-[11px] text-slate-400">{t("click_to_view_location", "Click to view location on map")}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -300,7 +486,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
               return (
                 <div
                   key={spot.id}
-                  onClick={() => setSelectedSpot(isSelected ? null : spot)}
+                  onClick={() => handleSpotClick(spot)}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                     isSelected
                       ? "bg-cyan-950/60 border-cyan-400/80 text-white shadow-md shadow-cyan-950"
@@ -359,7 +545,7 @@ export const LandmarkMapViewer: React.FC<LandmarkMapViewerProps> = ({
       <div className="p-3 sm:p-4 bg-slate-950 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center space-x-2">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            {t("google_maps_actions", "Google Maps Actions:")}
+            {t("google_maps_actions", "External Navigation:")}
           </span>
         </div>
 
