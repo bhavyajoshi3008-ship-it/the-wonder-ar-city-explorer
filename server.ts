@@ -1114,6 +1114,17 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
+  // Enable CORS for development and cross-port compatibility (e.g. port 5173 -> 3000)
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // Support high-resolution camera photos (up to 25MB)
   app.use(express.json({ limit: "25mb" }));
   app.use(express.urlencoded({ extended: true, limit: "25mb" }));
@@ -1329,6 +1340,14 @@ async function startServer() {
    * Tier 3: Known preset/hint dossier match (ONLY if user selected a verified preset or gave a landmark hint)
    * Tier 4: Clear "not_landmark" or "service_busy" error response — NEVER blindly default to Eiffel Tower!
    */
+  app.get("/api/recognize-landmark", (_req, res) => {
+    res.json({
+      status: "ok",
+      endpoint: "/api/recognize-landmark",
+      message: "Landmark recognition service is active. Send a POST request with an image payload to analyze.",
+    });
+  });
+
   app.post("/api/recognize-landmark", async (req, res) => {
     const { image, mimeType = "image/jpeg", hintName, mode, targetLanguage, targetLanguageName, visualSignature, gpsCoords, isSamplePreset } = req.body || {};
 
@@ -3229,8 +3248,23 @@ ${JSON.stringify(keys, null, 2)}`;
   if (PORT === 3000) {
     try {
       const redirectApp = express();
+      redirectApp.use((req, res, next) => {
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+        res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+        if (req.method === "OPTIONS") {
+          return res.sendStatus(200);
+        }
+        next();
+      });
+
       redirectApp.all("*", (req, res) => {
-        res.redirect(`http://localhost:3000${req.url}`);
+        const targetUrl = `http://localhost:3000${req.originalUrl || req.url}`;
+        // Preserve HTTP method and payload for non-GET/HEAD requests using HTTP 307
+        if (req.method !== "GET" && req.method !== "HEAD") {
+          return res.redirect(307, targetUrl);
+        }
+        res.redirect(302, targetUrl);
       });
       const redirectServer = redirectApp.listen(5173, "0.0.0.0", () => {
         console.log(`[CityLens AR Server] Port 5173 redirecting to http://localhost:3000`);
